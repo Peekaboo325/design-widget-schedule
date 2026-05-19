@@ -198,10 +198,6 @@ function createTray() {
 
   const contextMenu = Menu.buildFromTemplate([
     {
-      label: '위젯 보이기',
-      click: () => showWindowSafely()
-    },
-    {
       label: '위젯 위치 초기화',
       click: () => resetWindowPosition()
     },
