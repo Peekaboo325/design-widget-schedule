@@ -15,7 +15,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--widget-border);
   -webkit-app-region: drag;
 }
@@ -26,41 +26,69 @@
   letter-spacing: -0.2px;
 }
 
-/* 버튼은 드래그 영역에서 제외해야 클릭 가능 */
-.refresh {
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   -webkit-app-region: no-drag;
+}
+
+.iconBtn {
   background: transparent;
   border: none;
   border-radius: 6px;
   width: 22px;
   height: 22px;
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--widget-muted);
 }
 
-.refresh:hover {
+.iconBtn:hover {
   background: rgba(255, 255, 255, 0.08);
+  color: var(--widget-fg);
+}
+
+.iconBtnActive {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--widget-fg);
 }
 
 .body {
   flex: 1;
-  padding: 16px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
+  overflow: hidden;
 }
 
 .placeholder {
   margin: 0;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
+  color: var(--widget-muted);
 }
 
 .hint {
   margin: 0;
   font-size: 11px;
   color: var(--widget-muted);
+  line-height: 1.4;
+}
+
+/* S 크기에서는 폰트/패딩 더 작게 */
+.widget[data-size='S'] .header {
+  padding: 8px 10px;
+}
+
+.widget[data-size='S'] .date {
+  font-size: 12px;
+}
+
+.widget[data-size='S'] .body {
+  padding: 10px;
 }

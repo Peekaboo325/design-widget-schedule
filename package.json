@@ -12,6 +12,9 @@
     "preview": "electron-vite preview",
     "start": "electron-vite preview"
   },
+  "dependencies": {
+    "electron-store": "^10.1.0"
+  },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
     "electron": "^33.2.1",
