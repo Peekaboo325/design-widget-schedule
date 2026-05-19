@@ -191,7 +191,7 @@
 
 .tableRow {
   display: grid;
-  grid-template-columns: minmax(50px, 1.2fr) minmax(50px, 1.5fr) auto auto;
+  grid-template-columns: minmax(60px, 1fr) minmax(80px, 2.4fr) auto auto;
   gap: 8px;
   align-items: center;
   padding: 6px 0;
@@ -204,25 +204,28 @@
 }
 
 .cellClient {
-  font-weight: 600;
+  font-weight: 700;
   color: var(--widget-fg);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* 비고는 광고주와 함께 강조 (수량보다 위계 위) */
 .cellNote {
-  color: var(--widget-muted);
+  color: var(--widget-fg);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* 수량은 작고 흐리게 (대부분 1) */
 .cellQty {
   text-align: right;
+  font-size: 10px;
   font-variant-numeric: tabular-nums;
-  color: var(--widget-fg);
-  min-width: 16px;
+  color: var(--widget-muted);
+  min-width: 14px;
 }
 
 .cellStatus {
@@ -259,8 +262,12 @@
   padding: 4px 0;
 }
 
-/* 공유대기 영역은 화면을 덜 먹도록 max-height 제한 */
+/* L 모드 영역 비율 7:3 (잔여 스케줄 : 공유 대기) */
+.containerL > .tableWrap:nth-of-type(1) {
+  flex: 7 1 0;
+}
+
 .containerL > .tableWrap:nth-of-type(2) {
-  flex: 0 1 auto;
-  max-height: 40%;
+  flex: 3 1 0;
+  min-height: 0;
 }

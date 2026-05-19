@@ -91,25 +91,27 @@ export default function useSettings() {
 
 // 테마 컬러 + 모드를 CSS 변수로 적용
 // 다크: 어두운 베이스 + 액센트 진한 틴트
-// 라이트: 밝은 베이스 + 액센트 옅은 틴트 (가독성 위해 옅게)
+// 라이트: 거의 순백 베이스 + 액센트 옅은 틴트 (산뜻함)
 function applyTheme(hex, mode) {
   const root = document.documentElement
   root.style.setProperty('--widget-accent', hex)
+  // 액센트 위 텍스트의 대비색 (흰색 또는 검정 자동)
+  root.style.setProperty('--widget-on-accent', getContrastText(hex))
 
   if (mode === 'light') {
     root.style.setProperty(
       '--widget-bg',
-      `color-mix(in oklab, ${hex} 14%, rgba(248, 248, 250, 0.94))`
+      `color-mix(in oklab, ${hex} 8%, rgba(252, 252, 254, 0.96))`
     )
     root.style.setProperty(
       '--widget-header-bg',
-      `color-mix(in oklab, ${hex} 22%, rgba(248, 248, 250, 0.94))`
+      `color-mix(in oklab, ${hex} 18%, rgba(252, 252, 254, 0.96))`
     )
-    root.style.setProperty('--widget-fg', '#1c1c20')
-    root.style.setProperty('--widget-muted', 'rgba(28, 28, 32, 0.55)')
-    root.style.setProperty('--widget-border', 'rgba(0, 0, 0, 0.1)')
-    root.style.setProperty('--widget-overlay', 'rgba(0, 0, 0, 0.05)')
-    root.style.setProperty('--widget-overlay-strong', 'rgba(0, 0, 0, 0.08)')
+    root.style.setProperty('--widget-fg', '#0f0f12')
+    root.style.setProperty('--widget-muted', 'rgba(20, 20, 24, 0.55)')
+    root.style.setProperty('--widget-border', 'rgba(0, 0, 0, 0.08)')
+    root.style.setProperty('--widget-overlay', 'rgba(255, 255, 255, 0.45)')
+    root.style.setProperty('--widget-overlay-strong', 'rgba(0, 0, 0, 0.06)')
     root.style.setProperty('--widget-row-border', 'rgba(0, 0, 0, 0.06)')
   } else {
     root.style.setProperty(
@@ -127,4 +129,20 @@ function applyTheme(hex, mode) {
     root.style.setProperty('--widget-overlay-strong', 'rgba(255, 255, 255, 0.08)')
     root.style.setProperty('--widget-row-border', 'rgba(255, 255, 255, 0.04)')
   }
+}
+
+// WCAG 상대 휘도 기반으로 액센트 컬러 위에 올릴 텍스트 색 결정
+function getContrastText(hex) {
+  const c = hex.replace('#', '')
+  if (c.length !== 6) return '#ffffff'
+  const r = parseInt(c.slice(0, 2), 16) / 255
+  const g = parseInt(c.slice(2, 4), 16) / 255
+  const b = parseInt(c.slice(4, 6), 16) / 255
+  const lum = 0.2126 * toLin(r) + 0.7152 * toLin(g) + 0.0722 * toLin(b)
+  // 0.55 기준: 노랑·연두·옅은컬러는 검정, 진한블루·퍼플·핑크는 흰색
+  return lum > 0.55 ? '#1c1c20' : '#ffffff'
+}
+
+function toLin(v) {
+  return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)
 }

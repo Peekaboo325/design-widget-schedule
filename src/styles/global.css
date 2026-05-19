@@ -4,10 +4,11 @@
   --widget-fg: #f4f4f6;
   --widget-muted: rgba(244, 244, 246, 0.6);
   --widget-accent: #7aa2ff;
+  --widget-on-accent: #1c1c20;
   --widget-radius: 14px;
   --widget-border: rgba(255, 255, 255, 0.08);
-  --widget-overlay: rgba(0, 0, 0, 0.12); /* 패널/뱃지 배경 */
-  --widget-overlay-strong: rgba(255, 255, 255, 0.08); /* 호버/세그먼티드 */
+  --widget-overlay: rgba(0, 0, 0, 0.12);
+  --widget-overlay-strong: rgba(255, 255, 255, 0.08);
   --widget-row-border: rgba(255, 255, 255, 0.04);
 }
 

@@ -73,7 +73,7 @@
 
 .toggleOn .toggleKnob {
   transform: translateX(14px);
-  background: #fff;
+  background: var(--widget-on-accent);
 }
 
 /* 세그먼티드 (S/M/L, 다크/라이트) */
@@ -98,7 +98,7 @@
 
 .segmentActive {
   background: var(--widget-accent);
-  color: #1c1c20;
+  color: var(--widget-on-accent);
 }
 
 /* 슬라이더 */

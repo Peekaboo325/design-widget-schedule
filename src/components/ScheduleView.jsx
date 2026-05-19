@@ -8,9 +8,9 @@ const STATUS_STYLE = {
 }
 
 // 사이즈별 정보 단계 렌더링
-// S: 큰 숫자 + 공유대기 뱃지
-// M: 광고주별 합계 + 공유대기 뱃지
-// L: 전체 테이블 + 구분선 + 공유대기 목록
+// S: 큰 숫자 + 공유 대기 뱃지
+// M: 광고주별 합계 + 공유 대기 뱃지
+// L: 전체 테이블 + 구분선 + 공유 대기 목록
 export default function ScheduleView({ size, data, loading }) {
   const { schedule, pending, summary } = data
 
@@ -24,7 +24,7 @@ export default function ScheduleView({ size, data, loading }) {
     )
   }
 
-  // S / M 공통: 상단 카운트 + 공유대기 뱃지
+  // S / M 공통: 상단 카운트 + 공유 대기 뱃지
   return (
     <div className={styles.containerSM}>
       {size === 'S' ? (
@@ -74,14 +74,14 @@ function MediumSummary({ schedule, total }) {
   )
 }
 
-// 공유대기 뱃지 (S/M 공용)
+// 공유 대기 뱃지 (S/M 공용)
 function PendingBadge({ count }) {
   const dim = count === 0
   return (
     <div className={`${styles.pendingBadge} ${dim ? styles.pendingBadgeDim : ''}`}>
       <span className={styles.pendingDot} />
       <span className={styles.pendingText}>
-        공유대기 <strong>{count}</strong>건
+        공유 대기 <strong>{count}</strong>건
       </span>
     </div>
   )
@@ -126,12 +126,12 @@ function ScheduleTable({ schedule, loading }) {
   )
 }
 
-// L: 공유대기 목록
+// L: 공유 대기 목록
 function PendingList({ pending }) {
   return (
     <div className={styles.tableWrap}>
       <div className={styles.sectionHead}>
-        <span className={styles.sectionLabel}>공유대기</span>
+        <span className={styles.sectionLabel}>공유 대기</span>
         <span className={styles.sectionCount}>{pending.length}건</span>
       </div>
       {pending.length > 0 && (

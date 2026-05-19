@@ -117,7 +117,7 @@
   top: 0px;
   width: 4px;
   height: 8px;
-  border: solid #1c1c20;
+  border: solid var(--widget-on-accent);
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
