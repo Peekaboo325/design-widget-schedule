@@ -3,6 +3,7 @@ import styles from './App.module.css'
 import SettingsPanel from './components/SettingsPanel.jsx'
 import ScheduleView from './components/ScheduleView.jsx'
 import ChecklistView from './components/ChecklistView.jsx'
+import MemberPicker from './components/MemberPicker.jsx'
 import useSettings from './hooks/useSettings.js'
 import useMembers from './hooks/useMembers.js'
 import useSchedule from './hooks/useSchedule.js'
@@ -38,7 +39,8 @@ export default function App() {
     setAlwaysOnTop,
     setOpacity,
     setSize,
-    setThemeColor
+    setThemeColor,
+    setActiveMember
   } = useSettings()
 
   // L이 아닐 때 체크리스트 탭에 머물러 있으면 강제 복귀
@@ -48,9 +50,21 @@ export default function App() {
     }
   }, [settings.size, activeTab])
 
-  // 팀원 목록 + 임시 자동 선택
+  // 팀원 목록
   const { members, loading: membersLoading, error: membersError } = useMembers()
-  const activeMember = members[0] ?? null
+
+  // 저장된 멤버가 현재 목록에 없으면 stale로 간주 (입퇴사 대비)
+  const savedMember = settings.activeMember
+  const memberInList =
+    savedMember && members.length > 0 ? members.includes(savedMember) : false
+  const activeMember = memberInList ? savedMember : null
+
+  // 저장값이 목록에 없을 때 자동으로 null 처리 (재선택 유도)
+  useEffect(() => {
+    if (ready && savedMember && members.length > 0 && !memberInList) {
+      setActiveMember(null)
+    }
+  }, [ready, savedMember, members, memberInList, setActiveMember])
 
   // 활성 멤버의 스케줄/공유대기
   const {
@@ -62,8 +76,13 @@ export default function App() {
   } = useSchedule(activeMember)
 
   const refreshing = scheduleLoading
-  const showTabs = settings.size === 'L'
-  const showFooter = activeTab === 'schedule' && lastUpdated && !scheduleError
+  const needsMemberPick = ready && !activeMember
+  const showTabs = settings.size === 'L' && !needsMemberPick
+  const showFooter =
+    !needsMemberPick &&
+    activeTab === 'schedule' &&
+    lastUpdated &&
+    !scheduleError
 
   return (
     <div className={styles.widget} data-size={settings.size}>
@@ -84,7 +103,7 @@ export default function App() {
           >
             ⚙
           </button>
-          {activeTab === 'schedule' && (
+          {activeTab === 'schedule' && !needsMemberPick && (
             <button
               type="button"
               className={`${styles.iconBtn} ${refreshing ? styles.iconBtnSpinning : ''}`}
@@ -101,6 +120,8 @@ export default function App() {
       {settingsOpen && ready && (
         <SettingsPanel
           settings={settings}
+          members={members}
+          onChangeMember={setActiveMember}
           onToggleAlwaysOnTop={setAlwaysOnTop}
           onChangeOpacity={setOpacity}
           onChangeThemeColor={setThemeColor}
@@ -124,7 +145,14 @@ export default function App() {
       )}
 
       <main className={styles.body}>
-        {activeTab === 'checklist' ? (
+        {needsMemberPick ? (
+          <MemberPicker
+            members={members}
+            loading={membersLoading}
+            error={membersError}
+            onSelect={setActiveMember}
+          />
+        ) : activeTab === 'checklist' ? (
           <ChecklistView
             checked={checked}
             onToggle={toggleChecked}

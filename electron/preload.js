@@ -18,6 +18,9 @@ const api = {
   // 테마 컬러 저장 (적용은 렌더러에서 CSS 변수로)
   setThemeColor: (hex) => ipcRenderer.invoke('settings:set-theme-color', hex),
 
+  // 활성 팀원 저장
+  setActiveMember: (name) => ipcRenderer.invoke('settings:set-active-member', name),
+
   // GAS API 프록시 호출 (CSP/CORS 우회용)
   apiGet: (params) => ipcRenderer.invoke('api:get', params)
 }

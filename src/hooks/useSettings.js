@@ -7,7 +7,8 @@ const DEFAULTS = {
   alwaysOnTop: true,
   opacity: 1.0,
   themeColor: '#7aa2ff',
-  size: 'L'
+  size: 'L',
+  activeMember: null
 }
 
 export default function useSettings() {
@@ -60,13 +61,20 @@ export default function useSettings() {
     setSettings((s) => ({ ...s, themeColor: saved ?? hex }))
   }, [])
 
+  // 활성 팀원 선택 (null이면 미선택 상태로 되돌림)
+  const setActiveMember = useCallback(async (name) => {
+    const saved = await window.widgetAPI?.setActiveMember(name)
+    setSettings((s) => ({ ...s, activeMember: saved ?? name }))
+  }, [])
+
   return {
     settings,
     ready,
     setAlwaysOnTop,
     setOpacity,
     setSize,
-    setThemeColor
+    setThemeColor,
+    setActiveMember
   }
 }
 

@@ -18,6 +18,8 @@ const SIZE_OPTIONS = [
 
 export default function SettingsPanel({
   settings,
+  members,
+  onChangeMember,
   onToggleAlwaysOnTop,
   onChangeOpacity,
   onChangeThemeColor,
@@ -25,6 +27,24 @@ export default function SettingsPanel({
 }) {
   return (
     <div className={styles.panel}>
+      {/* 본인 선택 */}
+      {members && members.length > 0 && (
+        <Row label="본인">
+          <select
+            className={styles.select}
+            value={settings.activeMember ?? ''}
+            onChange={(e) => onChangeMember(e.target.value || null)}
+          >
+            {!settings.activeMember && <option value="">선택…</option>}
+            {members.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </Row>
+      )}
+
       {/* 항상 위 고정 */}
       <Row label="항상 위에 고정">
         <button

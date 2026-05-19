@@ -25,7 +25,8 @@ const store = new Store({
     alwaysOnTop: true,
     opacity: 1.0,
     themeColor: '#7aa2ff',
-    size: 'L'
+    size: 'L',
+    activeMember: null
   }
 })
 
@@ -77,8 +78,22 @@ ipcMain.handle('settings:get-all', () => ({
   alwaysOnTop: store.get('alwaysOnTop'),
   opacity: store.get('opacity'),
   themeColor: store.get('themeColor'),
-  size: store.get('size')
+  size: store.get('size'),
+  activeMember: store.get('activeMember')
 }))
+
+// 활성 팀원 저장 (null 허용: 미선택 상태)
+ipcMain.handle('settings:set-active-member', (_event, name) => {
+  if (name === null || name === undefined) {
+    store.set('activeMember', null)
+    return null
+  }
+  if (typeof name !== 'string' || !name.trim()) {
+    return store.get('activeMember')
+  }
+  store.set('activeMember', name)
+  return name
+})
 
 // 항상 위 고정 토글
 ipcMain.handle('window:set-always-on-top', (_event, value) => {
