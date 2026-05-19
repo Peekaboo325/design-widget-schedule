@@ -114,11 +114,18 @@ ipcMain.handle('window:set-opacity', (_event, value) => {
 })
 
 // 크기 전환 (S/M/L 프리셋)
+// resizable: false + transparent 조합에서 두 번째 setSize가 무시되는 케이스가 있어
+// 매번 resizable을 잠시 풀어준 뒤 새 사이즈를 적용하고 다시 잠금.
 ipcMain.handle('window:set-size', (_event, sizeKey) => {
   if (!mainWindow) return null
   const preset = SIZE_PRESETS[sizeKey]
   if (!preset) return store.get('size')
+
+  const wasResizable = mainWindow.isResizable()
+  if (!wasResizable) mainWindow.setResizable(true)
   mainWindow.setSize(preset.width, preset.height, true)
+  if (!wasResizable) mainWindow.setResizable(false)
+
   store.set('size', sizeKey)
   return sizeKey
 })

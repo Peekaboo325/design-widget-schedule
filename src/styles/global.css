@@ -32,3 +32,26 @@ button {
   font-family: inherit;
   color: inherit;
 }
+
+/* 얇은 스크롤바 (Chromium 전용) — 테마 액센트 컬러 반영 */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--widget-accent) 35%, transparent);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklab, var(--widget-accent) 55%, transparent);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}

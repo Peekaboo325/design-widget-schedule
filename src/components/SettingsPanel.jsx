@@ -1,4 +1,5 @@
 import styles from './SettingsPanel.module.css'
+import Dropdown from './Dropdown.jsx'
 
 // 프리셋 컬러 (협의: 액센트 + 배경 틴트 모두에 사용)
 const COLOR_PRESETS = [
@@ -30,18 +31,12 @@ export default function SettingsPanel({
       {/* 본인 선택 */}
       {members && members.length > 0 && (
         <Row label="본인">
-          <select
-            className={styles.select}
+          <Dropdown
             value={settings.activeMember ?? ''}
-            onChange={(e) => onChangeMember(e.target.value || null)}
-          >
-            {!settings.activeMember && <option value="">선택…</option>}
-            {members.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
+            options={members}
+            onChange={(v) => onChangeMember(v || null)}
+            placeholder="선택…"
+          />
         </Row>
       )}
 

@@ -32,29 +32,6 @@
   align-items: center;
 }
 
-/* 멤버 드롭다운 */
-.select {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--widget-fg);
-  border: 1px solid var(--widget-border);
-  border-radius: 4px;
-  padding: 3px 6px;
-  font-size: 11px;
-  font-family: inherit;
-  cursor: pointer;
-  min-width: 80px;
-}
-
-.select:focus {
-  outline: none;
-  border-color: var(--widget-accent);
-}
-
-.select option {
-  background: #1c1c20;
-  color: var(--widget-fg);
-}
-
 /* 토글 스위치 */
 .toggle {
   position: relative;

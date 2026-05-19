@@ -1,0 +1,96 @@
+.root {
+  position: relative;
+  display: inline-block;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 90px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--widget-border);
+  color: var(--widget-fg);
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.trigger:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.triggerOpen,
+.trigger:focus-visible {
+  outline: none;
+  border-color: var(--widget-accent);
+  background: color-mix(in oklab, var(--widget-accent) 12%, transparent);
+}
+
+.triggerLabel {
+  font-weight: 500;
+}
+
+.triggerPlaceholder {
+  color: var(--widget-muted);
+}
+
+.caret {
+  font-size: 9px;
+  color: var(--widget-muted);
+  transition: transform 0.15s ease;
+}
+
+.caretOpen {
+  transform: rotate(180deg);
+  color: var(--widget-accent);
+}
+
+/* 팝오버 메뉴 */
+.menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 20;
+  min-width: 100%;
+  list-style: none;
+  padding: 3px;
+  margin: 0;
+  background: #1c1c20;
+  border: 1px solid var(--widget-border);
+  border-radius: 6px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--widget-fg);
+  font-size: 11.5px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.option:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.optionActive {
+  background: color-mix(in oklab, var(--widget-accent) 25%, transparent);
+  color: var(--widget-fg);
+  font-weight: 600;
+}
+
+.optionActive:hover {
+  background: color-mix(in oklab, var(--widget-accent) 35%, transparent);
+}
