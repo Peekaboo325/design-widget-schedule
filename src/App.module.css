@@ -11,14 +11,16 @@
   backdrop-filter: blur(12px);
 }
 
-/* 헤더 — 액센트 컬러 블록. 드래그 영역 */
+/* 헤더 — 컬러 카드 (폴더 탭 느낌). 드래그 영역 */
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 14px;
+  padding: 12px 14px;
+  margin: 8px 8px 0;
   background: var(--widget-header-bg);
   color: var(--widget-on-header);
+  border-radius: var(--widget-card-radius);
   -webkit-app-region: drag;
   gap: 10px;
   flex-shrink: 0;
@@ -132,9 +134,9 @@
   }
 }
 
-/* 본문 카드 wrapper — 헤더 아래 떠 있는 흰 카드 */
+/* 본문 카드 wrapper — 헤더 카드 아래 별도 흰 카드 (폴더 안의 페이지 느낌) */
 .bodyCard {
-  margin: 8px;
+  margin: 6px 8px 8px;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -147,7 +149,7 @@
 
 /* 설정 펼친 상태 — 본문 카드 자리에 설정 */
 .settingsArea {
-  margin: 8px;
+  margin: 6px 8px 8px;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -222,26 +224,44 @@
   word-break: keep-all;
 }
 
-/* S 사이즈 — 헤더/본문 패딩 축소 */
+/* S 사이즈 — 240×220 안에 모든 게 들어가도록 더 컴팩트 */
+.widget[data-size='S'] {
+  border-radius: 18px;
+}
+
 .widget[data-size='S'] .header {
-  padding: 10px 10px;
+  padding: 8px 10px;
+  margin: 6px 6px 0;
   gap: 8px;
+  border-radius: 12px;
 }
 
 .widget[data-size='S'] .date {
-  font-size: 14px;
+  font-size: 13px;
+  letter-spacing: -0.2px;
 }
 
 .widget[data-size='S'] .bodyCard,
 .widget[data-size='S'] .settingsArea {
-  margin: 6px;
+  margin: 4px 6px 6px;
+  border-radius: 12px;
 }
 
 .widget[data-size='S'] .body {
   padding: 10px 12px;
 }
 
+.widget[data-size='S'] .iconBtn {
+  width: 28px;
+  height: 28px;
+}
+
+.widget[data-size='S'] .newBadge {
+  padding: 4px 9px;
+  font-size: 10px;
+}
+
 .widget[data-size='S'] .footer {
-  padding: 4px 12px 8px;
+  padding: 4px 12px 6px;
   font-size: 10px;
 }

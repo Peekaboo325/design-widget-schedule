@@ -9,7 +9,7 @@
   padding: 10px;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
   animation: popIn 0.15s ease-out;
-  min-width: 220px;
+  width: 196px;
 }
 
 @keyframes popIn {
@@ -26,7 +26,7 @@
 .grid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  gap: 4px;
+  gap: 2px;
   margin-bottom: 8px;
 }
 
@@ -63,16 +63,19 @@
   align-items: center;
 }
 
+/* 직접 입력 — 좁게. macOS에선 focus 시 시스템 이모지 패널이 자동 호출됨 */
 .customInput {
   flex: 1;
+  min-width: 0;
   background: var(--widget-overlay);
   border: 1px solid var(--widget-card-border);
   color: var(--widget-fg);
   font-family: inherit;
-  font-size: 14px;
-  padding: 6px 10px;
+  font-size: 13px;
+  padding: 5px 10px;
   border-radius: var(--widget-pill);
   outline: none;
+  text-align: center;
 }
 
 .customInput:focus {
@@ -83,12 +86,17 @@
   background: var(--widget-accent);
   color: var(--widget-on-accent);
   border: none;
-  border-radius: var(--widget-pill);
-  padding: 6px 12px;
-  font-size: 11px;
-  font-weight: 700;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+  font-weight: 800;
   cursor: pointer;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }
 
 .customApply:disabled {

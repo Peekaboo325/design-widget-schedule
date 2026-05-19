@@ -36,6 +36,14 @@ export default function useSettings() {
     }
   }, [])
 
+  // 드래그 스냅으로 사이즈 변경 시 settings.size 동기화
+  useEffect(() => {
+    const off = window.widgetAPI?.onSizeChanged?.((key) => {
+      setSettings((s) => ({ ...s, size: key }))
+    })
+    return () => off?.()
+  }, [])
+
   const setAlwaysOnTop = useCallback(async (value) => {
     const next = await window.widgetAPI?.setAlwaysOnTop(value)
     setSettings((s) => ({ ...s, alwaysOnTop: next ?? value }))
@@ -132,9 +140,10 @@ function applyTheme(hex, mode) {
     root.style.setProperty('--widget-row-border', 'rgba(0, 0, 0, 0.06)')
   } else {
     root.style.setProperty('--widget-bg', 'rgba(26, 26, 30, 0.94)')
+    // 다크 모드 헤더 — 액센트 비중 강화 (칙칙함 해소)
     root.style.setProperty(
       '--widget-header-bg',
-      `color-mix(in oklab, ${hex} 48%, rgba(26, 26, 30, 0.94))`
+      `color-mix(in oklab, ${hex} 78%, #1a1a1e)`
     )
     root.style.setProperty('--widget-card-bg', '#25252b')
     root.style.setProperty('--widget-card-border', 'rgba(255, 255, 255, 0.06)')

@@ -46,9 +46,9 @@ const GAS_BASE =
 
 const API_TIMEOUT_MS = 12000
 
-// 위젯 크기 프리셋
+// 위젯 크기 프리셋 (마우스 드래그 시 가장 가까운 프리셋으로 스냅)
 const SIZE_PRESETS = {
-  S: { width: 220, height: 180 },
+  S: { width: 240, height: 220 },
   M: { width: 300, height: 380 },
   L: { width: 360, height: 560 }
 }
@@ -92,11 +92,13 @@ function createWindow() {
   const winOpts = {
     width: sizePreset.width,
     height: sizePreset.height,
-    minWidth: 200,
-    minHeight: 160,
+    minWidth: 220,
+    minHeight: 200,
+    maxWidth: 480,
+    maxHeight: 700,
     frame: false,
     transparent: true,
-    resizable: false,
+    resizable: true,
     alwaysOnTop: initial.alwaysOnTop,
     hasShadow: false,
     skipTaskbar: true, // 작업표시줄·Alt+Tab에서 숨김 (트레이 전용)
@@ -127,6 +129,26 @@ function createWindow() {
     }
   })
 
+  // 드래그 리사이즈 → 가장 가까운 프리셋으로 스냅 (300ms debounce)
+  let snapTimer = null
+  mainWindow.on('resize', () => {
+    if (snapTimer) clearTimeout(snapTimer)
+    snapTimer = setTimeout(() => {
+      if (!mainWindow || mainWindow.isDestroyed()) return
+      const [w, h] = mainWindow.getSize()
+      const key = findNearestPreset(w, h)
+      const preset = SIZE_PRESETS[key]
+      // 이미 정확한 프리셋이면 스킵 (setSize 자체가 트리거하는 무한 루프 방지)
+      if (w !== preset.width || h !== preset.height) {
+        mainWindow.setSize(preset.width, preset.height, true)
+      }
+      if (store.get('size') !== key) {
+        store.set('size', key)
+        mainWindow.webContents.send('size-changed', key)
+      }
+    }, 300)
+  })
+
   mainWindow.once('ready-to-show', () => {
     mainWindow.show()
   })
@@ -136,6 +158,21 @@ function createWindow() {
   } else {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'))
   }
+}
+
+// 현재 사이즈에 가장 가까운 프리셋 키 반환 (드래그 스냅용)
+function findNearestPreset(w, h) {
+  let nearest = 'L'
+  let minDist = Infinity
+  for (const key of Object.keys(SIZE_PRESETS)) {
+    const p = SIZE_PRESETS[key]
+    const dist = Math.abs(w - p.width) + Math.abs(h - p.height)
+    if (dist < minDist) {
+      minDist = dist
+      nearest = key
+    }
+  }
+  return nearest
 }
 
 // 위젯의 현재 위치가 어떤 디스플레이의 작업영역에 걸쳐 있는지
@@ -354,20 +391,24 @@ ipcMain.handle('window:set-opacity', (_event, value) => {
 })
 
 // 크기 전환 (S/M/L 프리셋)
-// resizable: false + transparent 조합에서 두 번째 setSize가 무시되는 케이스가 있어
-// 매번 resizable을 잠시 풀어준 뒤 새 사이즈를 적용하고 다시 잠금.
+// resizable: true 가 기본이라 별도 트릭 없이 setSize 호출
+// 이후 resize 이벤트의 스냅 로직이 같은 프리셋으로 안정화
 ipcMain.handle('window:set-size', (_event, sizeKey) => {
   if (!mainWindow) return null
   const preset = SIZE_PRESETS[sizeKey]
   if (!preset) return store.get('size')
-
-  const wasResizable = mainWindow.isResizable()
-  if (!wasResizable) mainWindow.setResizable(true)
   mainWindow.setSize(preset.width, preset.height, true)
-  if (!wasResizable) mainWindow.setResizable(false)
-
   store.set('size', sizeKey)
   return sizeKey
+})
+
+// macOS 시스템 이모지 패널 호출 (직접 입력 input focus 시)
+ipcMain.handle('show-emoji-panel', () => {
+  if (process.platform === 'darwin' && typeof app.showEmojiPanel === 'function') {
+    app.showEmojiPanel()
+    return true
+  }
+  return false
 })
 
 // 테마 컬러는 렌더러 측 CSS 변수로만 적용 → 저장만 담당

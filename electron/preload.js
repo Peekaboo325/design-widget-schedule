@@ -32,6 +32,16 @@ const api = {
   setMemberEmoji: (member, emoji) =>
     ipcRenderer.invoke('settings:set-member-emoji', member, emoji),
 
+  // macOS 시스템 이모지 패널 호출 (직접 입력 input focus 시)
+  showEmojiPanel: () => ipcRenderer.invoke('show-emoji-panel'),
+
+  // 드래그 스냅으로 사이즈 변경됐을 때 알림
+  onSizeChanged: (cb) => {
+    const handler = (_e, key) => cb(key)
+    ipcRenderer.on('size-changed', handler)
+    return () => ipcRenderer.removeListener('size-changed', handler)
+  },
+
   // GAS API 프록시 호출 (CSP/CORS 우회용)
   apiGet: (params) => ipcRenderer.invoke('api:get', params),
   apiPost: (body) => ipcRenderer.invoke('api:post', body),

@@ -56,19 +56,23 @@ export default function EmojiPicker({ value, onChange, onClose }) {
           placeholder="직접 입력"
           value={custom}
           onChange={(e) => setCustom(e.target.value)}
+          onFocus={() => {
+            // macOS면 시스템 이모지 패널을 자동으로 띄움 (Windows/Linux는 무시)
+            window.widgetAPI?.showEmojiPanel?.()
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') applyCustom()
           }}
           className={styles.customInput}
-          autoFocus
         />
         <button
           type="button"
           className={styles.customApply}
           onClick={applyCustom}
           disabled={!custom.trim()}
+          aria-label="적용"
         >
-          적용
+          ✓
         </button>
       </div>
     </div>
