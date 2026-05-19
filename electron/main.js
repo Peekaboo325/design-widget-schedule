@@ -5,7 +5,8 @@ import {
   Menu,
   Notification,
   Tray,
-  nativeImage
+  nativeImage,
+  screen
 } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
@@ -128,6 +129,61 @@ function createWindow() {
   }
 }
 
+// 위젯의 현재 위치가 어떤 디스플레이의 작업영역에 걸쳐 있는지
+function isWindowOnAnyDisplay() {
+  if (!mainWindow || mainWindow.isDestroyed()) return false
+  const [winW, winH] = mainWindow.getSize()
+  const [winX, winY] = mainWindow.getPosition()
+  return screen.getAllDisplays().some(
+    (d) =>
+      winX + winW > d.workArea.x &&
+      winX < d.workArea.x + d.workArea.width &&
+      winY + winH > d.workArea.y &&
+      winY < d.workArea.y + d.workArea.height
+  )
+}
+
+// 위젯을 화면 안 안전한 위치로 표시
+// - destroy 됐으면 재생성
+// - 화면 밖이면 마우스 가까운 디스플레이의 우상단으로 보정
+// - show + focus
+function showWindowSafely() {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    createWindow()
+    return
+  }
+  if (!isWindowOnAnyDisplay()) {
+    const cursor = screen.getCursorScreenPoint()
+    const display = screen.getDisplayNearestPoint(cursor)
+    const work = display.workArea
+    const [winW, winH] = mainWindow.getSize()
+    mainWindow.setPosition(
+      Math.round(work.x + work.width - winW - 24),
+      Math.round(work.y + 24)
+    )
+  }
+  if (!mainWindow.isVisible()) mainWindow.show()
+  mainWindow.focus()
+}
+
+// 위젯 위치 초기화 — 명시적 비상 버튼
+function resetWindowPosition() {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    createWindow()
+    return
+  }
+  const cursor = screen.getCursorScreenPoint()
+  const display = screen.getDisplayNearestPoint(cursor)
+  const work = display.workArea
+  const [winW, winH] = mainWindow.getSize()
+  mainWindow.setPosition(
+    Math.round(work.x + work.width - winW - 24),
+    Math.round(work.y + 24)
+  )
+  if (!mainWindow.isVisible()) mainWindow.show()
+  mainWindow.focus()
+}
+
 // 트레이 아이콘 + 우클릭 메뉴 + 좌클릭 토글
 function createTray() {
   const iconPath = resolveIconPath()
@@ -141,6 +197,15 @@ function createTray() {
   tray.setToolTip('디자인 위젯')
 
   const contextMenu = Menu.buildFromTemplate([
+    {
+      label: '위젯 보이기',
+      click: () => showWindowSafely()
+    },
+    {
+      label: '위젯 위치 초기화',
+      click: () => resetWindowPosition()
+    },
+    { type: 'separator' },
     {
       label: '새로고침',
       click: () => {
@@ -162,17 +227,19 @@ function createTray() {
   ])
   tray.setContextMenu(contextMenu)
 
-  // 좌클릭: 위젯 보이기/숨기기 토글 (안전망)
-  // mainWindow가 어떤 이유로든 destroy 됐으면 재생성
+  // 좌클릭 토글
+  // - 정상적으로 보이고 화면 안에 있으면 hide
+  // - 그 외(숨김/destroy/화면 밖)는 모두 안전하게 표시 + 위치 보정
   tray.on('click', () => {
-    if (!mainWindow || mainWindow.isDestroyed()) {
-      createWindow()
-      return
-    }
-    if (mainWindow.isVisible()) mainWindow.hide()
-    else {
-      mainWindow.show()
-      mainWindow.focus()
+    if (
+      mainWindow &&
+      !mainWindow.isDestroyed() &&
+      mainWindow.isVisible() &&
+      isWindowOnAnyDisplay()
+    ) {
+      mainWindow.hide()
+    } else {
+      showWindowSafely()
     }
   })
 }
