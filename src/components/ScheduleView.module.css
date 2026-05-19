@@ -203,6 +203,11 @@
   border-bottom: 1px solid var(--widget-row-border);
 }
 
+/* NEW 0건일 때: dot 컬럼 제거 → 광고주가 좌측 끝부터 시작 */
+.tableNoMarker .tableRow {
+  grid-template-columns: minmax(60px, 1fr) minmax(80px, 2.4fr) auto auto;
+}
+
 .tableRow:last-child {
   border-bottom: none;
 }

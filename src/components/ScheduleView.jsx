@@ -96,21 +96,25 @@ function ScheduleTable({ schedule, newKeys }) {
       </div>
     )
   }
+  // NEW 항목이 하나라도 있을 때만 dot 컬럼 노출 → 평소엔 광고주가 좌측 끝
+  const hasAnyNew = (newKeys?.size ?? 0) > 0
   return (
     <div className={styles.tableWrap}>
       <div className={styles.sectionHead}>
         <span className={styles.sectionLabel}>잔여 스케줄</span>
         <span className={styles.sectionCount}>{schedule.length}건</span>
       </div>
-      <ul className={styles.table}>
+      <ul className={`${styles.table} ${hasAnyNew ? '' : styles.tableNoMarker}`}>
         {schedule.map((item, i) => {
           const isNew = newKeys?.has(scheduleKey(item))
           return (
             <li key={i} className={styles.tableRow}>
-              <span
-                className={`${styles.cellMarker} ${isNew ? styles.cellMarkerNew : ''}`}
-                aria-label={isNew ? '새 항목' : undefined}
-              />
+              {hasAnyNew && (
+                <span
+                  className={`${styles.cellMarker} ${isNew ? styles.cellMarkerNew : ''}`}
+                  aria-label={isNew ? '새 항목' : undefined}
+                />
+              )}
               <span className={styles.cellClient} title={item['광고주']}>
                 {item['광고주']}
               </span>
