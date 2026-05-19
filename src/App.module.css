@@ -65,7 +65,7 @@
 }
 
 .iconBtn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--widget-overlay-strong);
   color: var(--widget-fg);
 }
 
@@ -75,7 +75,7 @@
 }
 
 .iconBtnActive {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--widget-overlay-strong);
   color: var(--widget-fg);
 }
 

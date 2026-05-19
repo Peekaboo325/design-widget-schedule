@@ -6,6 +6,9 @@
   --widget-accent: #7aa2ff;
   --widget-radius: 14px;
   --widget-border: rgba(255, 255, 255, 0.08);
+  --widget-overlay: rgba(0, 0, 0, 0.12); /* 패널/뱃지 배경 */
+  --widget-overlay-strong: rgba(255, 255, 255, 0.08); /* 호버/세그먼티드 */
+  --widget-row-border: rgba(255, 255, 255, 0.04);
 }
 
 * {

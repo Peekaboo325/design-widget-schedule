@@ -26,7 +26,8 @@ const store = new Store({
     opacity: 1.0,
     themeColor: '#7aa2ff',
     size: 'L',
-    activeMember: null
+    activeMember: null,
+    mode: 'dark'
   }
 })
 
@@ -79,8 +80,16 @@ ipcMain.handle('settings:get-all', () => ({
   opacity: store.get('opacity'),
   themeColor: store.get('themeColor'),
   size: store.get('size'),
-  activeMember: store.get('activeMember')
+  activeMember: store.get('activeMember'),
+  mode: store.get('mode')
 }))
+
+// 다크/라이트 모드 저장
+ipcMain.handle('settings:set-mode', (_event, mode) => {
+  const next = mode === 'light' ? 'light' : 'dark'
+  store.set('mode', next)
+  return next
+})
 
 // 활성 팀원 저장 (null 허용: 미선택 상태)
 ipcMain.handle('settings:set-active-member', (_event, name) => {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import styles from './App.module.css'
 import SettingsPanel from './components/SettingsPanel.jsx'
 import ScheduleView from './components/ScheduleView.jsx'
@@ -41,8 +41,23 @@ export default function App() {
     setOpacity,
     setSize,
     setThemeColor,
+    setMode,
     setActiveMember
   } = useSettings()
+
+  // 설정 패널 외부 클릭 시 닫기 (⚙ 버튼은 토글이라 ref로 제외)
+  const settingsBtnRef = useRef(null)
+  const settingsPanelRef = useRef(null)
+  useEffect(() => {
+    if (!settingsOpen) return
+    function handle(e) {
+      if (settingsBtnRef.current?.contains(e.target)) return
+      if (settingsPanelRef.current?.contains(e.target)) return
+      setSettingsOpen(false)
+    }
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [settingsOpen])
 
   // L이 아닐 때 체크리스트 탭에 머물러 있으면 강제 복귀
   useEffect(() => {
@@ -98,6 +113,7 @@ export default function App() {
         </div>
         <div className={styles.headerActions}>
           <button
+            ref={settingsBtnRef}
             type="button"
             className={`${styles.iconBtn} ${settingsOpen ? styles.iconBtnActive : ''}`}
             aria-label="설정"
@@ -121,16 +137,19 @@ export default function App() {
       </header>
 
       {settingsOpen && ready && (
-        <SettingsPanel
-          size={settings.size}
-          settings={settings}
-          members={members}
-          onChangeMember={setActiveMember}
-          onToggleAlwaysOnTop={setAlwaysOnTop}
-          onChangeOpacity={setOpacity}
-          onChangeThemeColor={setThemeColor}
-          onChangeSize={setSize}
-        />
+        <div ref={settingsPanelRef}>
+          <SettingsPanel
+            size={settings.size}
+            settings={settings}
+            members={members}
+            onChangeMember={setActiveMember}
+            onToggleAlwaysOnTop={setAlwaysOnTop}
+            onChangeOpacity={setOpacity}
+            onChangeThemeColor={setThemeColor}
+            onChangeMode={setMode}
+            onChangeSize={setSize}
+          />
+        </div>
       )}
 
       {showTabs && (
@@ -141,7 +160,7 @@ export default function App() {
             onClick={() => setActiveTab('schedule')}
           />
           <TabButton
-            label="점검"
+            label="셀프 체크"
             active={activeTab === 'checklist'}
             onClick={() => setActiveTab('checklist')}
           />

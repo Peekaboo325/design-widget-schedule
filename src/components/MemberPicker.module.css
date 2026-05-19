@@ -40,7 +40,7 @@
 .item {
   width: 100%;
   text-align: left;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--widget-overlay);
   border: 1px solid var(--widget-border);
   color: var(--widget-fg);
   padding: 8px 12px;

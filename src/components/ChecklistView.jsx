@@ -24,7 +24,7 @@ export default function ChecklistView({ checked, onToggle, onResetAll }) {
           disabled={checkedCount === 0}
           aria-label="전체 리셋"
         >
-          전체 리셋
+          RESET
         </button>
       </div>
 

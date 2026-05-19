@@ -4,50 +4,17 @@
   gap: 12px;
   padding: 12px 14px 14px;
   border-bottom: 1px solid var(--widget-border);
-  background: rgba(0, 0, 0, 0.12);
+  background: var(--widget-overlay);
 }
 
-/* S 사이즈: 좁은 너비에 맞춰 패딩/간격 컴팩트 */
+/* S 사이즈: 행 수가 줄어든 만큼 여백을 넉넉히 */
 .panelCompact {
-  gap: 8px;
-  padding: 8px 10px 10px;
-}
-
-.panelCompact .row {
-  min-height: 20px;
-}
-
-.panelCompact .rowLabel {
-  font-size: 10px;
+  gap: 14px;
+  padding: 14px 12px;
 }
 
 .panelCompact .range {
-  width: 90px;
-}
-
-.panelCompact .toggle {
-  width: 28px;
-  height: 16px;
-}
-
-.panelCompact .toggleKnob {
-  width: 12px;
-  height: 12px;
-}
-
-.panelCompact .toggleOn .toggleKnob {
-  transform: translateX(12px);
-}
-
-.panelCompact .segment {
-  padding: 2px 7px;
-  font-size: 10px;
-}
-
-.panelCompact .swatch,
-.panelCompact .picker {
-  width: 16px;
-  height: 16px;
+  width: 100px;
 }
 
 .row {
@@ -81,36 +48,38 @@
   width: 32px;
   height: 18px;
   border-radius: 999px;
-  border: none;
-  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid var(--widget-border);
+  background: var(--widget-overlay-strong);
   cursor: pointer;
   padding: 0;
-  transition: background 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .toggleOn {
   background: var(--widget-accent);
+  border-color: var(--widget-accent);
 }
 
 .toggleKnob {
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  background: #fff;
-  transition: transform 0.15s ease;
+  background: var(--widget-fg);
+  transition: transform 0.15s ease, background 0.15s ease;
 }
 
 .toggleOn .toggleKnob {
   transform: translateX(14px);
+  background: #fff;
 }
 
-/* 세그먼티드 (S/M/L) */
+/* 세그먼티드 (S/M/L, 다크/라이트) */
 .segmented {
   display: inline-flex;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--widget-overlay-strong);
   border-radius: 6px;
   padding: 2px;
 }
@@ -137,7 +106,7 @@
   -webkit-appearance: none;
   width: 110px;
   height: 4px;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--widget-overlay-strong);
   border-radius: 999px;
   outline: none;
   cursor: pointer;
@@ -171,8 +140,8 @@
 }
 
 .swatchActive {
-  border-color: #fff;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.3);
+  border-color: var(--widget-fg);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
 }
 
 /* 컬러피커: 네이티브 input은 작은 점 + 클릭 영역만 노출 */
@@ -181,7 +150,7 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  border: 1px dashed rgba(255, 255, 255, 0.4);
+  border: 1px dashed var(--widget-muted);
   display: inline-flex;
   align-items: center;
   justify-content: center;

@@ -134,9 +134,7 @@ function PendingList({ pending }) {
         <span className={styles.sectionLabel}>공유대기</span>
         <span className={styles.sectionCount}>{pending.length}건</span>
       </div>
-      {pending.length === 0 ? (
-        <p className={styles.empty}>없음</p>
-      ) : (
+      {pending.length > 0 && (
         <ul className={styles.table}>
           {pending.map((item, i) => (
             <li key={i} className={styles.tableRow}>
@@ -156,13 +154,12 @@ function PendingList({ pending }) {
 }
 
 // 광고주별 합계 (M 사이즈 전용)
+// 스케줄러 원본 순서를 유지 — 첫 등장 순으로 누적
 function groupByClient(schedule) {
   const map = new Map()
   for (const item of schedule) {
     const key = item['광고주'] ?? '(미지정)'
     map.set(key, (map.get(key) ?? 0) + (Number(item['수량']) || 1))
   }
-  return Array.from(map.entries())
-    .map(([client, count]) => ({ client, count }))
-    .sort((a, b) => b.count - a.count)
+  return Array.from(map.entries()).map(([client, count]) => ({ client, count }))
 }

@@ -8,7 +8,8 @@ const DEFAULTS = {
   opacity: 1.0,
   themeColor: '#7aa2ff',
   size: 'L',
-  activeMember: null
+  activeMember: null,
+  mode: 'dark' // 'dark' | 'light'
 }
 
 export default function useSettings() {
@@ -20,14 +21,14 @@ export default function useSettings() {
     async function init() {
       const api = window.widgetAPI
       if (!api) {
-        // preload 미주입 환경(예: 일반 브라우저 dev) 대비
         setReady(true)
         return
       }
       const initial = await api.getSettings()
       if (cancelled) return
-      setSettings({ ...DEFAULTS, ...initial })
-      applyThemeColor(initial.themeColor ?? DEFAULTS.themeColor)
+      const merged = { ...DEFAULTS, ...initial }
+      setSettings(merged)
+      applyTheme(merged.themeColor, merged.mode)
       setReady(true)
     }
     init()
@@ -36,32 +37,41 @@ export default function useSettings() {
     }
   }, [])
 
-  // 항상 위 고정 토글
   const setAlwaysOnTop = useCallback(async (value) => {
     const next = await window.widgetAPI?.setAlwaysOnTop(value)
     setSettings((s) => ({ ...s, alwaysOnTop: next ?? value }))
   }, [])
 
-  // 투명도 (0.4 ~ 1.0)
   const setOpacity = useCallback(async (value) => {
     const next = await window.widgetAPI?.setOpacity(value)
     setSettings((s) => ({ ...s, opacity: next ?? value }))
   }, [])
 
-  // 크기 전환
   const setSize = useCallback(async (sizeKey) => {
     const next = await window.widgetAPI?.setSize(sizeKey)
     setSettings((s) => ({ ...s, size: next ?? sizeKey }))
   }, [])
 
-  // 테마 컬러 (CSS 변수 즉시 반영 + main에 저장 요청)
+  // 테마 컬러 변경 (현재 모드와 함께 즉시 반영)
   const setThemeColor = useCallback(async (hex) => {
-    applyThemeColor(hex)
+    setSettings((s) => {
+      applyTheme(hex, s.mode)
+      return s
+    })
     const saved = await window.widgetAPI?.setThemeColor(hex)
     setSettings((s) => ({ ...s, themeColor: saved ?? hex }))
   }, [])
 
-  // 활성 팀원 선택 (null이면 미선택 상태로 되돌림)
+  // 다크/라이트 모드
+  const setMode = useCallback(async (mode) => {
+    setSettings((s) => {
+      applyTheme(s.themeColor, mode)
+      return s
+    })
+    const saved = await window.widgetAPI?.setMode(mode)
+    setSettings((s) => ({ ...s, mode: saved ?? mode }))
+  }, [])
+
   const setActiveMember = useCallback(async (name) => {
     const saved = await window.widgetAPI?.setActiveMember(name)
     setSettings((s) => ({ ...s, activeMember: saved ?? name }))
@@ -74,23 +84,47 @@ export default function useSettings() {
     setOpacity,
     setSize,
     setThemeColor,
+    setMode,
     setActiveMember
   }
 }
 
-// 테마 컬러를 CSS 변수로 적용
-// --widget-accent: 포인트 색
-// --widget-bg: 다크 베이스에 액센트를 진하게 섞은 틴트 배경
-// --widget-header-bg: 헤더 영역 강조용 더 진한 틴트
-function applyThemeColor(hex) {
+// 테마 컬러 + 모드를 CSS 변수로 적용
+// 다크: 어두운 베이스 + 액센트 진한 틴트
+// 라이트: 밝은 베이스 + 액센트 옅은 틴트 (가독성 위해 옅게)
+function applyTheme(hex, mode) {
   const root = document.documentElement
   root.style.setProperty('--widget-accent', hex)
-  root.style.setProperty(
-    '--widget-bg',
-    `color-mix(in oklab, ${hex} 20%, rgba(28, 28, 32, 0.92))`
-  )
-  root.style.setProperty(
-    '--widget-header-bg',
-    `color-mix(in oklab, ${hex} 28%, rgba(28, 28, 32, 0.92))`
-  )
+
+  if (mode === 'light') {
+    root.style.setProperty(
+      '--widget-bg',
+      `color-mix(in oklab, ${hex} 14%, rgba(248, 248, 250, 0.94))`
+    )
+    root.style.setProperty(
+      '--widget-header-bg',
+      `color-mix(in oklab, ${hex} 22%, rgba(248, 248, 250, 0.94))`
+    )
+    root.style.setProperty('--widget-fg', '#1c1c20')
+    root.style.setProperty('--widget-muted', 'rgba(28, 28, 32, 0.55)')
+    root.style.setProperty('--widget-border', 'rgba(0, 0, 0, 0.1)')
+    root.style.setProperty('--widget-overlay', 'rgba(0, 0, 0, 0.05)')
+    root.style.setProperty('--widget-overlay-strong', 'rgba(0, 0, 0, 0.08)')
+    root.style.setProperty('--widget-row-border', 'rgba(0, 0, 0, 0.06)')
+  } else {
+    root.style.setProperty(
+      '--widget-bg',
+      `color-mix(in oklab, ${hex} 20%, rgba(28, 28, 32, 0.92))`
+    )
+    root.style.setProperty(
+      '--widget-header-bg',
+      `color-mix(in oklab, ${hex} 28%, rgba(28, 28, 32, 0.92))`
+    )
+    root.style.setProperty('--widget-fg', '#f4f4f6')
+    root.style.setProperty('--widget-muted', 'rgba(244, 244, 246, 0.6)')
+    root.style.setProperty('--widget-border', 'rgba(255, 255, 255, 0.08)')
+    root.style.setProperty('--widget-overlay', 'rgba(0, 0, 0, 0.12)')
+    root.style.setProperty('--widget-overlay-strong', 'rgba(255, 255, 255, 0.08)')
+    root.style.setProperty('--widget-row-border', 'rgba(255, 255, 255, 0.04)')
+  }
 }

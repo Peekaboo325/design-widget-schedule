@@ -21,6 +21,9 @@ const api = {
   // 활성 팀원 저장
   setActiveMember: (name) => ipcRenderer.invoke('settings:set-active-member', name),
 
+  // 다크/라이트 모드
+  setMode: (mode) => ipcRenderer.invoke('settings:set-mode', mode),
+
   // GAS API 프록시 호출 (CSP/CORS 우회용)
   apiGet: (params) => ipcRenderer.invoke('api:get', params)
 }
