@@ -54,7 +54,8 @@ const store = new Store({
     size: 'L',
     activeMember: null,
     mode: 'dark',
-    launchOnBoot: false
+    launchOnBoot: false,
+    memberEmoji: {} // { '부수빈': '🐰', ... }
   }
 })
 
@@ -247,8 +248,24 @@ ipcMain.handle('settings:get-all', () => ({
   size: store.get('size'),
   activeMember: store.get('activeMember'),
   mode: store.get('mode'),
-  launchOnBoot: store.get('launchOnBoot')
+  launchOnBoot: store.get('launchOnBoot'),
+  memberEmoji: store.get('memberEmoji') ?? {}
 }))
+
+// 멤버별 프로필 이모지 저장
+ipcMain.handle('settings:set-member-emoji', (_event, member, emoji) => {
+  if (typeof member !== 'string' || !member) return null
+  const map = { ...(store.get('memberEmoji') ?? {}) }
+  const trimmed = typeof emoji === 'string' ? emoji.trim() : ''
+  if (!trimmed) {
+    delete map[member]
+  } else {
+    // 이모지 또는 1~2자만 허용
+    map[member] = Array.from(trimmed).slice(0, 2).join('')
+  }
+  store.set('memberEmoji', map)
+  return map[member] ?? null
+})
 
 // 컴퓨터 시작 시 자동 실행
 ipcMain.handle('settings:set-launch-on-boot', (_event, value) => {

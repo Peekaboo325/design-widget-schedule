@@ -23,11 +23,13 @@
 
 .resetBtn {
   font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
   background: transparent;
   border: 1px solid var(--widget-border);
   color: var(--widget-muted);
-  border-radius: 4px;
-  padding: 2px 8px;
+  border-radius: var(--widget-pill);
+  padding: 3px 10px;
   cursor: pointer;
 }
 

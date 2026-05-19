@@ -1,14 +1,13 @@
 .popover {
   position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 46px; /* footer + pendingRow 위 */
+  left: 14px;
+  right: 14px;
+  bottom: 48px;
   z-index: 30;
-  background: var(--widget-bg);
-  border: 1px solid var(--widget-border);
-  border-radius: 8px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(12px);
+  background: var(--widget-card-bg);
+  border: 1px solid var(--widget-card-border);
+  border-radius: 14px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
   overflow: hidden;
   animation: popIn 0.15s ease-out;
 }
@@ -67,9 +66,9 @@
 
 /* 커스텀 체크박스 — 클릭 시 즉시 사라지므로 체크 표시는 불필요, 빈 사각형만 */
 .checkbox {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
   border: 1.5px solid var(--widget-muted);
   background: transparent;
   cursor: pointer;

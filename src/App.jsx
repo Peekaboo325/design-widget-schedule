@@ -10,7 +10,10 @@ import useSchedule from './hooks/useSchedule.js'
 import useSeenSchedule from './hooks/useSeenSchedule.js'
 import Toast from './components/Toast.jsx'
 import PendingPopover from './components/PendingPopover.jsx'
+import Avatar from './components/Avatar.jsx'
+import EmojiPicker from './components/EmojiPicker.jsx'
 import { shortName, nextStatus } from './lib/format.js'
+import { resolveMemberEmoji } from './lib/emoji.js'
 import { setRowStatus, setRowShare } from './lib/api.js'
 import { scheduleKey } from './components/ScheduleView.jsx'
 
@@ -48,8 +51,12 @@ export default function App() {
     setThemeColor,
     setMode,
     setActiveMember,
-    setLaunchOnBoot
+    setLaunchOnBoot,
+    setMemberEmoji
   } = useSettings()
+
+  // 프로필 이모지 피커
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false)
 
   // 설정 패널 외부 클릭 시 닫기 (⚙ 버튼은 토글이라 ref로 제외)
   const settingsBtnRef = useRef(null)
@@ -305,6 +312,23 @@ export default function App() {
     <div className={styles.widget} data-size={settings.size}>
       <header className={styles.header}>
         <div className={styles.headerLeft}>
+          {activeMember && (
+            <div className={styles.avatarSlot}>
+              <Avatar
+                emoji={resolveMemberEmoji(activeMember, settings.memberEmoji)}
+                size={settings.size === 'S' ? 32 : 40}
+                onClick={() => setEmojiPickerOpen((v) => !v)}
+                title={`${activeMember} — 클릭해서 이모지 변경`}
+              />
+              {emojiPickerOpen && (
+                <EmojiPicker
+                  value={resolveMemberEmoji(activeMember, settings.memberEmoji)}
+                  onChange={(emoji) => setMemberEmoji(activeMember, emoji)}
+                  onClose={() => setEmojiPickerOpen(false)}
+                />
+              )}
+            </div>
+          )}
           <span className={styles.date}>{todayLabel}</span>
         </div>
         <div className={styles.headerActions}>
@@ -363,50 +387,52 @@ export default function App() {
         </div>
       ) : (
         <>
-          {showTabs && (
-            <nav className={styles.tabs}>
-              <TabButton
-                label="스케줄"
-                active={activeTab === 'schedule'}
-                onClick={() => setActiveTab('schedule')}
-              />
-              <TabButton
-                label="셀프 체크"
-                active={activeTab === 'checklist'}
-                onClick={() => setActiveTab('checklist')}
-              />
-            </nav>
-          )}
-
-          <main className={styles.body}>
-            {needsMemberPick ? (
-              <MemberPicker
-                members={members}
-                loading={membersLoading}
-                error={membersError}
-                onSelect={setActiveMember}
-              />
-            ) : activeTab === 'checklist' ? (
-              <ChecklistView
-                checked={checked}
-                onToggle={toggleChecked}
-                onResetAll={resetChecked}
-              />
-            ) : (
-              <Body
-                size={settings.size}
-                membersLoading={membersLoading}
-                membersError={membersError}
-                activeMember={activeMember}
-                scheduleData={scheduleData}
-                scheduleLoading={scheduleLoading}
-                scheduleError={scheduleError}
-                newKeys={newKeys}
-                onStatusClick={handleStatusClick}
-                onPendingClick={handlePendingClick}
-              />
+          <div className={styles.bodyCard}>
+            {showTabs && (
+              <nav className={styles.tabs}>
+                <TabButton
+                  label="스케줄"
+                  active={activeTab === 'schedule'}
+                  onClick={() => setActiveTab('schedule')}
+                />
+                <TabButton
+                  label="셀프 체크"
+                  active={activeTab === 'checklist'}
+                  onClick={() => setActiveTab('checklist')}
+                />
+              </nav>
             )}
-          </main>
+
+            <main className={styles.body}>
+              {needsMemberPick ? (
+                <MemberPicker
+                  members={members}
+                  loading={membersLoading}
+                  error={membersError}
+                  onSelect={setActiveMember}
+                />
+              ) : activeTab === 'checklist' ? (
+                <ChecklistView
+                  checked={checked}
+                  onToggle={toggleChecked}
+                  onResetAll={resetChecked}
+                />
+              ) : (
+                <Body
+                  size={settings.size}
+                  membersLoading={membersLoading}
+                  membersError={membersError}
+                  activeMember={activeMember}
+                  scheduleData={scheduleData}
+                  scheduleLoading={scheduleLoading}
+                  scheduleError={scheduleError}
+                  newKeys={newKeys}
+                  onStatusClick={handleStatusClick}
+                  onPendingClick={handlePendingClick}
+                />
+              )}
+            </main>
+          </div>
           {showFooter && (
             <footer className={styles.footer}>
               {activeMember && (

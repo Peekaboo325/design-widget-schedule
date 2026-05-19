@@ -1,16 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 
-// 위젯 공통 설정 훅
-// 마운트 시 main 프로세스 store에서 값을 가져와 초기화
-// 각 setter는 IPC로 main에 반영하고 로컬 state도 동기화
 const DEFAULTS = {
   alwaysOnTop: true,
   opacity: 1.0,
   themeColor: '#7aa2ff',
   size: 'L',
   activeMember: null,
-  mode: 'dark', // 'dark' | 'light'
-  launchOnBoot: false
+  mode: 'dark',
+  launchOnBoot: false,
+  memberEmoji: {} // { '부수빈': '🐰', ... }
 }
 
 export default function useSettings() {
@@ -53,7 +51,6 @@ export default function useSettings() {
     setSettings((s) => ({ ...s, size: next ?? sizeKey }))
   }, [])
 
-  // 테마 컬러 변경 (현재 모드와 함께 즉시 반영)
   const setThemeColor = useCallback(async (hex) => {
     setSettings((s) => {
       applyTheme(hex, s.mode)
@@ -63,7 +60,6 @@ export default function useSettings() {
     setSettings((s) => ({ ...s, themeColor: saved ?? hex }))
   }, [])
 
-  // 다크/라이트 모드
   const setMode = useCallback(async (mode) => {
     setSettings((s) => {
       applyTheme(s.themeColor, mode)
@@ -78,10 +74,19 @@ export default function useSettings() {
     setSettings((s) => ({ ...s, activeMember: saved ?? name }))
   }, [])
 
-  // 컴퓨터 시작 시 자동 실행
   const setLaunchOnBoot = useCallback(async (value) => {
     const saved = await window.widgetAPI?.setLaunchOnBoot(value)
     setSettings((s) => ({ ...s, launchOnBoot: saved ?? value }))
+  }, [])
+
+  // 멤버별 프로필 이모지
+  const setMemberEmoji = useCallback(async (member, emoji) => {
+    if (!member) return
+    const saved = await window.widgetAPI?.setMemberEmoji(member, emoji)
+    setSettings((s) => ({
+      ...s,
+      memberEmoji: { ...(s.memberEmoji ?? {}), [member]: saved ?? emoji }
+    }))
   }, [])
 
   return {
@@ -93,53 +98,55 @@ export default function useSettings() {
     setThemeColor,
     setMode,
     setActiveMember,
-    setLaunchOnBoot
+    setLaunchOnBoot,
+    setMemberEmoji
   }
 }
 
 // 테마 컬러 + 모드를 CSS 변수로 적용
-// 다크: 어두운 베이스 + 액센트 진한 틴트
-// 라이트: 거의 순백 베이스 + 액센트 옅은 틴트 (산뜻함)
+// 핵심 컨셉:
+//   - 베이스(위젯 바깥 면)는 거의 무채색
+//   - 헤더는 액센트 컬러 풀로 채운 컬러 블록
+//   - 본문은 흰/옅은 흑 카드로 분리
+//   - 액센트 위 텍스트는 자동 흑/백 (WCAG 휘도)
 function applyTheme(hex, mode) {
   const root = document.documentElement
   root.style.setProperty('--widget-accent', hex)
-  // 액센트 위 텍스트의 대비색 (흰색 또는 검정 자동)
-  root.style.setProperty('--widget-on-accent', getContrastText(hex))
+  const onAccent = getContrastText(hex)
+  root.style.setProperty('--widget-on-accent', onAccent)
+  root.style.setProperty('--widget-on-header', onAccent)
 
   if (mode === 'light') {
-    root.style.setProperty(
-      '--widget-bg',
-      `color-mix(in oklab, ${hex} 8%, rgba(252, 252, 254, 0.96))`
-    )
+    root.style.setProperty('--widget-bg', 'rgba(252, 252, 254, 0.96)')
     root.style.setProperty(
       '--widget-header-bg',
-      `color-mix(in oklab, ${hex} 18%, rgba(252, 252, 254, 0.96))`
+      `color-mix(in oklab, ${hex} 55%, white)`
     )
+    root.style.setProperty('--widget-card-bg', '#ffffff')
+    root.style.setProperty('--widget-card-border', 'rgba(0, 0, 0, 0.06)')
     root.style.setProperty('--widget-fg', '#0f0f12')
-    root.style.setProperty('--widget-muted', 'rgba(20, 20, 24, 0.68)')
+    root.style.setProperty('--widget-muted', 'rgba(20, 20, 24, 0.62)')
     root.style.setProperty('--widget-border', 'rgba(0, 0, 0, 0.08)')
-    root.style.setProperty('--widget-overlay', 'rgba(255, 255, 255, 0.45)')
-    root.style.setProperty('--widget-overlay-strong', 'rgba(0, 0, 0, 0.06)')
+    root.style.setProperty('--widget-overlay', 'rgba(0, 0, 0, 0.04)')
+    root.style.setProperty('--widget-overlay-strong', 'rgba(0, 0, 0, 0.08)')
     root.style.setProperty('--widget-row-border', 'rgba(0, 0, 0, 0.06)')
   } else {
-    root.style.setProperty(
-      '--widget-bg',
-      `color-mix(in oklab, ${hex} 20%, rgba(28, 28, 32, 0.92))`
-    )
+    root.style.setProperty('--widget-bg', 'rgba(26, 26, 30, 0.94)')
     root.style.setProperty(
       '--widget-header-bg',
-      `color-mix(in oklab, ${hex} 28%, rgba(28, 28, 32, 0.92))`
+      `color-mix(in oklab, ${hex} 48%, rgba(26, 26, 30, 0.94))`
     )
+    root.style.setProperty('--widget-card-bg', '#25252b')
+    root.style.setProperty('--widget-card-border', 'rgba(255, 255, 255, 0.06)')
     root.style.setProperty('--widget-fg', '#f4f4f6')
     root.style.setProperty('--widget-muted', 'rgba(244, 244, 246, 0.72)')
     root.style.setProperty('--widget-border', 'rgba(255, 255, 255, 0.08)')
-    root.style.setProperty('--widget-overlay', 'rgba(0, 0, 0, 0.12)')
-    root.style.setProperty('--widget-overlay-strong', 'rgba(255, 255, 255, 0.08)')
-    root.style.setProperty('--widget-row-border', 'rgba(255, 255, 255, 0.04)')
+    root.style.setProperty('--widget-overlay', 'rgba(255, 255, 255, 0.06)')
+    root.style.setProperty('--widget-overlay-strong', 'rgba(255, 255, 255, 0.12)')
+    root.style.setProperty('--widget-row-border', 'rgba(255, 255, 255, 0.05)')
   }
 }
 
-// WCAG 상대 휘도 기반으로 액센트 컬러 위에 올릴 텍스트 색 결정
 function getContrastText(hex) {
   const c = hex.replace('#', '')
   if (c.length !== 6) return '#ffffff'
@@ -147,7 +154,6 @@ function getContrastText(hex) {
   const g = parseInt(c.slice(2, 4), 16) / 255
   const b = parseInt(c.slice(4, 6), 16) / 255
   const lum = 0.2126 * toLin(r) + 0.7152 * toLin(g) + 0.0722 * toLin(b)
-  // 0.55 기준: 노랑·연두·옅은컬러는 검정, 진한블루·퍼플·핑크는 흰색
   return lum > 0.55 ? '#1c1c20' : '#ffffff'
 }
 

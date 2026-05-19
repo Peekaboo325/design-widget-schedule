@@ -95,15 +95,16 @@
   flex-shrink: 0;
 }
 
-/* 공유대기 뱃지 */
+/* 공유 대기 뱃지 (S/M 모드) */
 .pendingBadge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 10px;
-  border-radius: 999px;
+  padding: 7px 12px;
+  border-radius: var(--widget-pill);
   background: color-mix(in oklab, var(--widget-accent) 18%, transparent);
   font-size: 11px;
+  font-weight: 600;
   align-self: flex-start;
 }
 
@@ -271,11 +272,11 @@
 
 .cellStatus {
   font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: var(--widget-pill);
+  font-weight: 700;
   white-space: nowrap;
-  min-width: 28px;
+  min-width: 32px;
   text-align: center;
 }
 

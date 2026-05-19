@@ -28,6 +28,10 @@ const api = {
   setLaunchOnBoot: (value) =>
     ipcRenderer.invoke('settings:set-launch-on-boot', value),
 
+  // 멤버별 프로필 이모지
+  setMemberEmoji: (member, emoji) =>
+    ipcRenderer.invoke('settings:set-member-emoji', member, emoji),
+
   // GAS API 프록시 호출 (CSP/CORS 우회용)
   apiGet: (params) => ipcRenderer.invoke('api:get', params),
   apiPost: (body) => ipcRenderer.invoke('api:post', body),

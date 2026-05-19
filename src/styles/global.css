@@ -9,17 +9,27 @@
 }
 
 :root {
-  --widget-bg: rgba(28, 28, 32, 0.82);
-  --widget-header-bg: rgba(28, 28, 32, 0.92);
+  /* 베이스 — 다크 기본값 (useSettings.applyTheme이 모드에 따라 덮어씀) */
+  --widget-bg: rgba(26, 26, 30, 0.94);
+  --widget-header-bg: rgba(122, 162, 255, 0.45);
+  --widget-card-bg: #25252b;
+  --widget-card-border: rgba(255, 255, 255, 0.06);
   --widget-fg: #f4f4f6;
   --widget-muted: rgba(244, 244, 246, 0.72);
   --widget-accent: #7aa2ff;
-  --widget-on-accent: #1c1c20;
-  --widget-radius: 14px;
+  --widget-on-accent: #ffffff;
+  --widget-on-header: #ffffff;
+
+  /* 쉐입 */
+  --widget-radius: 24px;
+  --widget-card-radius: 16px;
+  --widget-pill: 999px;
+
+  /* 표면 */
   --widget-border: rgba(255, 255, 255, 0.08);
-  --widget-overlay: rgba(0, 0, 0, 0.12);
-  --widget-overlay-strong: rgba(255, 255, 255, 0.08);
-  --widget-row-border: rgba(255, 255, 255, 0.04);
+  --widget-overlay: rgba(255, 255, 255, 0.06);
+  --widget-overlay-strong: rgba(255, 255, 255, 0.12);
+  --widget-row-border: rgba(255, 255, 255, 0.05);
 }
 
 * {
@@ -52,7 +62,7 @@ button {
   color: inherit;
 }
 
-/* 얇은 스크롤바 (Chromium 전용) — 테마 액센트 컬러 반영 */
+/* 얇은 스크롤바 — 테마 액센트 컬러 반영 */
 ::-webkit-scrollbar {
   width: 4px;
   height: 4px;

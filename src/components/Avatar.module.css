@@ -1,0 +1,24 @@
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--widget-card-bg);
+  color: var(--widget-fg);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+  line-height: 1;
+  transition: filter 0.12s ease, transform 0.08s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+button.avatar:hover {
+  filter: brightness(0.97);
+}
+
+button.avatar:active {
+  transform: scale(0.96);
+}

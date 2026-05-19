@@ -1,5 +1,5 @@
 .widget {
-  position: relative; /* Toast absolute 기준 */
+  position: relative;
   width: 100%;
   height: 100vh;
   display: flex;
@@ -11,111 +11,81 @@
   backdrop-filter: blur(12px);
 }
 
-/* 헤더 전체를 드래그 영역으로 지정 (Electron frameless 창 이동) */
+/* 헤더 — 액센트 컬러 블록. 드래그 영역 */
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
+  padding: 14px 14px;
   background: var(--widget-header-bg);
-  border-bottom: 1px solid var(--widget-border);
+  color: var(--widget-on-header);
   -webkit-app-region: drag;
-  gap: 8px;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
 .headerLeft {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
   min-width: 0;
 }
 
-.date {
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: -0.3px;
+.avatarSlot {
+  position: relative;
+  -webkit-app-region: no-drag;
 }
 
-.member {
-  font-size: 11px;
-  color: var(--widget-muted);
+.date {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  color: var(--widget-on-header);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .headerActions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   -webkit-app-region: no-drag;
 }
 
+/* 원형 아이콘 버튼 — 흰 카드 배경 + 액센트 아이콘 */
 .iconBtn {
-  background: transparent;
+  background: var(--widget-card-bg);
   border: none;
-  border-radius: 6px;
-  width: 22px;
-  height: 22px;
-  font-size: 13px;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--widget-muted);
+  color: var(--widget-accent);
+  flex-shrink: 0;
+  transition: filter 0.12s ease, transform 0.08s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 .iconBtn:hover:not(:disabled) {
-  background: var(--widget-overlay-strong);
-  color: var(--widget-fg);
+  filter: brightness(0.96);
+}
+
+.iconBtn:active:not(:disabled) {
+  transform: scale(0.94);
 }
 
 .iconBtn:disabled {
-  opacity: 0.4;
+  opacity: 0.5;
   cursor: default;
 }
 
 .iconBtnActive {
-  background: var(--widget-overlay-strong);
-  color: var(--widget-fg);
+  background: var(--widget-fg);
+  color: var(--widget-card-bg);
 }
 
-/* 새 스케줄 알림 뱃지 (+N) — brightness + inset highlight 펄스
-   transform/외부 shadow 없이 박스 안에서만 변화 → 잘림 X */
-.newBadge {
-  position: relative;
-  background: var(--widget-accent);
-  color: var(--widget-on-accent);
-  border: none;
-  border-radius: 999px;
-  padding: 3px 9px;
-  font-size: 11px;
-  font-weight: 800;
-  cursor: pointer;
-  line-height: 1.3;
-  letter-spacing: -0.2px;
-  margin-right: 2px;
-  animation: badgePulse 1.2s ease-in-out infinite;
-}
-
-.newBadge:hover {
-  animation-play-state: paused;
-  filter: brightness(1.15);
-}
-
-@keyframes badgePulse {
-  0%,
-  100% {
-    filter: brightness(1) saturate(1);
-    box-shadow: inset 0 0 0 0 rgba(255, 255, 255, 0);
-  }
-  50% {
-    filter: brightness(1.3) saturate(1.15);
-    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.55);
-  }
-}
-
-/* 새로고침 중 회전 */
 .iconBtnSpinning {
   animation: spin 1s linear infinite;
 }
@@ -126,28 +96,71 @@
   }
 }
 
-.body {
+/* 새 스케줄 알림 뱃지 (+N) — 알약, 흰 카드 배경 + 액센트 텍스트 */
+.newBadge {
+  position: relative;
+  background: var(--widget-card-bg);
+  color: var(--widget-accent);
+  border: none;
+  border-radius: var(--widget-pill);
+  padding: 5px 11px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  line-height: 1;
+  letter-spacing: -0.2px;
+  animation: badgePulse 1.2s ease-in-out infinite;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.newBadge:hover {
+  animation-play-state: paused;
+  filter: brightness(0.97);
+}
+
+@keyframes badgePulse {
+  0%,
+  100% {
+    filter: brightness(1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08),
+      inset 0 0 0 0 rgba(255, 255, 255, 0);
+  }
+  50% {
+    filter: brightness(1.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12),
+      inset 0 0 0 1.5px color-mix(in oklab, var(--widget-accent) 35%, transparent);
+  }
+}
+
+/* 본문 카드 wrapper — 헤더 아래 떠 있는 흰 카드 */
+.bodyCard {
+  margin: 8px;
   flex: 1;
-  padding: 14px;
   display: flex;
   flex-direction: column;
   min-height: 0;
+  background: var(--widget-card-bg);
+  border: 1px solid var(--widget-card-border);
+  border-radius: var(--widget-card-radius);
   overflow: hidden;
 }
 
-/* 설정 펼친 상태: 헤더 아래 전체를 설정 패널이 차지 + 스크롤 */
+/* 설정 펼친 상태 — 본문 카드 자리에 설정 */
 .settingsArea {
+  margin: 8px;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  background: var(--widget-card-bg);
+  border: 1px solid var(--widget-card-border);
+  border-radius: var(--widget-card-radius);
 }
 
-/* 탭 네비게이션 — L 사이즈에서만 표시
-   각 탭이 flex로 균등 분할되어 기능 추가 시 자동으로 N분할됨 */
+/* 탭 네비게이션 — 카드 내부 상단 */
 .tabs {
   display: flex;
   gap: 0;
-  padding: 6px 12px 0;
+  padding: 4px 12px 0;
   flex-shrink: 0;
 }
 
@@ -155,12 +168,12 @@
   flex: 1 1 0;
   background: transparent;
   border: none;
-  padding: 6px 0;
+  padding: 8px 0;
   font-size: 13px;
   font-weight: 600;
   color: var(--widget-muted);
   cursor: pointer;
-  border-radius: 4px 4px 0 0;
+  border-radius: 8px 8px 0 0;
   border-bottom: 2px solid transparent;
   text-align: center;
 }
@@ -174,18 +187,25 @@
   border-bottom-color: var(--widget-accent);
 }
 
-/* 본문 직계가 자체 레이아웃을 가질 수 있도록 height 100% */
+.body {
+  flex: 1;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .body > * {
   flex: 1;
   min-height: 0;
 }
 
 .footer {
-  padding: 6px 12px 8px;
+  padding: 6px 16px 10px;
   font-size: 11px;
   color: var(--widget-muted);
   text-align: right;
-  border-top: 1px solid var(--widget-border);
   flex-shrink: 0;
 }
 
@@ -202,20 +222,26 @@
   word-break: keep-all;
 }
 
-/* S 크기에서는 폰트/패딩 더 작게 */
+/* S 사이즈 — 헤더/본문 패딩 축소 */
 .widget[data-size='S'] .header {
-  padding: 8px 10px;
+  padding: 10px 10px;
+  gap: 8px;
 }
 
 .widget[data-size='S'] .date {
-  font-size: 13px;
+  font-size: 14px;
+}
+
+.widget[data-size='S'] .bodyCard,
+.widget[data-size='S'] .settingsArea {
+  margin: 6px;
 }
 
 .widget[data-size='S'] .body {
-  padding: 10px;
+  padding: 10px 12px;
 }
 
 .widget[data-size='S'] .footer {
-  padding: 4px 10px 6px;
+  padding: 4px 12px 8px;
   font-size: 10px;
 }

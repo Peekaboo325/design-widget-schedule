@@ -76,12 +76,12 @@
   background: var(--widget-on-accent);
 }
 
-/* 세그먼티드 (S/M/L, 다크/라이트) */
+/* 세그먼티드 (S/M/L, 다크/라이트) — 알약 */
 .segmented {
   display: inline-flex;
   background: var(--widget-overlay-strong);
-  border-radius: 6px;
-  padding: 2px;
+  border-radius: var(--widget-pill);
+  padding: 3px;
 }
 
 .segment {
@@ -89,11 +89,11 @@
   background: transparent;
   color: var(--widget-muted);
   font-size: 11px;
-  font-weight: 600;
-  padding: 3px 9px;
-  border-radius: 4px;
+  font-weight: 700;
+  padding: 4px 11px;
+  border-radius: var(--widget-pill);
   cursor: pointer;
-  min-width: 24px;
+  min-width: 26px;
 }
 
 .segmentActive {
