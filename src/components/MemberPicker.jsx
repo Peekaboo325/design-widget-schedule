@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import styles from './MemberPicker.module.css'
+import { shortName } from '../lib/format.js'
 
 // 최초 실행 시 본인 선택 화면
 // 본문 전체를 덮음. 선택 즉시 저장되고 일반 위젯 화면으로 전환.
@@ -48,8 +49,9 @@ export default function MemberPicker({ members, onSelect, loading, error }) {
               onClick={() => onSelect(name)}
               onMouseEnter={() => setHoveredIdx(i)}
               onMouseLeave={() => setHoveredIdx(null)}
+              title={name}
             >
-              {name}
+              {shortName(name)}
             </button>
           </li>
         ))}

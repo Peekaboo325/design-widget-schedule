@@ -1,5 +1,6 @@
 import styles from './SettingsPanel.module.css'
 import Dropdown from './Dropdown.jsx'
+import { shortName } from '../lib/format.js'
 
 // 프리셋 컬러 (액센트 + 배경 틴트 모두에 사용)
 const COLOR_PRESETS = [
@@ -33,16 +34,19 @@ export default function SettingsPanel({
   onChangeMode,
   onChangeSize
 }) {
-  // S 사이즈에서는 본인/항상위/크기/투명도까지만 노출
-  const showAdvanced = size !== 'S'
+  // 멤버 옵션: value는 풀네임(저장/식별용), label은 성씨 뗀 단축 이름
+  const memberOptions = (members ?? []).map((name) => ({
+    value: name,
+    label: shortName(name)
+  }))
   return (
     <div className={`${styles.panel} ${size === 'S' ? styles.panelCompact : ''}`}>
-      {/* 본인 선택 */}
-      {members && members.length > 0 && (
-        <Row label="본인">
+      {/* 사용자 선택 */}
+      {memberOptions.length > 0 && (
+        <Row label="사용자">
           <Dropdown
             value={settings.activeMember ?? ''}
-            options={members}
+            options={memberOptions}
             onChange={(v) => onChangeMember(v || null)}
             placeholder="선택…"
           />
@@ -93,58 +97,54 @@ export default function SettingsPanel({
         />
       </Row>
 
-      {/* M/L: 다크/라이트 모드 */}
-      {showAdvanced && (
-        <Row label="모드">
-          <div className={styles.segmented}>
-            {MODE_OPTIONS.map((opt) => (
-              <button
-                key={opt.key}
-                type="button"
-                className={`${styles.segment} ${
-                  settings.mode === opt.key ? styles.segmentActive : ''
-                }`}
-                onClick={() => onChangeMode(opt.key)}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </Row>
-      )}
+      {/* 다크/라이트 모드 */}
+      <Row label="모드">
+        <div className={styles.segmented}>
+          {MODE_OPTIONS.map((opt) => (
+            <button
+              key={opt.key}
+              type="button"
+              className={`${styles.segment} ${
+                settings.mode === opt.key ? styles.segmentActive : ''
+              }`}
+              onClick={() => onChangeMode(opt.key)}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </Row>
 
-      {/* M/L: 테마 컬러 */}
-      {showAdvanced && (
-        <Row label="테마 컬러" vertical>
-          <div className={styles.colorRow}>
-            {COLOR_PRESETS.map((hex) => (
-              <button
-                key={hex}
-                type="button"
-                aria-label={`프리셋 ${hex}`}
-                className={`${styles.swatch} ${
-                  settings.themeColor.toLowerCase() === hex.toLowerCase()
-                    ? styles.swatchActive
-                    : ''
-                }`}
-                style={{ background: hex }}
-                onClick={() => onChangeThemeColor(hex)}
-              />
-            ))}
-            <label className={styles.picker} aria-label="커스텀 컬러">
-              <span
-                className={styles.pickerDot}
-                style={{ background: settings.themeColor }}
-              />
-              <input
-                type="color"
-                value={settings.themeColor}
-                onChange={(e) => onChangeThemeColor(e.target.value)}
-              />
-            </label>
-          </div>
-        </Row>
-      )}
+      {/* 테마 컬러 */}
+      <Row label="테마 컬러" vertical>
+        <div className={styles.colorRow}>
+          {COLOR_PRESETS.map((hex) => (
+            <button
+              key={hex}
+              type="button"
+              aria-label={`프리셋 ${hex}`}
+              className={`${styles.swatch} ${
+                settings.themeColor.toLowerCase() === hex.toLowerCase()
+                  ? styles.swatchActive
+                  : ''
+              }`}
+              style={{ background: hex }}
+              onClick={() => onChangeThemeColor(hex)}
+            />
+          ))}
+          <label className={styles.picker} aria-label="커스텀 컬러">
+            <span
+              className={styles.pickerDot}
+              style={{ background: settings.themeColor }}
+            />
+            <input
+              type="color"
+              value={settings.themeColor}
+              onChange={(e) => onChangeThemeColor(e.target.value)}
+            />
+          </label>
+        </div>
+      </Row>
     </div>
   )
 }

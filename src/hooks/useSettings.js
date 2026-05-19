@@ -108,7 +108,7 @@ function applyTheme(hex, mode) {
       `color-mix(in oklab, ${hex} 18%, rgba(252, 252, 254, 0.96))`
     )
     root.style.setProperty('--widget-fg', '#0f0f12')
-    root.style.setProperty('--widget-muted', 'rgba(20, 20, 24, 0.55)')
+    root.style.setProperty('--widget-muted', 'rgba(20, 20, 24, 0.68)')
     root.style.setProperty('--widget-border', 'rgba(0, 0, 0, 0.08)')
     root.style.setProperty('--widget-overlay', 'rgba(255, 255, 255, 0.45)')
     root.style.setProperty('--widget-overlay-strong', 'rgba(0, 0, 0, 0.06)')
@@ -123,7 +123,7 @@ function applyTheme(hex, mode) {
       `color-mix(in oklab, ${hex} 28%, rgba(28, 28, 32, 0.92))`
     )
     root.style.setProperty('--widget-fg', '#f4f4f6')
-    root.style.setProperty('--widget-muted', 'rgba(244, 244, 246, 0.6)')
+    root.style.setProperty('--widget-muted', 'rgba(244, 244, 246, 0.72)')
     root.style.setProperty('--widget-border', 'rgba(255, 255, 255, 0.08)')
     root.style.setProperty('--widget-overlay', 'rgba(0, 0, 0, 0.12)')
     root.style.setProperty('--widget-overlay-strong', 'rgba(255, 255, 255, 0.08)')

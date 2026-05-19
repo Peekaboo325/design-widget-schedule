@@ -2,7 +2,7 @@
   --widget-bg: rgba(28, 28, 32, 0.82);
   --widget-header-bg: rgba(28, 28, 32, 0.92);
   --widget-fg: #f4f4f6;
-  --widget-muted: rgba(244, 244, 246, 0.6);
+  --widget-muted: rgba(244, 244, 246, 0.72);
   --widget-accent: #7aa2ff;
   --widget-on-accent: #1c1c20;
   --widget-radius: 14px;
@@ -25,10 +25,14 @@ body,
   height: 100%;
   background: transparent;
   color: var(--widget-fg);
-  font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo',
-    'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  font-family: 'SUIT Variable', -apple-system, BlinkMacSystemFont, 'Pretendard',
+    'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
   font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.1px;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
   user-select: none;
   overflow: hidden;
 }
