@@ -18,12 +18,28 @@
   padding: 10px 12px;
   border-bottom: 1px solid var(--widget-border);
   -webkit-app-region: drag;
+  gap: 8px;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
 }
 
 .date {
   font-size: 13px;
   font-weight: 600;
   letter-spacing: -0.2px;
+}
+
+.member {
+  font-size: 11px;
+  color: var(--widget-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .headerActions {
@@ -47,9 +63,14 @@
   color: var(--widget-muted);
 }
 
-.iconBtn:hover {
+.iconBtn:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.08);
   color: var(--widget-fg);
+}
+
+.iconBtn:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 .iconBtnActive {
@@ -57,27 +78,74 @@
   color: var(--widget-fg);
 }
 
+/* 새로고침 중 회전 */
+.iconBtnSpinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .body {
   flex: 1;
   padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   overflow: hidden;
 }
 
-.placeholder {
-  margin: 0;
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.metricLabel {
   font-size: 12px;
-  font-weight: 500;
   color: var(--widget-muted);
 }
 
+.metricValue {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--widget-fg);
+}
+
 .hint {
-  margin: 0;
+  margin: 4px 0 0;
   font-size: 11px;
   color: var(--widget-muted);
   line-height: 1.4;
+}
+
+.timestamp {
+  margin: 0;
+  font-size: 10px;
+  color: var(--widget-muted);
+  opacity: 0.7;
+}
+
+.muted {
+  margin: 0;
+  font-size: 12px;
+  color: var(--widget-muted);
+}
+
+.error {
+  margin: 0;
+  font-size: 12px;
+  color: #ff8a8a;
+  word-break: keep-all;
 }
 
 /* S 크기에서는 폰트/패딩 더 작게 */
@@ -91,4 +159,8 @@
 
 .widget[data-size='S'] .body {
   padding: 10px;
+}
+
+.widget[data-size='S'] .metricValue {
+  font-size: 14px;
 }
