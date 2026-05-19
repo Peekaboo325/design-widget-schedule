@@ -198,11 +198,6 @@ function createTray() {
 
   const contextMenu = Menu.buildFromTemplate([
     {
-      label: '위젯 위치 초기화',
-      click: () => resetWindowPosition()
-    },
-    { type: 'separator' },
-    {
       label: '새로고침',
       click: () => {
         if (!mainWindow || mainWindow.isDestroyed()) {
@@ -211,6 +206,10 @@ function createTray() {
         }
         mainWindow.webContents.send('tray:refresh')
       }
+    },
+    {
+      label: '위젯 위치 초기화',
+      click: () => resetWindowPosition()
     },
     { type: 'separator' },
     {
