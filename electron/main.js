@@ -138,6 +138,14 @@ ipcMain.handle('api:get', async (_event, params) => {
     if (!res.ok) {
       return { ok: false, error: `HTTP ${res.status}` }
     }
+    // Apps Script가 인증 페이지로 튕기면 HTML이 옴 → 명확한 에러로 변환
+    const contentType = res.headers.get('content-type') ?? ''
+    if (!contentType.toLowerCase().includes('application/json')) {
+      return {
+        ok: false,
+        error: `JSON 응답이 아님 (${contentType || 'unknown'}). GAS 배포 권한 설정 확인 필요`
+      }
+    }
     const data = await res.json()
     return { ok: true, data }
   } catch (err) {
