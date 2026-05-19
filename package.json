@@ -1,0 +1,23 @@
+{
+  "name": "design-widget-schedule",
+  "version": "0.1.0",
+  "description": "IMC 3본부 디자인팀 팀원용 바탕화면 위젯",
+  "main": "out/main/main.js",
+  "author": "Peekaboo325",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "start": "electron-vite preview"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^33.2.1",
+    "electron-vite": "^2.3.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "vite": "^5.4.11"
+  }
+}

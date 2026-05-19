@@ -1,0 +1,34 @@
+:root {
+  --widget-bg: rgba(28, 28, 32, 0.82);
+  --widget-fg: #f4f4f6;
+  --widget-muted: rgba(244, 244, 246, 0.6);
+  --widget-accent: #7aa2ff;
+  --widget-radius: 14px;
+  --widget-border: rgba(255, 255, 255, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  color: var(--widget-fg);
+  font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo',
+    'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  overflow: hidden;
+}
+
+button {
+  font-family: inherit;
+  color: inherit;
+}
