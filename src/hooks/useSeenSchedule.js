@@ -59,5 +59,17 @@ export default function useSeenSchedule(activeMember, scheduleItems) {
     setSeenKeys(new Set(scheduleItems.map(scheduleKey)))
   }, [scheduleItems])
 
-  return { newKeys, newCount: newKeys.size, markAllSeen }
+  // 단일 키만 기준선에 추가 (Undo 케이스에서 NEW 표시 방지에 사용)
+  const markSeen = useCallback((key) => {
+    if (!key) return
+    setSeenKeys((prev) => {
+      if (!prev) return prev
+      if (prev.has(key)) return prev
+      const next = new Set(prev)
+      next.add(key)
+      return next
+    })
+  }, [])
+
+  return { newKeys, newCount: newKeys.size, markAllSeen, markSeen }
 }

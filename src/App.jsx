@@ -9,8 +9,10 @@ import useMembers from './hooks/useMembers.js'
 import useSchedule from './hooks/useSchedule.js'
 import useSeenSchedule from './hooks/useSeenSchedule.js'
 import Toast from './components/Toast.jsx'
+import PendingPopover from './components/PendingPopover.jsx'
 import { shortName, nextStatus } from './lib/format.js'
-import { setRowStatus } from './lib/api.js'
+import { setRowStatus, setRowShare } from './lib/api.js'
+import { scheduleKey } from './components/ScheduleView.jsx'
 
 // 위젯 셸: 헤더(드래그·설정·새로고침) + 설정 패널 + 본문(탭 전환)
 // 5단계: L 사이즈에서 점검 체크리스트 탭 활성화.
@@ -157,6 +159,9 @@ export default function App() {
             onClick: async () => {
               try {
                 await setRowStatus(rowIndex, prevStatus)
+                // refresh로 다시 fetch되며 사라졌던 키가 재등장 → NEW로 잡힘
+                // 방지: 해당 키를 미리 기준선에 등록
+                markSeen(scheduleKey(item))
                 refresh()
               } catch (err) {
                 setToast({
@@ -178,6 +183,69 @@ export default function App() {
         })
       }
     },
+    [mutateSchedule, refresh, markSeen]
+  )
+
+  // 공유 대기 팝오버 열고 닫기
+  const [pendingOpen, setPendingOpen] = useState(false)
+  const handlePendingClick = useCallback(() => setPendingOpen(true), [])
+  const closePendingPopover = useCallback(() => setPendingOpen(false), [])
+
+  // 팝오버 열려있는데 공유 대기가 0건이 되면 자동 닫기
+  useEffect(() => {
+    if (pendingOpen && (scheduleData?.pending?.length ?? 0) === 0) {
+      setPendingOpen(false)
+    }
+  }, [pendingOpen, scheduleData])
+
+  // 공유 체크 클릭 — L열 TRUE + 낙관적으로 pending에서 제거 + Undo
+  const handleShareCheck = useCallback(
+    async (item) => {
+      if (!item || !item.rowIndex) return
+      const rowIndex = item.rowIndex
+
+      mutateSchedule((prev) => {
+        const updatedPending = prev.pending.filter(
+          (p) => p.rowIndex !== rowIndex
+        )
+        return {
+          ...prev,
+          pending: updatedPending,
+          summary: { ...prev.summary, pending: updatedPending.length }
+        }
+      })
+
+      try {
+        await setRowShare(rowIndex, true)
+        setToast({
+          key: Date.now(),
+          message: `${item['광고주']} 공유 처리됨`,
+          tone: 'info',
+          action: {
+            label: '취소',
+            onClick: async () => {
+              try {
+                await setRowShare(rowIndex, false)
+                refresh()
+              } catch (err) {
+                setToast({
+                  key: Date.now(),
+                  tone: 'error',
+                  message: `취소 실패: ${err.message ?? err}`
+                })
+              }
+            }
+          }
+        })
+      } catch (err) {
+        refresh()
+        setToast({
+          key: Date.now(),
+          tone: 'error',
+          message: `공유 처리 실패: ${err.message ?? err}`
+        })
+      }
+    },
     [mutateSchedule, refresh]
   )
 
@@ -188,7 +256,7 @@ export default function App() {
   }, [refresh])
 
   // 새 스케줄 알림 트래킹 (세션 기반)
-  const { newKeys, newCount, markAllSeen } = useSeenSchedule(
+  const { newKeys, newCount, markAllSeen, markSeen } = useSeenSchedule(
     activeMember,
     scheduleData?.schedule
   )
@@ -330,6 +398,7 @@ export default function App() {
                 scheduleError={scheduleError}
                 newKeys={newKeys}
                 onStatusClick={handleStatusClick}
+                onPendingClick={handlePendingClick}
               />
             )}
           </main>
@@ -345,6 +414,18 @@ export default function App() {
           )}
         </>
       )}
+      {pendingOpen &&
+        settings.size === 'L' &&
+        (scheduleData?.pending?.length ?? 0) > 0 && (
+          <PendingPopover
+            pending={scheduleData.pending}
+            onCheck={(item) => {
+              handleShareCheck(item)
+              // 마지막 1건이었으면 즉시 닫힘 (위 useEffect가 처리)
+            }}
+            onClose={closePendingPopover}
+          />
+        )}
       <Toast toast={toast} onDismiss={dismissToast} />
     </div>
   )
@@ -412,7 +493,8 @@ function Body({
   scheduleLoading,
   scheduleError,
   newKeys,
-  onStatusClick
+  onStatusClick,
+  onPendingClick
 }) {
   if (membersLoading) return <p className={styles.muted}>팀원 목록 불러오는 중…</p>
   if (membersError) {
@@ -445,6 +527,7 @@ function Body({
       data={scheduleData}
       newKeys={newKeys}
       onStatusClick={onStatusClick}
+      onPendingClick={onPendingClick}
     />
   )
 }

@@ -17,7 +17,13 @@ const STATUS_STYLE = {
 // S: 큰 숫자 + 공유 대기 뱃지
 // M: 광고주별 합계 + 공유 대기 뱃지
 // L: 전체 테이블 + 구분선 + 공유 대기 목록
-export default function ScheduleView({ size, data, newKeys, onStatusClick }) {
+export default function ScheduleView({
+  size,
+  data,
+  newKeys,
+  onStatusClick,
+  onPendingClick
+}) {
   const { schedule, pending, summary } = data
 
   if (size === 'L') {
@@ -28,7 +34,7 @@ export default function ScheduleView({ size, data, newKeys, onStatusClick }) {
           newKeys={newKeys}
           onStatusClick={onStatusClick}
         />
-        <PendingRow pending={pending} />
+        <PendingRow pending={pending} onClick={onPendingClick} />
       </div>
     )
   }
@@ -145,13 +151,20 @@ function ScheduleTable({ schedule, newKeys, onStatusClick }) {
 }
 
 // L 모드 공유 대기: 한 줄 요약 (라벨 + 카운트)
-// 위계상 부차 정보라 목록 없이 숫자만 노출
-function PendingRow({ pending }) {
+// 0건이 아니면 클릭 가능 → 위에서 팝오버 펼침
+function PendingRow({ pending, onClick }) {
+  const empty = pending.length === 0
   return (
-    <div className={styles.pendingRow}>
+    <button
+      type="button"
+      className={`${styles.pendingRow} ${empty ? styles.pendingRowEmpty : ''}`}
+      onClick={() => !empty && onClick?.()}
+      disabled={empty}
+      title={empty ? undefined : '클릭하면 목록 펼침'}
+    >
       <span className={styles.pendingRowLabel}>공유 대기</span>
       <span className={styles.pendingRowCount}>{pending.length}건</span>
-    </div>
+    </button>
   )
 }
 

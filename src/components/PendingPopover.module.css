@@ -1,0 +1,109 @@
+.popover {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 46px; /* footer + pendingRow 위 */
+  z-index: 30;
+  background: var(--widget-bg);
+  border: 1px solid var(--widget-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(12px);
+  max-height: 220px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: popIn 0.15s ease-out;
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--widget-border);
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--widget-fg);
+}
+
+.hint {
+  font-size: 10px;
+  color: var(--widget-muted);
+}
+
+.list {
+  list-style: none;
+  padding: 4px;
+  margin: 0;
+  overflow-y: auto;
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: auto minmax(50px, 1fr) minmax(70px, 2fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 8px;
+  font-size: 12px;
+  border-radius: 4px;
+}
+
+.row:hover {
+  background: var(--widget-overlay-strong);
+}
+
+/* 커스텀 체크박스 — 클릭 시 즉시 사라지므로 체크 표시는 불필요, 빈 사각형만 */
+.checkbox {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid var(--widget-muted);
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.checkbox:hover {
+  border-color: var(--widget-accent);
+  background: color-mix(in oklab, var(--widget-accent) 12%, transparent);
+}
+
+.client {
+  font-weight: 700;
+  color: var(--widget-fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note {
+  color: var(--widget-fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qty {
+  font-size: 11px;
+  color: var(--widget-muted);
+  font-variant-numeric: tabular-nums;
+}

@@ -325,14 +325,28 @@
   min-height: 0;
 }
 
-/* L 공유 대기 한 줄 — 부차 정보라 라벨 + 카운트만 */
+/* L 공유 대기 한 줄 — 부차 정보라 라벨 + 카운트만. 클릭 시 팝오버 펼침 */
 .pendingRow {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  padding: 8px 2px 2px;
+  width: 100%;
+  padding: 10px 4px 4px;
+  border: none;
   border-top: 1px solid var(--widget-border);
+  background: transparent;
+  cursor: pointer;
   flex-shrink: 0;
+  font-family: inherit;
+  text-align: left;
+}
+
+.pendingRow:hover:not(:disabled) {
+  background: var(--widget-overlay-strong);
+}
+
+.pendingRowEmpty {
+  cursor: default;
 }
 
 .pendingRowLabel {
