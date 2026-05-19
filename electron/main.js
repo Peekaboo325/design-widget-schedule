@@ -52,9 +52,19 @@ const store = new Store({
     themeColor: '#7aa2ff',
     size: 'L',
     activeMember: null,
-    mode: 'dark'
+    mode: 'dark',
+    launchOnBoot: false
   }
 })
+
+// 저장된 자동 실행 설정을 OS에 반영 (앱 부팅마다 동기화)
+function applyLaunchOnBoot(enabled) {
+  app.setLoginItemSettings({
+    openAtLogin: Boolean(enabled),
+    // packaging 후의 경로. dev 모드에서는 electron 자체 자동실행 대신 store만 반영
+    openAsHidden: false
+  })
+}
 
 let mainWindow = null
 let tray = null
@@ -174,8 +184,17 @@ ipcMain.handle('settings:get-all', () => ({
   themeColor: store.get('themeColor'),
   size: store.get('size'),
   activeMember: store.get('activeMember'),
-  mode: store.get('mode')
+  mode: store.get('mode'),
+  launchOnBoot: store.get('launchOnBoot')
 }))
+
+// 컴퓨터 시작 시 자동 실행
+ipcMain.handle('settings:set-launch-on-boot', (_event, value) => {
+  const enabled = Boolean(value)
+  store.set('launchOnBoot', enabled)
+  applyLaunchOnBoot(enabled)
+  return enabled
+})
 
 // 다크/라이트 모드 저장
 ipcMain.handle('settings:set-mode', (_event, mode) => {
@@ -313,6 +332,9 @@ ipcMain.handle('api:get', async (_event, params) => {
 })
 
 app.whenReady().then(() => {
+  // 저장된 자동 실행 설정을 OS에 적용 (앱 시작 때마다 동기화)
+  applyLaunchOnBoot(store.get('launchOnBoot'))
+
   createWindow()
   createTray()
 

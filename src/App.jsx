@@ -43,7 +43,8 @@ export default function App() {
     setSize,
     setThemeColor,
     setMode,
-    setActiveMember
+    setActiveMember,
+    setLaunchOnBoot
   } = useSettings()
 
   // 설정 패널 외부 클릭 시 닫기 (⚙ 버튼은 토글이라 ref로 제외)
@@ -125,7 +126,7 @@ export default function App() {
       .join('\n')
     const more = items.length > 3 ? `\n외 ${items.length - 3}건` : ''
     window.widgetAPI?.notify?.({
-      title: `새 스케줄 ${fresh.length}건`,
+      title: `디자인 위젯 · 새 스케줄 ${fresh.length}건`,
       body: preview + more
     })
   }, [newKeys, scheduleData])
@@ -196,6 +197,7 @@ export default function App() {
             onChangeThemeColor={setThemeColor}
             onChangeMode={setMode}
             onChangeSize={setSize}
+            onChangeLaunchOnBoot={setLaunchOnBoot}
           />
         </div>
       ) : (

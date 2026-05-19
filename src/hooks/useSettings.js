@@ -9,7 +9,8 @@ const DEFAULTS = {
   themeColor: '#7aa2ff',
   size: 'L',
   activeMember: null,
-  mode: 'dark' // 'dark' | 'light'
+  mode: 'dark', // 'dark' | 'light'
+  launchOnBoot: false
 }
 
 export default function useSettings() {
@@ -77,6 +78,12 @@ export default function useSettings() {
     setSettings((s) => ({ ...s, activeMember: saved ?? name }))
   }, [])
 
+  // 컴퓨터 시작 시 자동 실행
+  const setLaunchOnBoot = useCallback(async (value) => {
+    const saved = await window.widgetAPI?.setLaunchOnBoot(value)
+    setSettings((s) => ({ ...s, launchOnBoot: saved ?? value }))
+  }, [])
+
   return {
     settings,
     ready,
@@ -85,7 +92,8 @@ export default function useSettings() {
     setSize,
     setThemeColor,
     setMode,
-    setActiveMember
+    setActiveMember,
+    setLaunchOnBoot
   }
 }
 

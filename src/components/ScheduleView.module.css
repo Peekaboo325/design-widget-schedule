@@ -24,11 +24,11 @@
 }
 
 .bigValue {
-  font-size: 52px;
+  font-size: 44px;
   font-weight: 800;
   line-height: 1;
   color: var(--widget-accent);
-  letter-spacing: -2.2px;
+  letter-spacing: -1.8px;
 }
 
 /* M: 광고주별 리스트 */
@@ -57,10 +57,10 @@
 }
 
 .mediumTotal {
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 800;
   color: var(--widget-accent);
-  letter-spacing: -0.8px;
+  letter-spacing: -0.6px;
   line-height: 1;
 }
 
@@ -282,12 +282,15 @@
   padding: 4px 0;
 }
 
-/* L 모드 영역 비율 6:4 (잔여 스케줄 : 공유 대기) */
+/* L 모드 영역 — 공유 대기는 콘텐츠 만큼만, 잔여 스케줄이 나머지 공간 모두 사용
+   공유 대기가 많아지면 max-height 35%에서 자체 스크롤 */
 .containerL > .tableWrap:nth-of-type(1) {
-  flex: 6 1 0;
+  flex: 1 1 0;
+  min-height: 0;
 }
 
 .containerL > .tableWrap:nth-of-type(2) {
-  flex: 4 1 0;
+  flex: 0 1 auto;
   min-height: 0;
+  max-height: 35%;
 }

@@ -24,6 +24,10 @@ const api = {
   // 다크/라이트 모드
   setMode: (mode) => ipcRenderer.invoke('settings:set-mode', mode),
 
+  // 컴퓨터 시작 시 자동 실행
+  setLaunchOnBoot: (value) =>
+    ipcRenderer.invoke('settings:set-launch-on-boot', value),
+
   // GAS API 프록시 호출 (CSP/CORS 우회용)
   apiGet: (params) => ipcRenderer.invoke('api:get', params),
 

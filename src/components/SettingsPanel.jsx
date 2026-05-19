@@ -32,7 +32,8 @@ export default function SettingsPanel({
   onChangeOpacity,
   onChangeThemeColor,
   onChangeMode,
-  onChangeSize
+  onChangeSize,
+  onChangeLaunchOnBoot
 }) {
   // 멤버 옵션: value는 풀네임(저장/식별용), label은 성씨 뗀 단축 이름
   const memberOptions = (members ?? []).map((name) => ({
@@ -61,6 +62,19 @@ export default function SettingsPanel({
           aria-checked={settings.alwaysOnTop}
           className={`${styles.toggle} ${settings.alwaysOnTop ? styles.toggleOn : ''}`}
           onClick={() => onToggleAlwaysOnTop(!settings.alwaysOnTop)}
+        >
+          <span className={styles.toggleKnob} />
+        </button>
+      </Row>
+
+      {/* 시작 시 자동 실행 */}
+      <Row label="시작 시 자동 실행">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={settings.launchOnBoot}
+          className={`${styles.toggle} ${settings.launchOnBoot ? styles.toggleOn : ''}`}
+          onClick={() => onChangeLaunchOnBoot(!settings.launchOnBoot)}
         >
           <span className={styles.toggleKnob} />
         </button>
