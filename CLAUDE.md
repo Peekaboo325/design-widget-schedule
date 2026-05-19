@@ -42,8 +42,15 @@ IMC 3본부 디자인팀 팀원용 바탕화면 위젯 (Electron + React + Vite)
 - **Electron + React + Vite** (electron-vite 권장)
 - **핫 리로드:** 개발 모드에서 코드 저장 → 자동 반영 필수
 - **빌드:** electron-builder (.exe)
-- **스타일:** 협의 후 결정 (CSS Modules / Tailwind)
+- **스타일:** CSS Modules (협의 완료)
 - **상태 관리:** React 기본 (useState/useContext). 별도 라이브러리 도입 시 사전 협의.
+- **설정 영속화:** electron-store (main 프로세스 영구 저장)
+
+## 로컬 개발 주의
+- **`git pull` 직후엔 `npm install` 한 번 실행할 것.**
+  - dependencies가 늘어났을 가능성 있음 (electron-vite는 main 의존성을 번들하지 않고 런타임 `node_modules`에서 찾음).
+  - 빠뜨리면 dev 실행 시 `ERR_MODULE_NOT_FOUND` 발생.
+- dependencies가 추가/변경되는 작업 단위에서는 응답에 **"`npm install` 필요"** 라고 명시할 것.
 
 ## 데이터 소스
 - GAS Web App: `schedule-widget-api.gs`
