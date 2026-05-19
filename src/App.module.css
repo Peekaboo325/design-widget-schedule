@@ -11,7 +11,7 @@
 .headerCard {
   display: flex;
   align-items: center;
-  margin-right: 130px;
+  margin-right: 150px;
   padding: 12px 14px;
   background: var(--widget-header-bg);
   color: var(--widget-on-header);
@@ -22,7 +22,9 @@
   flex-shrink: 0;
 }
 
-/* 본문 카드 — 헤더 아래 + 전체 너비. 좌상단 0(헤더와 매끄럽게), 그 외 라운드 */
+/* 본문 카드 — 헤더 아래 + 전체 너비. 좌상단 0(헤더와 매끄럽게), 그 외 라운드.
+   추가로 mask로 좌상단 모서리를 inverse curve(안쪽으로 둥글게)로 깎아내어
+   헤더 카드 우측 컷아웃 영역과 자연스럽게 폴더 탭 모양을 형성. */
 .bodyCard {
   flex: 1;
   display: flex;
@@ -31,6 +33,18 @@
   background: var(--widget-card-bg);
   border-radius: 0 var(--widget-radius) var(--widget-radius) var(--widget-radius);
   overflow: hidden;
+  /* 좌상단 inverse curve — 반지름 안은 투명(OS 배경 비침), 그 외는 카드 색 유지 */
+  --notch-r: 14px;
+  -webkit-mask-image: radial-gradient(
+    circle var(--notch-r) at 0 0,
+    transparent 100%,
+    black 0
+  );
+  mask-image: radial-gradient(
+    circle var(--notch-r) at 0 0,
+    transparent 100%,
+    black 0
+  );
 }
 
 .avatarSlot {
@@ -49,8 +63,8 @@
 /* 우측 액션 아이콘 — 헤더 카드 밖 transparent 영역 위에 absolute로 떠있음 */
 .headerActions {
   position: absolute;
-  top: 8px;
-  right: 12px;
+  top: 6px;
+  right: 14px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -58,13 +72,13 @@
   z-index: 3;
 }
 
-/* 원형 아이콘 버튼 — 흰 카드 배경 + 액센트 아이콘 */
+/* 원형 아이콘 버튼 — 흰 카드 배경 + 액센트 아이콘. 컷아웃 영역에 떠있음 */
 .iconBtn {
   background: var(--widget-card-bg);
   border: none;
   border-radius: 50%;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -72,7 +86,7 @@
   color: var(--widget-accent);
   flex-shrink: 0;
   transition: filter 0.12s ease, transform 0.08s ease;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
 .iconBtn:hover:not(:disabled) {
@@ -110,14 +124,14 @@
   color: var(--widget-accent);
   border: none;
   border-radius: var(--widget-pill);
-  padding: 5px 11px;
+  padding: 6px 12px;
   font-size: 11px;
   font-weight: 800;
   cursor: pointer;
   line-height: 1;
   letter-spacing: -0.2px;
   animation: badgePulse 1.2s ease-in-out infinite;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
 .newBadge:hover {
@@ -129,12 +143,12 @@
   0%,
   100% {
     filter: brightness(1);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08),
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12),
       inset 0 0 0 0 rgba(255, 255, 255, 0);
   }
   50% {
     filter: brightness(1.1);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12),
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.16),
       inset 0 0 0 1.5px color-mix(in oklab, var(--widget-accent) 35%, transparent);
   }
 }
@@ -214,7 +228,7 @@
 
 /* S 사이즈 — 240×220 안에 컴팩트하게 */
 .widget[data-size='S'] .headerCard {
-  margin-right: 100px;
+  margin-right: 110px;
   padding: 10px 12px;
   gap: 8px;
   border-radius: 18px 18px 0 0;
@@ -222,17 +236,18 @@
 
 .widget[data-size='S'] .bodyCard {
   border-radius: 0 18px 18px 18px;
+  --notch-r: 12px;
 }
 
 .widget[data-size='S'] .headerActions {
   top: 6px;
-  right: 8px;
+  right: 10px;
   gap: 6px;
 }
 
 .widget[data-size='S'] .iconBtn {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
 }
 
 .widget[data-size='S'] .date {
@@ -245,7 +260,7 @@
 }
 
 .widget[data-size='S'] .newBadge {
-  padding: 4px 9px;
+  padding: 5px 10px;
   font-size: 10px;
 }
 
