@@ -310,83 +310,83 @@ export default function App() {
 
   return (
     <div className={styles.widget} data-size={settings.size}>
-      <header className={styles.headerRow}>
-        <div className={styles.headerCard}>
-          {activeMember && (
-            <div className={styles.avatarSlot}>
-              <Avatar
-                emoji={resolveMemberEmoji(activeMember, settings.memberEmoji)}
-                size={settings.size === 'S' ? 32 : 40}
-                onClick={() => setEmojiPickerOpen((v) => !v)}
-                title={`${activeMember} — 클릭해서 이모지 변경`}
+      <div className={styles.headerCard}>
+        {activeMember && (
+          <div className={styles.avatarSlot}>
+            <Avatar
+              emoji={resolveMemberEmoji(activeMember, settings.memberEmoji)}
+              size={settings.size === 'S' ? 32 : 40}
+              onClick={() => setEmojiPickerOpen((v) => !v)}
+              title={`${activeMember} — 클릭해서 이모지 변경`}
+            />
+            {emojiPickerOpen && (
+              <EmojiPicker
+                value={resolveMemberEmoji(activeMember, settings.memberEmoji)}
+                onChange={(emoji) => setMemberEmoji(activeMember, emoji)}
+                onClose={() => setEmojiPickerOpen(false)}
               />
-              {emojiPickerOpen && (
-                <EmojiPicker
-                  value={resolveMemberEmoji(activeMember, settings.memberEmoji)}
-                  onChange={(emoji) => setMemberEmoji(activeMember, emoji)}
-                  onClose={() => setEmojiPickerOpen(false)}
-                />
-              )}
-            </div>
-          )}
-          <span className={styles.date}>{todayLabel}</span>
-        </div>
-        <div className={styles.headerActions}>
-          {/* 새 스케줄 알림 뱃지 — 클릭 시 모두 '본 것'으로 */}
-          {newCount > 0 && activeTab === 'schedule' && !settingsOpen && (
-            <button
-              type="button"
-              className={styles.newBadge}
-              aria-label={`새 스케줄 ${newCount}건. 클릭하면 본 것으로 표시`}
-              title="클릭하면 본 것으로 표시"
-              onClick={markAllSeen}
-            >
-              +{newCount}
-            </button>
-          )}
-          {/* ↻ 먼저, ⚙ 가 항상 우측 끝 — 토글 시 ⚙ 위치가 바뀌지 않도록 */}
-          {activeTab === 'schedule' && !needsMemberPick && !settingsOpen && (
-            <button
-              type="button"
-              className={`${styles.iconBtn} ${refreshing ? styles.iconBtnSpinning : ''}`}
-              aria-label="새로고침"
-              disabled={!activeMember || refreshing}
-              onClick={() => refresh()}
-            >
-              <RefreshIcon />
-            </button>
-          )}
-          <button
-            ref={settingsBtnRef}
-            type="button"
-            className={`${styles.iconBtn} ${settingsOpen ? styles.iconBtnActive : ''}`}
-            aria-label="설정"
-            aria-expanded={settingsOpen}
-            onClick={() => setSettingsOpen((v) => !v)}
-          >
-            <GearIcon />
-          </button>
-        </div>
-      </header>
+            )}
+          </div>
+        )}
+        <span className={styles.date}>{todayLabel}</span>
+      </div>
 
-      {/* 설정 패널 펼친 상태에서는 본문/탭/footer 숨김 — 본문 가림·잘림 방지 */}
+      <div className={styles.headerActions}>
+        {/* 새 스케줄 알림 뱃지 — 클릭 시 모두 '본 것'으로 */}
+        {newCount > 0 && activeTab === 'schedule' && !settingsOpen && (
+          <button
+            type="button"
+            className={styles.newBadge}
+            aria-label={`새 스케줄 ${newCount}건. 클릭하면 본 것으로 표시`}
+            title="클릭하면 본 것으로 표시"
+            onClick={markAllSeen}
+          >
+            +{newCount}
+          </button>
+        )}
+        {activeTab === 'schedule' && !needsMemberPick && !settingsOpen && (
+          <button
+            type="button"
+            className={`${styles.iconBtn} ${refreshing ? styles.iconBtnSpinning : ''}`}
+            aria-label="새로고침"
+            disabled={!activeMember || refreshing}
+            onClick={() => refresh()}
+          >
+            <RefreshIcon />
+          </button>
+        )}
+        <button
+          ref={settingsBtnRef}
+          type="button"
+          className={`${styles.iconBtn} ${settingsOpen ? styles.iconBtnActive : ''}`}
+          aria-label="설정"
+          aria-expanded={settingsOpen}
+          onClick={() => setSettingsOpen((v) => !v)}
+        >
+          <GearIcon />
+        </button>
+      </div>
+
+      {/* 설정 펼친 상태에서는 본문/탭/footer 숨김 — 본문 가림·잘림 방지 */}
       {settingsOpen && ready ? (
-        <div ref={settingsPanelRef} className={styles.settingsArea}>
-          <SettingsPanel
-            size={settings.size}
-            settings={settings}
-            members={members}
-            onChangeMember={setActiveMember}
-            onToggleAlwaysOnTop={setAlwaysOnTop}
-            onChangeOpacity={setOpacity}
-            onChangeThemeColor={setThemeColor}
-            onChangeMode={setMode}
-            onChangeSize={setSize}
-            onChangeLaunchOnBoot={setLaunchOnBoot}
-          />
+        <div ref={settingsPanelRef} className={styles.bodyCard}>
+          <div className={styles.settingsArea}>
+            <SettingsPanel
+              size={settings.size}
+              settings={settings}
+              members={members}
+              onChangeMember={setActiveMember}
+              onToggleAlwaysOnTop={setAlwaysOnTop}
+              onChangeOpacity={setOpacity}
+              onChangeThemeColor={setThemeColor}
+              onChangeMode={setMode}
+              onChangeSize={setSize}
+              onChangeLaunchOnBoot={setLaunchOnBoot}
+            />
+          </div>
         </div>
       ) : (
-        <>
+        <div className={styles.bodyCard}>
           {showTabs && (
             <nav className={styles.tabs}>
               <TabButton
@@ -441,7 +441,7 @@ export default function App() {
               {scheduleLoading ? ' · 갱신 중…' : ''}
             </footer>
           )}
-        </>
+        </div>
       )}
       {pendingOpen &&
         settings.size === 'L' &&
@@ -450,7 +450,6 @@ export default function App() {
             pending={scheduleData.pending}
             onCheck={(item) => {
               handleShareCheck(item)
-              // 마지막 1건이었으면 즉시 닫힘 (위 useEffect가 처리)
             }}
             onClose={closePendingPopover}
           />
