@@ -4,46 +4,42 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--widget-bg);
-  border: 1px solid var(--widget-border);
+  background: var(--widget-card-bg);
+  border: 1px solid var(--widget-card-border);
   border-radius: var(--widget-radius);
   overflow: hidden;
-  backdrop-filter: blur(12px);
 }
 
-/* 헤더 row — 헤더 카드 우측 상단을 컷아웃해서 아이콘 자리 만듦 */
+/* 헤더 row — 위젯 전체의 상단. 카드 안의 컬러 영역 */
 .headerRow {
   position: relative;
-  margin: 8px 8px 0;
   flex-shrink: 0;
 }
 
-/* 헤더 카드 — 컬러 블록. 우측 상단을 ::after로 곡선 컷아웃 */
+/* 헤더 영역 — 컬러 배경. 우측 상단을 ::after로 곡선 컷아웃 */
 .headerCard {
   position: relative;
   display: flex;
   align-items: center;
-  padding: 12px 14px;
-  padding-right: 110px; /* 우측에 아이콘 자리 확보 */
+  padding: 14px 14px;
+  padding-right: 116px; /* 우측 아이콘 자리 */
   background: var(--widget-header-bg);
   color: var(--widget-on-header);
-  border-radius: var(--widget-card-radius);
   -webkit-app-region: drag;
   gap: 10px;
   min-width: 0;
-  isolation: isolate;
 }
 
-/* 우측 상단 곡선 컷아웃 — 위젯 베이스 색의 둥근 도형으로 덮음 */
+/* 우측 상단 컷아웃 — 본문(흰 카드 색)이 헤더 쪽으로 곡선으로 들어옴 */
 .headerCard::after {
   content: '';
   position: absolute;
   top: 0;
   right: 0;
-  width: 102px;
+  width: 116px;
   height: 100%;
-  background: var(--widget-bg);
-  border-radius: 0 var(--widget-card-radius) 0 22px;
+  background: var(--widget-card-bg);
+  border-radius: 0 0 0 24px;
   pointer-events: none;
 }
 
@@ -60,15 +56,15 @@
   white-space: nowrap;
 }
 
-/* 우측 액션 아이콘 — 컷아웃 자리에 absolute 배치 */
+/* 우측 액션 아이콘 — 컷아웃 자리에 위치 */
 .headerActions {
   position: absolute;
   top: 50%;
-  right: 6px;
+  right: 12px;
   transform: translateY(-50%);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   -webkit-app-region: no-drag;
   z-index: 3;
 }
@@ -154,35 +150,18 @@
   }
 }
 
-/* 본문 카드 wrapper — 헤더 카드 아래 별도 흰 카드 (폴더 안의 페이지 느낌) */
-.bodyCard {
-  margin: 6px 8px 8px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  background: var(--widget-card-bg);
-  border: 1px solid var(--widget-card-border);
-  border-radius: var(--widget-card-radius);
-  overflow: hidden;
-}
-
-/* 설정 펼친 상태 — 본문 카드 자리에 설정 */
+/* 설정 펼친 상태 — 헤더 아래 영역 차지 */
 .settingsArea {
-  margin: 6px 8px 8px;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  background: var(--widget-card-bg);
-  border: 1px solid var(--widget-card-border);
-  border-radius: var(--widget-card-radius);
 }
 
-/* 탭 네비게이션 — 카드 내부 상단 */
+/* 탭 네비게이션 — 헤더 바로 아래 */
 .tabs {
   display: flex;
   gap: 0;
-  padding: 4px 12px 0;
+  padding: 6px 14px 0;
   flex-shrink: 0;
 }
 
@@ -244,25 +223,25 @@
   word-break: keep-all;
 }
 
-/* S 사이즈 — 240×220 안에 모든 게 들어가도록 더 컴팩트 */
+/* S 사이즈 — 240×220 안에 컴팩트하게 */
 .widget[data-size='S'] {
   border-radius: 18px;
 }
 
-.widget[data-size='S'] .headerRow {
-  margin: 6px 6px 0;
-}
-
 .widget[data-size='S'] .headerCard {
-  padding: 8px 10px;
-  padding-right: 84px;
+  padding: 10px 12px;
+  padding-right: 92px;
   gap: 8px;
-  border-radius: 12px;
 }
 
 .widget[data-size='S'] .headerCard::after {
-  width: 80px;
-  border-radius: 0 12px 0 18px;
+  width: 92px;
+  border-radius: 0 0 0 18px;
+}
+
+.widget[data-size='S'] .headerActions {
+  right: 8px;
+  gap: 6px;
 }
 
 .widget[data-size='S'] .iconBtn {
@@ -273,12 +252,6 @@
 .widget[data-size='S'] .date {
   font-size: 13px;
   letter-spacing: -0.2px;
-}
-
-.widget[data-size='S'] .bodyCard,
-.widget[data-size='S'] .settingsArea {
-  margin: 4px 6px 6px;
-  border-radius: 12px;
 }
 
 .widget[data-size='S'] .body {

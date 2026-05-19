@@ -387,52 +387,50 @@ export default function App() {
         </div>
       ) : (
         <>
-          <div className={styles.bodyCard}>
-            {showTabs && (
-              <nav className={styles.tabs}>
-                <TabButton
-                  label="스케줄"
-                  active={activeTab === 'schedule'}
-                  onClick={() => setActiveTab('schedule')}
-                />
-                <TabButton
-                  label="셀프 체크"
-                  active={activeTab === 'checklist'}
-                  onClick={() => setActiveTab('checklist')}
-                />
-              </nav>
-            )}
+          {showTabs && (
+            <nav className={styles.tabs}>
+              <TabButton
+                label="스케줄"
+                active={activeTab === 'schedule'}
+                onClick={() => setActiveTab('schedule')}
+              />
+              <TabButton
+                label="셀프 체크"
+                active={activeTab === 'checklist'}
+                onClick={() => setActiveTab('checklist')}
+              />
+            </nav>
+          )}
 
-            <main className={styles.body}>
-              {needsMemberPick ? (
-                <MemberPicker
-                  members={members}
-                  loading={membersLoading}
-                  error={membersError}
-                  onSelect={setActiveMember}
-                />
-              ) : activeTab === 'checklist' ? (
-                <ChecklistView
-                  checked={checked}
-                  onToggle={toggleChecked}
-                  onResetAll={resetChecked}
-                />
-              ) : (
-                <Body
-                  size={settings.size}
-                  membersLoading={membersLoading}
-                  membersError={membersError}
-                  activeMember={activeMember}
-                  scheduleData={scheduleData}
-                  scheduleLoading={scheduleLoading}
-                  scheduleError={scheduleError}
-                  newKeys={newKeys}
-                  onStatusClick={handleStatusClick}
-                  onPendingClick={handlePendingClick}
-                />
-              )}
-            </main>
-          </div>
+          <main className={styles.body}>
+            {needsMemberPick ? (
+              <MemberPicker
+                members={members}
+                loading={membersLoading}
+                error={membersError}
+                onSelect={setActiveMember}
+              />
+            ) : activeTab === 'checklist' ? (
+              <ChecklistView
+                checked={checked}
+                onToggle={toggleChecked}
+                onResetAll={resetChecked}
+              />
+            ) : (
+              <Body
+                size={settings.size}
+                membersLoading={membersLoading}
+                membersError={membersError}
+                activeMember={activeMember}
+                scheduleData={scheduleData}
+                scheduleLoading={scheduleLoading}
+                scheduleError={scheduleError}
+                newKeys={newKeys}
+                onStatusClick={handleStatusClick}
+                onPendingClick={handlePendingClick}
+              />
+            )}
+          </main>
           {showFooter && (
             <footer className={styles.footer}>
               {activeMember && (
