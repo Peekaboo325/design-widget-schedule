@@ -141,24 +141,27 @@
   overflow-y: auto;
 }
 
-/* 탭 네비게이션 — L 사이즈에서만 표시 */
+/* 탭 네비게이션 — L 사이즈에서만 표시
+   각 탭이 flex로 균등 분할되어 기능 추가 시 자동으로 N분할됨 */
 .tabs {
   display: flex;
-  gap: 2px;
+  gap: 0;
   padding: 6px 12px 0;
   flex-shrink: 0;
 }
 
 .tab {
+  flex: 1 1 0;
   background: transparent;
   border: none;
-  padding: 6px 12px;
+  padding: 6px 0;
   font-size: 13px;
   font-weight: 600;
   color: var(--widget-muted);
   cursor: pointer;
   border-radius: 4px 4px 0 0;
   border-bottom: 2px solid transparent;
+  text-align: center;
 }
 
 .tab:hover {
