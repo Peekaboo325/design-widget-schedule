@@ -25,7 +25,15 @@ const api = {
   setMode: (mode) => ipcRenderer.invoke('settings:set-mode', mode),
 
   // GAS API 프록시 호출 (CSP/CORS 우회용)
-  apiGet: (params) => ipcRenderer.invoke('api:get', params)
+  apiGet: (params) => ipcRenderer.invoke('api:get', params),
+
+  // 트레이 새로고침 메뉴 → 렌더러 콜백
+  onTrayRefresh: (cb) => {
+    const handler = () => cb()
+    ipcRenderer.on('tray:refresh', handler)
+    // 정리 함수 반환
+    return () => ipcRenderer.removeListener('tray:refresh', handler)
+  }
 }
 
 contextBridge.exposeInMainWorld('widgetAPI', api)

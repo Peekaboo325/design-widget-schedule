@@ -91,6 +91,12 @@ export default function App() {
     refresh
   } = useSchedule(activeMember)
 
+  // 트레이 '새로고침' 메뉴 → 즉시 재조회
+  useEffect(() => {
+    const off = window.widgetAPI?.onTrayRefresh?.(() => refresh())
+    return () => off?.()
+  }, [refresh])
+
   const refreshing = scheduleLoading
   const needsMemberPick = ready && !activeMember
   const showTabs = settings.size === 'L' && !needsMemberPick

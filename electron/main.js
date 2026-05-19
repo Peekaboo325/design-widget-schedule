@@ -1,9 +1,20 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import Store from 'electron-store'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+// 트레이/창 아이콘
+// dev:   <project>/resources/design-widget-schedule.ico
+// 배포:  process.resourcesPath/design-widget-schedule.ico
+const ICON_FILENAME = 'design-widget-schedule.ico'
+function resolveIconPath() {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, ICON_FILENAME)
+  }
+  return path.join(__dirname, '../../resources', ICON_FILENAME)
+}
 
 // GAS Web App 베이스 URL
 // 렌더러는 CSP/CORS 때문에 직접 호출 불가 → main에서 fetch 후 IPC 응답
@@ -32,6 +43,9 @@ const store = new Store({
 })
 
 let mainWindow = null
+let tray = null
+// 트레이의 '종료' 메뉴 클릭으로 quit하는지 식별 (단순 close와 구분)
+let isQuitting = false
 
 function createWindow() {
   const initial = {
@@ -41,7 +55,7 @@ function createWindow() {
   }
   const sizePreset = SIZE_PRESETS[initial.size] ?? SIZE_PRESETS.L
 
-  mainWindow = new BrowserWindow({
+  const winOpts = {
     width: sizePreset.width,
     height: sizePreset.height,
     minWidth: 200,
@@ -51,7 +65,7 @@ function createWindow() {
     resizable: false,
     alwaysOnTop: initial.alwaysOnTop,
     hasShadow: false,
-    skipTaskbar: false,
+    skipTaskbar: true, // 작업표시줄·Alt+Tab에서 숨김 (트레이 전용)
     backgroundColor: '#00000000',
     opacity: initial.opacity,
     show: false,
@@ -61,7 +75,15 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false
     }
-  })
+  }
+
+  // 아이콘 파일이 있으면 창에도 적용 (frameless라 시각 노출은 적지만 OS 메타데이터로 사용)
+  const iconImage = nativeImage.createFromPath(resolveIconPath())
+  if (!iconImage.isEmpty()) {
+    winOpts.icon = iconImage
+  }
+
+  mainWindow = new BrowserWindow(winOpts)
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show()
@@ -72,6 +94,47 @@ function createWindow() {
   } else {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'))
   }
+}
+
+// 트레이 아이콘 + 우클릭 메뉴 + 좌클릭 토글
+function createTray() {
+  const iconPath = resolveIconPath()
+  const image = nativeImage.createFromPath(iconPath)
+  if (image.isEmpty()) {
+    console.warn(`[tray] icon file not found at ${iconPath} — tray skipped`)
+    return
+  }
+
+  tray = new Tray(image)
+  tray.setToolTip('디자인 위젯')
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: '새로고침',
+      click: () => {
+        mainWindow?.webContents.send('tray:refresh')
+      }
+    },
+    { type: 'separator' },
+    {
+      label: '종료',
+      click: () => {
+        isQuitting = true
+        app.quit()
+      }
+    }
+  ])
+  tray.setContextMenu(contextMenu)
+
+  // 좌클릭: 위젯 보이기/숨기기 토글 (안전망)
+  tray.on('click', () => {
+    if (!mainWindow) return
+    if (mainWindow.isVisible()) mainWindow.hide()
+    else {
+      mainWindow.show()
+      mainWindow.focus()
+    }
+  })
 }
 
 // 설정값 초기 동기화
@@ -188,12 +251,17 @@ ipcMain.handle('api:get', async (_event, params) => {
 
 app.whenReady().then(() => {
   createWindow()
+  createTray()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
 
+// 트레이가 있는 동안에는 창이 닫혀도 앱 종료하지 않음
+// (명시적 '종료' 메뉴 클릭 시에만 app.quit)
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
+  if (isQuitting && process.platform !== 'darwin') {
+    app.quit()
+  }
 })
