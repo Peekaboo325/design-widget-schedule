@@ -185,7 +185,7 @@
 
 .table {
   list-style: none;
-  padding: 0 8px 0 0;
+  padding: 0 8px 0 4px;
   margin: 0;
   overflow-y: auto;
   min-height: 0;
@@ -195,8 +195,8 @@
 
 .tableRow {
   display: grid;
-  grid-template-columns: 8px minmax(60px, 1fr) minmax(80px, 2.4fr) auto auto;
-  gap: 6px;
+  grid-template-columns: 14px minmax(60px, 1fr) minmax(80px, 2.4fr) auto auto;
+  gap: 8px;
   align-items: center;
   padding: 8px 0;
   font-size: 13px;
@@ -209,15 +209,31 @@
 
 /* NEW 항목 좌측 dot */
 .cellMarker {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: transparent;
+  justify-self: center;
 }
 
 .cellMarkerNew {
   background: var(--widget-accent);
-  box-shadow: 0 0 0 2px color-mix(in oklab, var(--widget-accent) 30%, transparent);
+  animation: dotPulse 1.3s ease-in-out infinite;
+}
+
+@keyframes dotPulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    filter: brightness(1);
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--widget-accent) 50%, transparent);
+  }
+  50% {
+    opacity: 1;
+    filter: brightness(1.35);
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--widget-accent) 0%, transparent),
+      0 0 6px 1px color-mix(in oklab, var(--widget-accent) 60%, transparent);
+  }
 }
 
 .cellClient {
