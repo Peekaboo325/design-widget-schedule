@@ -108,17 +108,40 @@ export default function App() {
       const next = nextStatus(prevStatus)
       const rowIndex = item.rowIndex
 
-      // 낙관적 업데이트: 완료면 잔여 스케줄에서 즉시 제거, 아니면 상태만 변경
+      // 낙관적 업데이트
+      // - 잔여 스케줄: 상태 변경 또는 완료 시 제거
+      // - 완료 시 공유 대기에도 즉시 추가 (서버 응답 기다리지 않고 카운트 갱신)
       mutateSchedule((prev) => {
-        const updated = prev.schedule
+        const completedItem = prev.schedule.find(
+          (it) => it.rowIndex === rowIndex
+        )
+        const updatedSchedule = prev.schedule
           .map((it) =>
             it.rowIndex === rowIndex ? { ...it, ['상태']: next } : it
           )
           .filter((it) => it['상태'] !== '완료')
+
+        const movedToPending = next === '완료' && completedItem
+        const updatedPending = movedToPending
+          ? [
+              ...prev.pending,
+              {
+                rowIndex: completedItem.rowIndex,
+                ['광고주']: completedItem['광고주'],
+                ['비고']: completedItem['비고'],
+                ['수량']: completedItem['수량']
+              }
+            ]
+          : prev.pending
+
         return {
           ...prev,
-          schedule: updated,
-          summary: { ...prev.summary, total: updated.length }
+          schedule: updatedSchedule,
+          pending: updatedPending,
+          summary: {
+            total: updatedSchedule.length,
+            pending: updatedPending.length
+          }
         }
       })
 
