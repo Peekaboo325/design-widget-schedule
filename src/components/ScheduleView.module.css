@@ -23,11 +23,11 @@
 }
 
 .bigValue {
-  font-size: 38px;
+  font-size: 42px;
   font-weight: 700;
   line-height: 1;
-  color: var(--widget-fg);
-  letter-spacing: -1px;
+  color: var(--widget-accent);
+  letter-spacing: -1.5px;
 }
 
 /* M: 광고주별 리스트 */
@@ -43,6 +43,9 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--widget-border);
+  margin-bottom: 6px;
 }
 
 .mediumLabel {
@@ -51,8 +54,11 @@
 }
 
 .mediumTotal {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--widget-accent);
+  letter-spacing: -0.5px;
+  line-height: 1;
 }
 
 .clientList {
@@ -152,8 +158,9 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  padding-bottom: 4px;
-  margin-bottom: 4px;
+  padding-bottom: 6px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--widget-border);
 }
 
 .sectionLabel {
@@ -163,14 +170,17 @@
 }
 
 .sectionCount {
-  font-size: 11px;
-  color: var(--widget-muted);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--widget-accent);
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.3px;
+  line-height: 1;
 }
 
 .table {
   list-style: none;
-  padding: 0;
+  padding: 0 8px 0 0;
   margin: 0;
   overflow-y: auto;
   min-height: 0;
@@ -229,9 +239,10 @@
   color: var(--widget-accent);
 }
 
+/* 대기: 머스타드 오커 (옐로 프리셋과 충돌 방지) */
 .statusWaiting {
-  background: rgba(255, 217, 61, 0.18);
-  color: #ffd93d;
+  background: rgba(212, 161, 85, 0.2);
+  color: #e0b878;
 }
 
 .statusUndefined {

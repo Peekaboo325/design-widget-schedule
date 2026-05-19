@@ -18,6 +18,7 @@ const SIZE_OPTIONS = [
 ]
 
 export default function SettingsPanel({
+  size,
   settings,
   members,
   onChangeMember,
@@ -26,8 +27,9 @@ export default function SettingsPanel({
   onChangeThemeColor,
   onChangeSize
 }) {
+  const compact = size === 'S'
   return (
-    <div className={styles.panel}>
+    <div className={`${styles.panel} ${compact ? styles.panelCompact : ''}`}>
       {/* 본인 선택 */}
       {members && members.length > 0 && (
         <Row label="본인">

@@ -7,6 +7,49 @@
   background: rgba(0, 0, 0, 0.12);
 }
 
+/* S 사이즈: 좁은 너비에 맞춰 패딩/간격 컴팩트 */
+.panelCompact {
+  gap: 8px;
+  padding: 8px 10px 10px;
+}
+
+.panelCompact .row {
+  min-height: 20px;
+}
+
+.panelCompact .rowLabel {
+  font-size: 10px;
+}
+
+.panelCompact .range {
+  width: 90px;
+}
+
+.panelCompact .toggle {
+  width: 28px;
+  height: 16px;
+}
+
+.panelCompact .toggleKnob {
+  width: 12px;
+  height: 12px;
+}
+
+.panelCompact .toggleOn .toggleKnob {
+  transform: translateX(12px);
+}
+
+.panelCompact .segment {
+  padding: 2px 7px;
+  font-size: 10px;
+}
+
+.panelCompact .swatch,
+.panelCompact .picker {
+  width: 16px;
+  height: 16px;
+}
+
 .row {
   display: flex;
   align-items: center;

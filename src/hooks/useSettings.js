@@ -80,12 +80,17 @@ export default function useSettings() {
 
 // 테마 컬러를 CSS 변수로 적용
 // --widget-accent: 포인트 색
-// --widget-bg: 다크 베이스에 액센트 8%를 섞은 틴트 배경
+// --widget-bg: 다크 베이스에 액센트를 진하게 섞은 틴트 배경
+// --widget-header-bg: 헤더 영역 강조용 더 진한 틴트
 function applyThemeColor(hex) {
   const root = document.documentElement
   root.style.setProperty('--widget-accent', hex)
   root.style.setProperty(
     '--widget-bg',
-    `color-mix(in oklab, ${hex} 8%, rgba(28, 28, 32, 0.92))`
+    `color-mix(in oklab, ${hex} 20%, rgba(28, 28, 32, 0.92))`
+  )
+  root.style.setProperty(
+    '--widget-header-bg',
+    `color-mix(in oklab, ${hex} 28%, rgba(28, 28, 32, 0.92))`
   )
 }

@@ -41,7 +41,7 @@ export default function ScheduleView({ size, data, loading }) {
 function SmallSummary({ total }) {
   return (
     <div className={styles.bigMetric}>
-      <span className={styles.bigLabel}>스케줄</span>
+      <span className={styles.bigLabel}>잔여 스케줄</span>
       <span className={styles.bigValue}>{total}</span>
     </div>
   )
@@ -53,7 +53,7 @@ function MediumSummary({ schedule, total }) {
   return (
     <div className={styles.mediumStack}>
       <div className={styles.mediumHeader}>
-        <span className={styles.mediumLabel}>스케줄</span>
+        <span className={styles.mediumLabel}>잔여 스케줄</span>
         <span className={styles.mediumTotal}>{total}건</span>
       </div>
       {grouped.length === 0 ? (
@@ -81,13 +81,13 @@ function PendingBadge({ count }) {
     <div className={`${styles.pendingBadge} ${dim ? styles.pendingBadgeDim : ''}`}>
       <span className={styles.pendingDot} />
       <span className={styles.pendingText}>
-        공유대기 <strong>{count}</strong>건 미발송
+        공유대기 <strong>{count}</strong>건
       </span>
     </div>
   )
 }
 
-// L: 스케줄 전체 테이블
+// L: 잔여 스케줄 전체 테이블
 function ScheduleTable({ schedule, loading }) {
   if (schedule.length === 0) {
     return (
@@ -99,7 +99,7 @@ function ScheduleTable({ schedule, loading }) {
   return (
     <div className={styles.tableWrap}>
       <div className={styles.sectionHead}>
-        <span className={styles.sectionLabel}>스케줄</span>
+        <span className={styles.sectionLabel}>잔여 스케줄</span>
         <span className={styles.sectionCount}>{schedule.length}건</span>
       </div>
       <ul className={styles.table}>

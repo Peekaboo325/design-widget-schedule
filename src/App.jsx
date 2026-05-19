@@ -122,6 +122,7 @@ export default function App() {
 
       {settingsOpen && ready && (
         <SettingsPanel
+          size={settings.size}
           settings={settings}
           members={members}
           onChangeMember={setActiveMember}
