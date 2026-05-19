@@ -98,6 +98,13 @@ export default function App() {
     mutate: mutateSchedule
   } = useSchedule(activeMember)
 
+  // 새 스케줄 알림 트래킹 (세션 기반)
+  // 주의: handleStatusClick이 markSeen을 dependency로 쓰므로 반드시 그보다 위에서 선언되어야 함
+  const { newKeys, newCount, markAllSeen, markSeen } = useSeenSchedule(
+    activeMember,
+    scheduleData?.schedule
+  )
+
   // 토스트 (액션 결과 안내 + Undo)
   const [toast, setToast] = useState(null)
   const dismissToast = useCallback(() => setToast(null), [])
@@ -254,12 +261,6 @@ export default function App() {
     const off = window.widgetAPI?.onTrayRefresh?.(() => refresh())
     return () => off?.()
   }, [refresh])
-
-  // 새 스케줄 알림 트래킹 (세션 기반)
-  const { newKeys, newCount, markAllSeen, markSeen } = useSeenSchedule(
-    activeMember,
-    scheduleData?.schedule
-  )
 
   // 새로 추가된 NEW 키만 OS 알림 (중복 방지)
   // 이전 newKeys에 없던 키가 들어오면 알림 띄움
