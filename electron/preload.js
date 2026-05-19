@@ -27,11 +27,6 @@ const api = {
   // GAS API 프록시 호출 (CSP/CORS 우회용)
   apiGet: (params) => ipcRenderer.invoke('api:get', params),
 
-  // 새 스케줄 알림 기준선: 멤버별 '본 항목 키' 영구 저장
-  getSeenKeys: (member) => ipcRenderer.invoke('schedule:get-seen-keys', member),
-  setSeenKeys: (member, keys) =>
-    ipcRenderer.invoke('schedule:set-seen-keys', member, keys),
-
   // 트레이 새로고침 메뉴 → 렌더러 콜백
   onTrayRefresh: (cb) => {
     const handler = () => cb()

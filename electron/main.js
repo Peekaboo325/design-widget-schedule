@@ -38,9 +38,7 @@ const store = new Store({
     themeColor: '#7aa2ff',
     size: 'L',
     activeMember: null,
-    mode: 'dark',
-    // '본 것으로 표시한 스케줄 키' — { '<member>': ['광고주|비고', ...] }
-    seenScheduleKeys: {}
+    mode: 'dark'
   }
 })
 
@@ -170,22 +168,6 @@ ipcMain.handle('settings:set-mode', (_event, mode) => {
   const next = mode === 'light' ? 'light' : 'dark'
   store.set('mode', next)
   return next
-})
-
-// 멤버별 '본 스케줄 키' 조회/저장 — 새 스케줄 알림 기준선
-ipcMain.handle('schedule:get-seen-keys', (_event, member) => {
-  if (typeof member !== 'string' || !member) return []
-  const all = store.get('seenScheduleKeys') || {}
-  return Array.isArray(all[member]) ? all[member] : []
-})
-
-ipcMain.handle('schedule:set-seen-keys', (_event, member, keys) => {
-  if (typeof member !== 'string' || !member) return []
-  const arr = Array.isArray(keys) ? keys.filter((k) => typeof k === 'string') : []
-  const all = store.get('seenScheduleKeys') || {}
-  all[member] = arr
-  store.set('seenScheduleKeys', all)
-  return arr
 })
 
 // 활성 팀원 저장 (null 허용: 미선택 상태)
