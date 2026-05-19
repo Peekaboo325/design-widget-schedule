@@ -158,6 +158,23 @@ function doPost(e) {
     if (action === 'setShare') {
       const v = Boolean(value);
       sheet.getRange(rowIndex, COL.공유).setValue(v);
+
+      // GAS의 onEdit 트리거는 스크립트의 setValue로는 발동되지 않음.
+      // 사용자가 체크박스를 직접 클릭한 것과 동일한 효과를 내기 위해
+      // 같은 프로젝트에 있는 moveRowOnCheck를 가짜 이벤트로 호출.
+      // (Code.gs와 같은 Apps Script 프로젝트에 통합되어 있어야 함)
+      if (v === true && typeof moveRowOnCheck === 'function') {
+        try {
+          moveRowOnCheck({
+            range: sheet.getRange(rowIndex, COL.공유),
+            value: 'TRUE',
+            source: SpreadsheetApp.getActiveSpreadsheet()
+          });
+        } catch (moveErr) {
+          Logger.log('자동 이관 실패: ' + moveErr);
+        }
+      }
+
       return jsonResponse({ ok: true, action, rowIndex, value: v });
     }
 
