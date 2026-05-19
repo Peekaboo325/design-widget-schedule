@@ -7,7 +7,6 @@ import MemberPicker from './components/MemberPicker.jsx'
 import useSettings from './hooks/useSettings.js'
 import useMembers from './hooks/useMembers.js'
 import useSchedule from './hooks/useSchedule.js'
-import { shortName } from './lib/format.js'
 
 // 위젯 셸: 헤더(드래그·설정·새로고침) + 설정 패널 + 본문(탭 전환)
 // 5단계: L 사이즈에서 점검 체크리스트 탭 활성화.
@@ -111,23 +110,9 @@ export default function App() {
       <header className={styles.header}>
         <div className={styles.headerLeft}>
           <span className={styles.date}>{todayLabel}</span>
-          {activeMember && (
-            <span className={styles.member} title={activeMember}>
-              {shortName(activeMember)}
-            </span>
-          )}
         </div>
         <div className={styles.headerActions}>
-          <button
-            ref={settingsBtnRef}
-            type="button"
-            className={`${styles.iconBtn} ${settingsOpen ? styles.iconBtnActive : ''}`}
-            aria-label="설정"
-            aria-expanded={settingsOpen}
-            onClick={() => setSettingsOpen((v) => !v)}
-          >
-            <GearIcon />
-          </button>
+          {/* ↻ 먼저, ⚙ 가 항상 우측 끝 — 토글 시 ⚙ 위치가 바뀌지 않도록 */}
           {activeTab === 'schedule' && !needsMemberPick && !settingsOpen && (
             <button
               type="button"
@@ -139,6 +124,16 @@ export default function App() {
               <RefreshIcon />
             </button>
           )}
+          <button
+            ref={settingsBtnRef}
+            type="button"
+            className={`${styles.iconBtn} ${settingsOpen ? styles.iconBtnActive : ''}`}
+            aria-label="설정"
+            aria-expanded={settingsOpen}
+            onClick={() => setSettingsOpen((v) => !v)}
+          >
+            <GearIcon />
+          </button>
         </div>
       </header>
 
@@ -202,6 +197,8 @@ export default function App() {
           </main>
           {showFooter && (
             <footer className={styles.footer}>
+              {activeMember && <span title={activeMember}>{activeMember}</span>}
+              {activeMember && ' · '}
               마지막 갱신 {formatTime(lastUpdated)}
               {scheduleLoading ? ' · 갱신 중…' : ''}
             </footer>

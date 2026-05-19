@@ -262,12 +262,12 @@
   padding: 4px 0;
 }
 
-/* L 모드 영역 비율 7:3 (잔여 스케줄 : 공유 대기) */
+/* L 모드 영역 비율 6:4 (잔여 스케줄 : 공유 대기) */
 .containerL > .tableWrap:nth-of-type(1) {
-  flex: 7 1 0;
+  flex: 6 1 0;
 }
 
 .containerL > .tableWrap:nth-of-type(2) {
-  flex: 3 1 0;
+  flex: 4 1 0;
   min-height: 0;
 }
