@@ -466,17 +466,34 @@ ipcMain.handle('api:get', async (_event, params) => {
   }
 })
 
-app.whenReady().then(() => {
-  // 저장된 자동 실행 설정을 OS에 적용 (앱 시작 때마다 동기화)
-  applyLaunchOnBoot(store.get('launchOnBoot'))
-
-  createWindow()
-  createTray()
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+// 단일 인스턴스 락 — 두 번째 실행 시도 시 기존 위젯에 focus만 보내고 종료
+// 트레이 누적 / 중복 실행 방지
+const gotSingleInstanceLock = app.requestSingleInstanceLock()
+if (!gotSingleInstanceLock) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    // 두 번째 인스턴스가 떴다 = 기존 위젯에 focus
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      showWindowSafely()
+    } else {
+      createWindow()
+    }
   })
-})
+
+  app.whenReady().then(() => {
+    // 저장된 자동 실행 설정을 OS에 적용 (앱 시작 때마다 동기화)
+    applyLaunchOnBoot(store.get('launchOnBoot'))
+
+    createWindow()
+    createTray()
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    })
+  })
+}
 
 // 트레이가 있는 동안에는 창이 닫혀도 앱 종료하지 않음
 // (명시적 '종료' 메뉴 클릭 시에만 app.quit)
