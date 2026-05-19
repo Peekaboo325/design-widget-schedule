@@ -17,17 +17,18 @@
 }
 
 .bigLabel {
-  font-size: 11px;
+  font-size: 10px;
+  font-weight: 500;
   color: var(--widget-muted);
-  letter-spacing: -0.2px;
+  letter-spacing: 0;
 }
 
 .bigValue {
-  font-size: 42px;
-  font-weight: 700;
+  font-size: 48px;
+  font-weight: 800;
   line-height: 1;
   color: var(--widget-accent);
-  letter-spacing: -1.5px;
+  letter-spacing: -2px;
 }
 
 /* M: 광고주별 리스트 */
@@ -49,15 +50,17 @@
 }
 
 .mediumLabel {
-  font-size: 11px;
+  font-size: 10px;
+  font-weight: 500;
   color: var(--widget-muted);
+  letter-spacing: 0;
 }
 
 .mediumTotal {
-  font-size: 22px;
-  font-weight: 700;
+  font-size: 26px;
+  font-weight: 800;
   color: var(--widget-accent);
-  letter-spacing: -0.5px;
+  letter-spacing: -0.8px;
   line-height: 1;
 }
 
@@ -165,17 +168,18 @@
 }
 
 .sectionLabel {
-  font-size: 11px;
+  font-size: 10px;
+  font-weight: 500;
   color: var(--widget-muted);
-  letter-spacing: -0.2px;
+  letter-spacing: 0;
 }
 
 .sectionCount {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 800;
   color: var(--widget-accent);
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.6px;
   line-height: 1;
 }
 
@@ -194,8 +198,8 @@
   grid-template-columns: minmax(60px, 1fr) minmax(80px, 2.4fr) auto auto;
   gap: 8px;
   align-items: center;
-  padding: 6px 0;
-  font-size: 11.5px;
+  padding: 7px 0;
+  font-size: 12px;
   border-bottom: 1px solid var(--widget-row-border);
 }
 
@@ -204,6 +208,7 @@
 }
 
 .cellClient {
+  font-size: 12px;
   font-weight: 700;
   color: var(--widget-fg);
   overflow: hidden;
@@ -213,6 +218,8 @@
 
 /* 비고는 광고주와 함께 강조 (수량보다 위계 위) */
 .cellNote {
+  font-size: 11.5px;
+  font-weight: 500;
   color: var(--widget-fg);
   overflow: hidden;
   text-overflow: ellipsis;

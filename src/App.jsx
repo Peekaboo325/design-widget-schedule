@@ -7,6 +7,7 @@ import MemberPicker from './components/MemberPicker.jsx'
 import useSettings from './hooks/useSettings.js'
 import useMembers from './hooks/useMembers.js'
 import useSchedule from './hooks/useSchedule.js'
+import { shortName } from './lib/format.js'
 
 // 위젯 셸: 헤더(드래그·설정·새로고침) + 설정 패널 + 본문(탭 전환)
 // 5단계: L 사이즈에서 점검 체크리스트 탭 활성화.
@@ -197,7 +198,9 @@ export default function App() {
           </main>
           {showFooter && (
             <footer className={styles.footer}>
-              {activeMember && <span title={activeMember}>{activeMember}</span>}
+              {activeMember && (
+                <span title={activeMember}>{shortName(activeMember)}</span>
+              )}
               {activeMember && ' · '}
               마지막 갱신 {formatTime(lastUpdated)}
               {scheduleLoading ? ' · 갱신 중…' : ''}

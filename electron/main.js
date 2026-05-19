@@ -85,6 +85,14 @@ function createWindow() {
 
   mainWindow = new BrowserWindow(winOpts)
 
+  // 일반 close 시도(Alt+F4 등)는 hide로 대체 — 트레이 '종료'에서만 실제 닫힘
+  mainWindow.on('close', (e) => {
+    if (!isQuitting) {
+      e.preventDefault()
+      mainWindow.hide()
+    }
+  })
+
   mainWindow.once('ready-to-show', () => {
     mainWindow.show()
   })
@@ -112,7 +120,11 @@ function createTray() {
     {
       label: '새로고침',
       click: () => {
-        mainWindow?.webContents.send('tray:refresh')
+        if (!mainWindow || mainWindow.isDestroyed()) {
+          createWindow()
+          return
+        }
+        mainWindow.webContents.send('tray:refresh')
       }
     },
     { type: 'separator' },
@@ -127,8 +139,12 @@ function createTray() {
   tray.setContextMenu(contextMenu)
 
   // 좌클릭: 위젯 보이기/숨기기 토글 (안전망)
+  // mainWindow가 어떤 이유로든 destroy 됐으면 재생성
   tray.on('click', () => {
-    if (!mainWindow) return
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      createWindow()
+      return
+    }
     if (mainWindow.isVisible()) mainWindow.hide()
     else {
       mainWindow.show()

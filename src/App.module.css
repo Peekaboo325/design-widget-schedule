@@ -30,9 +30,9 @@
 }
 
 .date {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: -0.2px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
 }
 
 .member {
@@ -118,7 +118,7 @@
   background: transparent;
   border: none;
   padding: 5px 10px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--widget-muted);
   cursor: pointer;
