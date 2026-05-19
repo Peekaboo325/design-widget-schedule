@@ -30,6 +30,7 @@ const api = {
 
   // GAS API 프록시 호출 (CSP/CORS 우회용)
   apiGet: (params) => ipcRenderer.invoke('api:get', params),
+  apiPost: (body) => ipcRenderer.invoke('api:post', body),
 
   // OS 알림 (새 스케줄)
   notify: (payload) => ipcRenderer.invoke('notify', payload),

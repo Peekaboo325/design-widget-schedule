@@ -285,6 +285,55 @@ ipcMain.handle('settings:set-theme-color', (_event, hex) => {
   return hex
 })
 
+// 네트워크 에러를 사용자 친화 메시지로 변환
+function friendlyNetworkError(err) {
+  const msg = String(err?.message ?? err)
+  if (
+    /fetch failed|ENOTFOUND|ENETUNREACH|EAI_AGAIN|EHOSTUNREACH/i.test(msg) ||
+    err?.name === 'AbortError'
+  ) {
+    return '네트워크 연결을 확인해주세요'
+  }
+  return msg
+}
+
+// GAS API POST — 시트 쓰기 (상태/공유 변경)
+// body: { action: 'setStatus'|'setShare', rowIndex, value }
+// 응답: { ok: true, data } | { ok: false, error }
+ipcMain.handle('api:post', async (_event, body) => {
+  if (!body || typeof body !== 'object') {
+    return { ok: false, error: 'invalid body' }
+  }
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), API_TIMEOUT_MS)
+  try {
+    const res = await fetch(GAS_BASE, {
+      method: 'POST',
+      // GAS Apps Script는 application/json POST 시 e.postData.contents에 본문 전달
+      // CORS preflight 회피를 위해 text/plain으로 보냄 (main 프로세스라 어차피 CORS 무관하지만 GAS 호환)
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(body),
+      redirect: 'follow',
+      signal: controller.signal
+    })
+    if (!res.ok) return { ok: false, error: `HTTP ${res.status}` }
+    const contentType = res.headers.get('content-type') ?? ''
+    if (!contentType.toLowerCase().includes('application/json')) {
+      return {
+        ok: false,
+        error: `JSON 응답이 아님 (${contentType || 'unknown'})`
+      }
+    }
+    const data = await res.json()
+    if (data && data.error) return { ok: false, error: String(data.error) }
+    return { ok: true, data }
+  } catch (err) {
+    return { ok: false, error: friendlyNetworkError(err) }
+  } finally {
+    clearTimeout(timer)
+  }
+})
+
 // GAS API 호출 프록시
 // params: { type: 'members' } 또는 { type: 'schedule', member: '이름' }
 // 응답: { ok: true, data } | { ok: false, error }
@@ -317,15 +366,7 @@ ipcMain.handle('api:get', async (_event, params) => {
     const data = await res.json()
     return { ok: true, data }
   } catch (err) {
-    const msg = String(err?.message ?? err)
-    // 네트워크 단절 케이스를 사용자 친화 메시지로 변환
-    if (
-      /fetch failed|ENOTFOUND|ENETUNREACH|EAI_AGAIN|EHOSTUNREACH/i.test(msg) ||
-      err?.name === 'AbortError'
-    ) {
-      return { ok: false, error: '네트워크 연결을 확인해주세요' }
-    }
-    return { ok: false, error: msg }
+    return { ok: false, error: friendlyNetworkError(err) }
   } finally {
     clearTimeout(timer)
   }

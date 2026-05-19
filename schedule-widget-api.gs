@@ -1,6 +1,8 @@
 // ============================================================
 // 스케줄 위젯 API — schedule-widget-api.gs
-// 💛신규·유지보수 시트 기반, 팀원별 미완료 작업 + 공유대기 반환
+// 💛신규·유지보수 시트 기반
+// - doGet: 팀원별 미완료 작업 + 공유대기 반환 (rowIndex 포함)
+// - doPost: 상태(K열) / 공유(L열) 변경
 // ============================================================
 
 const SCHEDULE_SHEET_NAME = '💛신규·유지보수';
@@ -17,6 +19,12 @@ const COL = {
   공유: 12,    // L
 };
 
+// 상태 화이트리스트 (POST 검증)
+const VALID_STATUSES = ['미정', '대기', '진행', '완료'];
+
+// ============================================================
+// GET
+// ============================================================
 function doGet(e) {
   try {
     const params = e.parameter || {};
@@ -31,13 +39,9 @@ function doGet(e) {
       result = { error: '알 수 없는 type: ' + type };
     }
 
-    return ContentService
-      .createTextOutput(JSON.stringify(result))
-      .setMimeType(ContentService.MimeType.JSON);
+    return jsonResponse(result);
   } catch (err) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ error: err.message }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return jsonResponse({ error: err.message });
   }
 }
 
@@ -57,10 +61,11 @@ function getSchedule(member) {
   const schedule = [];
   const pending = [];
 
-  for (const row of rows) {
+  rows.forEach((row, i) => {
     const 작업자 = String(row[COL.작업자 - 1] || '').trim();
-    if (작업자 !== member) continue;
+    if (작업자 !== member) return;
 
+    const rowIndex = DATA_START_ROW + i; // 시트 절대 행 번호 (위젯이 POST 시 사용)
     const 광고주 = String(row[COL.광고주 - 1] || '');
     const 수량 = row[COL.수량 - 1] || 0;
     const 비고 = String(row[COL.비고 - 1] || '');
@@ -68,11 +73,11 @@ function getSchedule(member) {
     const 공유 = row[COL.공유 - 1];
 
     if (상태 === '완료' && 공유 !== true) {
-      pending.push({ 광고주, 비고, 수량 });
+      pending.push({ rowIndex, 광고주, 비고, 수량 });
     } else if (상태 !== '완료') {
-      schedule.push({ 광고주, 비고, 수량, 상태 });
+      schedule.push({ rowIndex, 광고주, 비고, 수량, 상태 });
     }
-  }
+  });
 
   return {
     schedule,
@@ -82,4 +87,53 @@ function getSchedule(member) {
       pending: pending.length,
     },
   };
+}
+
+// ============================================================
+// POST — 상태/공유 변경
+// 요청 본문(JSON):
+//   { action: 'setStatus', rowIndex: <number>, value: '미정'|'대기'|'진행'|'완료' }
+//   { action: 'setShare',  rowIndex: <number>, value: true|false }
+// 응답: { ok: true, action, rowIndex, value } | { error: '...' }
+// ============================================================
+function doPost(e) {
+  try {
+    const body = JSON.parse((e.postData && e.postData.contents) || '{}');
+    const action = body.action;
+    const rowIndex = body.rowIndex;
+    const value = body.value;
+
+    if (!Number.isInteger(rowIndex) || rowIndex < DATA_START_ROW) {
+      return jsonResponse({ error: 'invalid rowIndex' });
+    }
+
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SCHEDULE_SHEET_NAME);
+    if (!sheet) return jsonResponse({ error: 'sheet not found' });
+    if (rowIndex > sheet.getLastRow()) return jsonResponse({ error: 'rowIndex out of range' });
+
+    if (action === 'setStatus') {
+      if (!VALID_STATUSES.includes(value)) return jsonResponse({ error: 'invalid status' });
+      sheet.getRange(rowIndex, COL.상태).setValue(value);
+      return jsonResponse({ ok: true, action, rowIndex, value });
+    }
+
+    if (action === 'setShare') {
+      const v = Boolean(value);
+      sheet.getRange(rowIndex, COL.공유).setValue(v);
+      return jsonResponse({ ok: true, action, rowIndex, value: v });
+    }
+
+    return jsonResponse({ error: 'unknown action: ' + action });
+  } catch (err) {
+    return jsonResponse({ error: err.message });
+  }
+}
+
+// ============================================================
+// 헬퍼
+// ============================================================
+function jsonResponse(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
 }
