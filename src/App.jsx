@@ -154,9 +154,10 @@ export default function App() {
         }
       })
 
-      // 시트에 반영
+      // 시트에 반영 — expect로 행 어긋남 검증
+      const expect = { 광고주: item['광고주'], 비고: item['비고'] }
       try {
-        await setRowStatus(rowIndex, next)
+        await setRowStatus(rowIndex, next, expect)
         setToast({
           key: Date.now(),
           message: `${item['광고주']} → ${next}`,
@@ -165,6 +166,8 @@ export default function App() {
             label: '취소',
             onClick: async () => {
               try {
+                // 취소는 시트 현재 값과 일치 검증을 우회해도 안전 (방금 변경한 본인이라)
+                // 단 안전 위해 expect 유지하되, 검증 실패 시 자연 refresh로 정정
                 await setRowStatus(rowIndex, prevStatus)
                 // refresh로 다시 fetch되며 사라졌던 키가 재등장 → NEW로 잡힘
                 // 방지: 해당 키를 미리 기준선에 등록
@@ -222,8 +225,9 @@ export default function App() {
         }
       })
 
+      const expect = { 광고주: item['광고주'], 비고: item['비고'] }
       try {
-        await setRowShare(rowIndex, true)
+        await setRowShare(rowIndex, true, expect)
         setToast({
           key: Date.now(),
           message: `${item['광고주']} 공유 처리됨`,
@@ -232,7 +236,7 @@ export default function App() {
             label: '취소',
             onClick: async () => {
               try {
-                await setRowShare(rowIndex, false)
+                await setRowShare(rowIndex, false, expect)
                 refresh()
               } catch (err) {
                 setToast({

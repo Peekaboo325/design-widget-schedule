@@ -3,6 +3,8 @@
 // 💛신규·유지보수 시트 기반
 // - doGet: 팀원별 미완료 작업 + 공유대기 반환 (rowIndex 포함)
 // - doPost: 상태(K열) / 공유(L열) 변경
+//   · LockService로 동시 실행 직렬화
+//   · expect(광고주/비고) 검증으로 행 어긋남(stale rowIndex) 방지
 // ============================================================
 
 const SCHEDULE_SHEET_NAME = '💛신규·유지보수';
@@ -21,6 +23,9 @@ const COL = {
 
 // 상태 화이트리스트 (POST 검증)
 const VALID_STATUSES = ['미정', '대기', '진행', '완료'];
+
+// 동시 실행 직렬화 락 대기 한도
+const LOCK_TIMEOUT_MS = 10000;
 
 // ============================================================
 // GET
@@ -92,27 +97,60 @@ function getSchedule(member) {
 // ============================================================
 // POST — 상태/공유 변경
 // 요청 본문(JSON):
-//   { action: 'setStatus', rowIndex: <number>, value: '미정'|'대기'|'진행'|'완료' }
-//   { action: 'setShare',  rowIndex: <number>, value: true|false }
-// 응답: { ok: true, action, rowIndex, value } | { error: '...' }
+//   { action: 'setStatus', rowIndex, value, expect: { 광고주, 비고 } }
+//   { action: 'setShare',  rowIndex, value, expect: { 광고주, 비고 } }
+//
+// expect: 클라이언트가 마지막 fetch 시 본 광고주/비고. 현재 시트와 다르면
+//         행 어긋남(운영자가 행 삽입/삭제)으로 보고 거부.
+//
+// 응답:
+//   { ok: true, action, rowIndex, value }
+//   { error: '...', code: 'STALE'|'BUSY'|'INVALID' }
 // ============================================================
 function doPost(e) {
+  // 1) 동시 실행 직렬화 — 두 사용자가 동시에 POST 보내도 순서대로 처리
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(LOCK_TIMEOUT_MS);
+  } catch (lockErr) {
+    return jsonResponse({
+      error: '서버가 바쁩니다. 잠시 후 다시 시도해주세요.',
+      code: 'BUSY',
+    });
+  }
+
   try {
     const body = JSON.parse((e.postData && e.postData.contents) || '{}');
     const action = body.action;
     const rowIndex = body.rowIndex;
     const value = body.value;
+    const expect = body.expect;
 
     if (!Number.isInteger(rowIndex) || rowIndex < DATA_START_ROW) {
-      return jsonResponse({ error: 'invalid rowIndex' });
+      return jsonResponse({ error: 'invalid rowIndex', code: 'INVALID' });
     }
 
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SCHEDULE_SHEET_NAME);
-    if (!sheet) return jsonResponse({ error: 'sheet not found' });
-    if (rowIndex > sheet.getLastRow()) return jsonResponse({ error: 'rowIndex out of range' });
+    if (!sheet) return jsonResponse({ error: 'sheet not found', code: 'INVALID' });
+    if (rowIndex > sheet.getLastRow()) return jsonResponse({ error: 'rowIndex out of range', code: 'STALE' });
+
+    // 2) Optimistic Locking — 클라이언트가 본 광고주/비고가 현재 시트와 일치하는지 확인
+    //    expect 제공 시에만 적용 (구버전 위젯 호환)
+    if (expect && (expect['광고주'] != null || expect['비고'] != null)) {
+      const currentClient = String(sheet.getRange(rowIndex, COL.광고주).getValue() || '').trim();
+      const currentNote   = String(sheet.getRange(rowIndex, COL.비고).getValue() || '').trim();
+      const expectClient  = String(expect['광고주'] || '').trim();
+      const expectNote    = String(expect['비고'] || '').trim();
+      if (currentClient !== expectClient || currentNote !== expectNote) {
+        return jsonResponse({
+          error: '시트가 변경되었습니다. 새로고침 후 다시 시도해주세요.',
+          code: 'STALE',
+        });
+      }
+    }
 
     if (action === 'setStatus') {
-      if (!VALID_STATUSES.includes(value)) return jsonResponse({ error: 'invalid status' });
+      if (!VALID_STATUSES.includes(value)) return jsonResponse({ error: 'invalid status', code: 'INVALID' });
       sheet.getRange(rowIndex, COL.상태).setValue(value);
       return jsonResponse({ ok: true, action, rowIndex, value });
     }
@@ -123,9 +161,11 @@ function doPost(e) {
       return jsonResponse({ ok: true, action, rowIndex, value: v });
     }
 
-    return jsonResponse({ error: 'unknown action: ' + action });
+    return jsonResponse({ error: 'unknown action: ' + action, code: 'INVALID' });
   } catch (err) {
     return jsonResponse({ error: err.message });
+  } finally {
+    lock.releaseLock();
   }
 }
 

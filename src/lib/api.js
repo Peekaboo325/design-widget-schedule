@@ -27,13 +27,14 @@ async function postApi(body) {
 }
 
 // 행 상태 변경 (K열): 미정/대기/진행/완료
-export async function setRowStatus(rowIndex, status) {
-  return postApi({ action: 'setStatus', rowIndex, value: status })
+// expect: 클라이언트가 본 광고주/비고. GAS 측 optimistic locking 검증에 사용
+export async function setRowStatus(rowIndex, status, expect) {
+  return postApi({ action: 'setStatus', rowIndex, value: status, expect })
 }
 
 // 행 공유 토글 (L열): TRUE/FALSE
-export async function setRowShare(rowIndex, shared) {
-  return postApi({ action: 'setShare', rowIndex, value: Boolean(shared) })
+export async function setRowShare(rowIndex, shared, expect) {
+  return postApi({ action: 'setShare', rowIndex, value: Boolean(shared), expect })
 }
 
 // 팀원 목록 조회
