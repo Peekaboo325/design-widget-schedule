@@ -29,7 +29,11 @@ IMC 3본부 디자인팀 팀원용 바탕화면 위젯 (Electron + React + Vite)
   - 예: `2단계: 투명도 슬라이더와 항상 위 고정 토글 추가`
   - 예: `버그 수정: preload 경로 불일치로 인한 IPC 누락 해결`
 - 푸시 대상은 현재 작업 브랜치 (기본: `claude/start-stage-one-RHl4J`).
-- 푸시 실패 시 원인 보고 후 재시도 (강제 푸시 / 브랜치 변경은 금지).
+- 푸시 실패 시 원인 보고 후 재시도 (강제 푸시 금지).
+- **작업 브랜치 푸시 후 매번 `main`에도 fast-forward 머지하여 푸시.**
+  - 다른 컴퓨터에서 clone/pull 받을 때 항상 최신 상태가 되도록.
+  - 흐름: 작업 브랜치 커밋·푸시 → `git checkout main` → `git merge --ff-only <작업브랜치>` → `git push origin main` → 다시 작업 브랜치로 체크아웃.
+  - fast-forward 불가 시(예외 케이스) 사용자에게 보고 후 결정.
 
 ## 커뮤니케이션
 - 한국어로 대화.
