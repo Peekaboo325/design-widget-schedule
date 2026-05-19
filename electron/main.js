@@ -14,15 +14,23 @@ import Store from 'electron-store'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-// 트레이/창 아이콘
-// dev:   <project>/resources/design-widget-schedule.ico
-// 배포:  process.resourcesPath/design-widget-schedule.ico
-const ICON_FILENAME = 'design-widget-schedule.ico'
+// 트레이/창 아이콘 — OS별로 다른 파일
+// Windows: .ico (작업표시줄 자연스러움)
+// macOS / Linux: .png (macOS는 .ico 인식 못함)
+// dev:   <project>/resources/<file>
+// 배포:  process.resourcesPath/<file>
+function iconFilename() {
+  return process.platform === 'win32'
+    ? 'design-widget-schedule.ico'
+    : 'design-widget-schedule.png'
+}
+
 function resolveIconPath() {
+  const filename = iconFilename()
   if (app.isPackaged) {
-    return path.join(process.resourcesPath, ICON_FILENAME)
+    return path.join(process.resourcesPath, filename)
   }
-  return path.join(__dirname, '../../resources', ICON_FILENAME)
+  return path.join(__dirname, '../../resources', filename)
 }
 
 // Windows 알림센터 토스트가 정상 동작하도록 AppUserModelId 지정
@@ -194,7 +202,14 @@ function createTray() {
     return
   }
 
-  tray = new Tray(image)
+  // macOS 메뉴바는 작은 아이콘이 자연스러움. 22×22로 리사이즈.
+  // Windows/Linux는 원본 그대로 (OS가 알아서 처리)
+  const trayImage =
+    process.platform === 'darwin'
+      ? image.resize({ width: 22, height: 22 })
+      : image
+
+  tray = new Tray(trayImage)
   tray.setToolTip('디자인 위젯')
 
   const contextMenu = Menu.buildFromTemplate([
