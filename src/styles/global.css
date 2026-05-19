@@ -1,3 +1,13 @@
+/* SUIT 가변 폰트 (번들). 파일이 없으면 시스템 폰트로 fallback. */
+@font-face {
+  font-family: 'SUIT Variable';
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  src: url('../assets/fonts/SUIT-Variable.woff2') format('woff2-variations'),
+    url('../assets/fonts/SUIT-Variable.woff2') format('woff2');
+}
+
 :root {
   --widget-bg: rgba(28, 28, 32, 0.82);
   --widget-header-bg: rgba(28, 28, 32, 0.92);
@@ -27,9 +37,9 @@ body,
   color: var(--widget-fg);
   font-family: 'SUIT Variable', -apple-system, BlinkMacSystemFont, 'Pretendard',
     'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
-  letter-spacing: -0.1px;
+  letter-spacing: -0.15px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;

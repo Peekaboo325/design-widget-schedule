@@ -1,6 +1,12 @@
 import styles from './ScheduleView.module.css'
 
-// 상태 → 색상 매핑 (테마와 무관한 의미색)
+// 스케줄 항목의 안정적 키 — '광고주|비고' 조합
+// NEW 추적, seenScheduleKeys 비교에 공통 사용
+export function scheduleKey(item) {
+  return `${item?.['광고주'] ?? ''}|${item?.['비고'] ?? ''}`
+}
+
+// 상태 → 색상 매핑
 const STATUS_STYLE = {
   진행: styles.statusActive,
   대기: styles.statusWaiting,
@@ -11,20 +17,19 @@ const STATUS_STYLE = {
 // S: 큰 숫자 + 공유 대기 뱃지
 // M: 광고주별 합계 + 공유 대기 뱃지
 // L: 전체 테이블 + 구분선 + 공유 대기 목록
-export default function ScheduleView({ size, data, loading }) {
+export default function ScheduleView({ size, data, newKeys }) {
   const { schedule, pending, summary } = data
 
   if (size === 'L') {
     return (
       <div className={styles.containerL}>
-        <ScheduleTable schedule={schedule} loading={loading} />
+        <ScheduleTable schedule={schedule} newKeys={newKeys} />
         <div className={styles.divider} />
         <PendingList pending={pending} />
       </div>
     )
   }
 
-  // S / M 공통: 상단 카운트 + 공유 대기 뱃지
   return (
     <div className={styles.containerSM}>
       {size === 'S' ? (
@@ -37,7 +42,6 @@ export default function ScheduleView({ size, data, loading }) {
   )
 }
 
-// S: 큰 숫자 하나
 function SmallSummary({ total }) {
   return (
     <div className={styles.bigMetric}>
@@ -47,7 +51,6 @@ function SmallSummary({ total }) {
   )
 }
 
-// M: 광고주별 합계 + 총합
 function MediumSummary({ schedule, total }) {
   const grouped = groupByClient(schedule)
   return (
@@ -74,7 +77,6 @@ function MediumSummary({ schedule, total }) {
   )
 }
 
-// 공유 대기 뱃지 (S/M 공용)
 function PendingBadge({ count }) {
   const dim = count === 0
   return (
@@ -87,8 +89,7 @@ function PendingBadge({ count }) {
   )
 }
 
-// L: 잔여 스케줄 전체 테이블
-function ScheduleTable({ schedule, loading }) {
+function ScheduleTable({ schedule, newKeys }) {
   if (schedule.length === 0) {
     return (
       <div className={styles.tableEmpty}>
@@ -103,30 +104,36 @@ function ScheduleTable({ schedule, loading }) {
         <span className={styles.sectionCount}>{schedule.length}건</span>
       </div>
       <ul className={styles.table}>
-        {schedule.map((item, i) => (
-          <li key={i} className={styles.tableRow}>
-            <span className={styles.cellClient} title={item['광고주']}>
-              {item['광고주']}
-            </span>
-            <span className={styles.cellNote} title={item['비고']}>
-              {item['비고']}
-            </span>
-            <span className={styles.cellQty}>{item['수량']}</span>
-            <span
-              className={`${styles.cellStatus} ${
-                STATUS_STYLE[item['상태']] ?? ''
-              }`}
-            >
-              {item['상태']}
-            </span>
-          </li>
-        ))}
+        {schedule.map((item, i) => {
+          const isNew = newKeys?.has(scheduleKey(item))
+          return (
+            <li key={i} className={styles.tableRow}>
+              <span
+                className={`${styles.cellMarker} ${isNew ? styles.cellMarkerNew : ''}`}
+                aria-label={isNew ? '새 항목' : undefined}
+              />
+              <span className={styles.cellClient} title={item['광고주']}>
+                {item['광고주']}
+              </span>
+              <span className={styles.cellNote} title={item['비고']}>
+                {item['비고']}
+              </span>
+              <span className={styles.cellQty}>{item['수량']}</span>
+              <span
+                className={`${styles.cellStatus} ${
+                  STATUS_STYLE[item['상태']] ?? ''
+                }`}
+              >
+                {item['상태']}
+              </span>
+            </li>
+          )
+        })}
       </ul>
     </div>
   )
 }
 
-// L: 공유 대기 목록
 function PendingList({ pending }) {
   return (
     <div className={styles.tableWrap}>
@@ -138,6 +145,7 @@ function PendingList({ pending }) {
         <ul className={styles.table}>
           {pending.map((item, i) => (
             <li key={i} className={styles.tableRow}>
+              <span className={styles.cellMarker} />
               <span className={styles.cellClient} title={item['광고주']}>
                 {item['광고주']}
               </span>
@@ -145,6 +153,7 @@ function PendingList({ pending }) {
                 {item['비고']}
               </span>
               <span className={styles.cellQty}>{item['수량']}</span>
+              <span />
             </li>
           ))}
         </ul>
@@ -153,8 +162,7 @@ function PendingList({ pending }) {
   )
 }
 
-// 광고주별 합계 (M 사이즈 전용)
-// 스케줄러 원본 순서를 유지 — 첫 등장 순으로 누적
+// 광고주별 합계 (M 사이즈 전용) — 원본 순서 유지
 function groupByClient(schedule) {
   const map = new Map()
   for (const item of schedule) {

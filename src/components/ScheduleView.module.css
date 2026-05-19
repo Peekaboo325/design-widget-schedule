@@ -17,18 +17,18 @@
 }
 
 .bigLabel {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--widget-muted);
   letter-spacing: 0;
 }
 
 .bigValue {
-  font-size: 48px;
+  font-size: 52px;
   font-weight: 800;
   line-height: 1;
   color: var(--widget-accent);
-  letter-spacing: -2px;
+  letter-spacing: -2.2px;
 }
 
 /* M: 광고주별 리스트 */
@@ -50,14 +50,14 @@
 }
 
 .mediumLabel {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--widget-muted);
   letter-spacing: 0;
 }
 
 .mediumTotal {
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 800;
   color: var(--widget-accent);
   letter-spacing: -0.8px;
@@ -168,18 +168,18 @@
 }
 
 .sectionLabel {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--widget-muted);
   letter-spacing: 0;
 }
 
 .sectionCount {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 800;
   color: var(--widget-accent);
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.6px;
+  letter-spacing: -0.8px;
   line-height: 1;
 }
 
@@ -195,11 +195,11 @@
 
 .tableRow {
   display: grid;
-  grid-template-columns: minmax(60px, 1fr) minmax(80px, 2.4fr) auto auto;
-  gap: 8px;
+  grid-template-columns: 8px minmax(60px, 1fr) minmax(80px, 2.4fr) auto auto;
+  gap: 6px;
   align-items: center;
-  padding: 7px 0;
-  font-size: 12px;
+  padding: 8px 0;
+  font-size: 13px;
   border-bottom: 1px solid var(--widget-row-border);
 }
 
@@ -207,8 +207,21 @@
   border-bottom: none;
 }
 
+/* NEW 항목 좌측 dot */
+.cellMarker {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.cellMarkerNew {
+  background: var(--widget-accent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--widget-accent) 30%, transparent);
+}
+
 .cellClient {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--widget-fg);
   overflow: hidden;
@@ -218,7 +231,7 @@
 
 /* 비고는 광고주와 함께 강조 (수량보다 위계 위) */
 .cellNote {
-  font-size: 11.5px;
+  font-size: 12.5px;
   font-weight: 500;
   color: var(--widget-fg);
   overflow: hidden;
@@ -229,19 +242,19 @@
 /* 수량은 작고 흐리게 (대부분 1) */
 .cellQty {
   text-align: right;
-  font-size: 10px;
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
   color: var(--widget-muted);
   min-width: 14px;
 }
 
 .cellStatus {
-  font-size: 10px;
-  padding: 1px 6px;
+  font-size: 11px;
+  padding: 2px 8px;
   border-radius: 4px;
   font-weight: 600;
   white-space: nowrap;
-  min-width: 24px;
+  min-width: 28px;
   text-align: center;
 }
 

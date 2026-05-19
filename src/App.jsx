@@ -7,6 +7,7 @@ import MemberPicker from './components/MemberPicker.jsx'
 import useSettings from './hooks/useSettings.js'
 import useMembers from './hooks/useMembers.js'
 import useSchedule from './hooks/useSchedule.js'
+import useSeenSchedule from './hooks/useSeenSchedule.js'
 import { shortName } from './lib/format.js'
 
 // 위젯 셸: 헤더(드래그·설정·새로고침) + 설정 패널 + 본문(탭 전환)
@@ -97,6 +98,12 @@ export default function App() {
     return () => off?.()
   }, [refresh])
 
+  // 새 스케줄 알림 트래킹 (멤버별 '본 키' store 비교)
+  const { newKeys, newCount, markAllSeen } = useSeenSchedule(
+    activeMember,
+    scheduleData?.schedule
+  )
+
   const refreshing = scheduleLoading
   const needsMemberPick = ready && !activeMember
   const showTabs = settings.size === 'L' && !needsMemberPick
@@ -113,6 +120,18 @@ export default function App() {
           <span className={styles.date}>{todayLabel}</span>
         </div>
         <div className={styles.headerActions}>
+          {/* 새 스케줄 알림 뱃지 — 클릭 시 모두 '본 것'으로 */}
+          {newCount > 0 && activeTab === 'schedule' && !settingsOpen && (
+            <button
+              type="button"
+              className={styles.newBadge}
+              aria-label={`새 스케줄 ${newCount}건. 클릭하면 본 것으로 표시`}
+              title="클릭하면 본 것으로 표시"
+              onClick={markAllSeen}
+            >
+              +{newCount}
+            </button>
+          )}
           {/* ↻ 먼저, ⚙ 가 항상 우측 끝 — 토글 시 ⚙ 위치가 바뀌지 않도록 */}
           {activeTab === 'schedule' && !needsMemberPick && !settingsOpen && (
             <button
@@ -193,6 +212,7 @@ export default function App() {
                 scheduleData={scheduleData}
                 scheduleLoading={scheduleLoading}
                 scheduleError={scheduleError}
+                newKeys={newKeys}
               />
             )}
           </main>
@@ -272,7 +292,8 @@ function Body({
   activeMember,
   scheduleData,
   scheduleLoading,
-  scheduleError
+  scheduleError,
+  newKeys
 }) {
   if (membersLoading) return <p className={styles.muted}>팀원 목록 불러오는 중…</p>
   if (membersError) {
@@ -299,7 +320,7 @@ function Body({
     return <p className={styles.muted}>스케줄 불러오는 중…</p>
   }
 
-  return <ScheduleView size={size} data={scheduleData} loading={scheduleLoading} />
+  return <ScheduleView size={size} data={scheduleData} newKeys={newKeys} />
 }
 
 // 예: "5월 19일 (월)"

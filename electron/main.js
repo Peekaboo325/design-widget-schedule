@@ -38,7 +38,9 @@ const store = new Store({
     themeColor: '#7aa2ff',
     size: 'L',
     activeMember: null,
-    mode: 'dark'
+    mode: 'dark',
+    // '본 것으로 표시한 스케줄 키' — { '<member>': ['광고주|비고', ...] }
+    seenScheduleKeys: {}
   }
 })
 
@@ -170,6 +172,22 @@ ipcMain.handle('settings:set-mode', (_event, mode) => {
   return next
 })
 
+// 멤버별 '본 스케줄 키' 조회/저장 — 새 스케줄 알림 기준선
+ipcMain.handle('schedule:get-seen-keys', (_event, member) => {
+  if (typeof member !== 'string' || !member) return []
+  const all = store.get('seenScheduleKeys') || {}
+  return Array.isArray(all[member]) ? all[member] : []
+})
+
+ipcMain.handle('schedule:set-seen-keys', (_event, member, keys) => {
+  if (typeof member !== 'string' || !member) return []
+  const arr = Array.isArray(keys) ? keys.filter((k) => typeof k === 'string') : []
+  const all = store.get('seenScheduleKeys') || {}
+  all[member] = arr
+  store.set('seenScheduleKeys', all)
+  return arr
+})
+
 // 활성 팀원 저장 (null 허용: 미선택 상태)
 ipcMain.handle('settings:set-active-member', (_event, name) => {
   if (name === null || name === undefined) {
@@ -259,7 +277,15 @@ ipcMain.handle('api:get', async (_event, params) => {
     const data = await res.json()
     return { ok: true, data }
   } catch (err) {
-    return { ok: false, error: String(err?.message ?? err) }
+    const msg = String(err?.message ?? err)
+    // 네트워크 단절 케이스를 사용자 친화 메시지로 변환
+    if (
+      /fetch failed|ENOTFOUND|ENETUNREACH|EAI_AGAIN|EHOSTUNREACH/i.test(msg) ||
+      err?.name === 'AbortError'
+    ) {
+      return { ok: false, error: '네트워크 연결을 확인해주세요' }
+    }
+    return { ok: false, error: msg }
   } finally {
     clearTimeout(timer)
   }
