@@ -27,6 +27,9 @@ const api = {
   // GAS API 프록시 호출 (CSP/CORS 우회용)
   apiGet: (params) => ipcRenderer.invoke('api:get', params),
 
+  // OS 알림 (새 스케줄)
+  notify: (payload) => ipcRenderer.invoke('notify', payload),
+
   // 트레이 새로고침 메뉴 → 렌더러 콜백
   onTrayRefresh: (cb) => {
     const handler = () => cb()

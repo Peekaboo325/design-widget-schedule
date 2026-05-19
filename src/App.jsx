@@ -98,11 +98,37 @@ export default function App() {
     return () => off?.()
   }, [refresh])
 
-  // 새 스케줄 알림 트래킹 (멤버별 '본 키' store 비교)
+  // 새 스케줄 알림 트래킹 (세션 기반)
   const { newKeys, newCount, markAllSeen } = useSeenSchedule(
     activeMember,
     scheduleData?.schedule
   )
+
+  // 새로 추가된 NEW 키만 OS 알림 (중복 방지)
+  // 이전 newKeys에 없던 키가 들어오면 알림 띄움
+  const prevNewKeysRef = useRef(new Set())
+  useEffect(() => {
+    const prev = prevNewKeysRef.current
+    const fresh = []
+    for (const k of newKeys) {
+      if (!prev.has(k)) fresh.push(k)
+    }
+    prevNewKeysRef.current = newKeys
+
+    if (fresh.length === 0) return
+    const items = (scheduleData?.schedule ?? []).filter((it) =>
+      fresh.includes(`${it['광고주']}|${it['비고']}`)
+    )
+    const preview = items
+      .slice(0, 3)
+      .map((it) => `${it['광고주']} · ${it['비고']}`)
+      .join('\n')
+    const more = items.length > 3 ? `\n외 ${items.length - 3}건` : ''
+    window.widgetAPI?.notify?.({
+      title: `새 스케줄 ${fresh.length}건`,
+      body: preview + more
+    })
+  }, [newKeys, scheduleData])
 
   const refreshing = scheduleLoading
   const needsMemberPick = ready && !activeMember

@@ -1,4 +1,12 @@
-import { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage } from 'electron'
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  Menu,
+  Notification,
+  Tray,
+  nativeImage
+} from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import Store from 'electron-store'
@@ -14,6 +22,12 @@ function resolveIconPath() {
     return path.join(process.resourcesPath, ICON_FILENAME)
   }
   return path.join(__dirname, '../../resources', ICON_FILENAME)
+}
+
+// Windows 알림센터 토스트가 정상 동작하도록 AppUserModelId 지정
+// (electron-builder packaging 후엔 appId 기반으로 자동 처리되지만 dev에서도 안전하게)
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.peekaboo325.design-widget-schedule')
 }
 
 // GAS Web App 베이스 URL
@@ -168,6 +182,31 @@ ipcMain.handle('settings:set-mode', (_event, mode) => {
   const next = mode === 'light' ? 'light' : 'dark'
   store.set('mode', next)
   return next
+})
+
+// OS 알림 표시 (새 스케줄 알림용)
+// 클릭 시 위젯을 보여주고 포커스
+ipcMain.handle('notify', (_event, payload) => {
+  if (!Notification.isSupported()) return false
+  const title = String(payload?.title ?? '디자인 위젯')
+  const body = String(payload?.body ?? '')
+  const iconImage = nativeImage.createFromPath(resolveIconPath())
+  const notification = new Notification({
+    title,
+    body,
+    icon: iconImage.isEmpty() ? undefined : iconImage,
+    silent: false
+  })
+  notification.on('click', () => {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      createWindow()
+      return
+    }
+    if (!mainWindow.isVisible()) mainWindow.show()
+    mainWindow.focus()
+  })
+  notification.show()
+  return true
 })
 
 // 활성 팀원 저장 (null 허용: 미선택 상태)
