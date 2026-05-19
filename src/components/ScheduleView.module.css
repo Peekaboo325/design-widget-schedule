@@ -298,15 +298,32 @@
   padding: 4px 0;
 }
 
-/* L 모드 영역 — 공유 대기는 콘텐츠 만큼만, 잔여 스케줄이 나머지 공간 모두 사용
-   공유 대기가 많아지면 max-height 35%에서 자체 스크롤 */
-.containerL > .tableWrap:nth-of-type(1) {
+/* L 모드: 잔여 스케줄(나머지 공간 전부) + 공유 대기 한 줄 요약 */
+.containerL > .tableWrap {
   flex: 1 1 0;
   min-height: 0;
 }
 
-.containerL > .tableWrap:nth-of-type(2) {
-  flex: 0 1 auto;
-  min-height: 0;
-  max-height: 35%;
+/* L 공유 대기 한 줄 — 부차 정보라 라벨 + 카운트만 */
+.pendingRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 8px 2px 2px;
+  border-top: 1px solid var(--widget-border);
+  flex-shrink: 0;
+}
+
+.pendingRowLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--widget-muted);
+}
+
+.pendingRowCount {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--widget-muted);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.2px;
 }

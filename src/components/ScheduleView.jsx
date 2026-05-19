@@ -24,8 +24,7 @@ export default function ScheduleView({ size, data, newKeys }) {
     return (
       <div className={styles.containerL}>
         <ScheduleTable schedule={schedule} newKeys={newKeys} />
-        <div className={styles.divider} />
-        <PendingList pending={pending} />
+        <PendingRow pending={pending} />
       </div>
     )
   }
@@ -134,30 +133,13 @@ function ScheduleTable({ schedule, newKeys }) {
   )
 }
 
-function PendingList({ pending }) {
+// L 모드 공유 대기: 한 줄 요약 (라벨 + 카운트)
+// 위계상 부차 정보라 목록 없이 숫자만 노출
+function PendingRow({ pending }) {
   return (
-    <div className={styles.tableWrap}>
-      <div className={styles.sectionHead}>
-        <span className={styles.sectionLabel}>공유 대기</span>
-        <span className={styles.sectionCount}>{pending.length}건</span>
-      </div>
-      {pending.length > 0 && (
-        <ul className={styles.table}>
-          {pending.map((item, i) => (
-            <li key={i} className={styles.tableRow}>
-              <span className={styles.cellMarker} />
-              <span className={styles.cellClient} title={item['광고주']}>
-                {item['광고주']}
-              </span>
-              <span className={styles.cellNote} title={item['비고']}>
-                {item['비고']}
-              </span>
-              <span className={styles.cellQty}>{item['수량']}</span>
-              <span />
-            </li>
-          ))}
-        </ul>
-      )}
+    <div className={styles.pendingRow}>
+      <span className={styles.pendingRowLabel}>공유 대기</span>
+      <span className={styles.pendingRowCount}>{pending.length}건</span>
     </div>
   )
 }
