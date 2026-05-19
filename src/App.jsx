@@ -1,17 +1,36 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import styles from './App.module.css'
 import SettingsPanel from './components/SettingsPanel.jsx'
 import ScheduleView from './components/ScheduleView.jsx'
+import ChecklistView from './components/ChecklistView.jsx'
 import useSettings from './hooks/useSettings.js'
 import useMembers from './hooks/useMembers.js'
 import useSchedule from './hooks/useSchedule.js'
 
-// 위젯 셸: 헤더(드래그·설정·새로고침) + 설정 패널 + 본문
-// 3단계: GAS API 연결. 멤버 선택 UI는 6단계라, 잠정적으로 members[0] 사용.
-// 본문의 사이즈별 정보 단계 렌더링은 4단계에서 구현.
+// 위젯 셸: 헤더(드래그·설정·새로고침) + 설정 패널 + 본문(탭 전환)
+// 5단계: L 사이즈에서 점검 체크리스트 탭 활성화.
 export default function App() {
   const todayLabel = useMemo(() => formatToday(new Date()), [])
   const [settingsOpen, setSettingsOpen] = useState(false)
+
+  // 활성 탭: 'schedule' | 'checklist'
+  // SPEC: 체크리스트 탭은 L 사이즈에서만 노출. S/M으로 가면 강제로 스케줄로 복귀.
+  const [activeTab, setActiveTab] = useState('schedule')
+
+  // 체크리스트 상태 — { 'sectionId:idx': true, ... }
+  // SPEC: 저장 없음. 컴포넌트 메모리에만.
+  const [checked, setChecked] = useState({})
+
+  const toggleChecked = useCallback((key) => {
+    setChecked((prev) => {
+      const next = { ...prev }
+      if (next[key]) delete next[key]
+      else next[key] = true
+      return next
+    })
+  }, [])
+
+  const resetChecked = useCallback(() => setChecked({}), [])
 
   const {
     settings,
@@ -21,6 +40,13 @@ export default function App() {
     setSize,
     setThemeColor
   } = useSettings()
+
+  // L이 아닐 때 체크리스트 탭에 머물러 있으면 강제 복귀
+  useEffect(() => {
+    if (settings.size !== 'L' && activeTab !== 'schedule') {
+      setActiveTab('schedule')
+    }
+  }, [settings.size, activeTab])
 
   // 팀원 목록 + 임시 자동 선택
   const { members, loading: membersLoading, error: membersError } = useMembers()
@@ -36,6 +62,8 @@ export default function App() {
   } = useSchedule(activeMember)
 
   const refreshing = scheduleLoading
+  const showTabs = settings.size === 'L'
+  const showFooter = activeTab === 'schedule' && lastUpdated && !scheduleError
 
   return (
     <div className={styles.widget} data-size={settings.size}>
@@ -56,15 +84,17 @@ export default function App() {
           >
             ⚙
           </button>
-          <button
-            type="button"
-            className={`${styles.iconBtn} ${refreshing ? styles.iconBtnSpinning : ''}`}
-            aria-label="새로고침"
-            disabled={!activeMember || refreshing}
-            onClick={() => refresh()}
-          >
-            ↻
-          </button>
+          {activeTab === 'schedule' && (
+            <button
+              type="button"
+              className={`${styles.iconBtn} ${refreshing ? styles.iconBtnSpinning : ''}`}
+              aria-label="새로고침"
+              disabled={!activeMember || refreshing}
+              onClick={() => refresh()}
+            >
+              ↻
+            </button>
+          )}
         </div>
       </header>
 
@@ -78,24 +108,59 @@ export default function App() {
         />
       )}
 
+      {showTabs && (
+        <nav className={styles.tabs}>
+          <TabButton
+            label="스케줄"
+            active={activeTab === 'schedule'}
+            onClick={() => setActiveTab('schedule')}
+          />
+          <TabButton
+            label="점검"
+            active={activeTab === 'checklist'}
+            onClick={() => setActiveTab('checklist')}
+          />
+        </nav>
+      )}
+
       <main className={styles.body}>
-        <Body
-          size={settings.size}
-          membersLoading={membersLoading}
-          membersError={membersError}
-          activeMember={activeMember}
-          scheduleData={scheduleData}
-          scheduleLoading={scheduleLoading}
-          scheduleError={scheduleError}
-        />
+        {activeTab === 'checklist' ? (
+          <ChecklistView
+            checked={checked}
+            onToggle={toggleChecked}
+            onResetAll={resetChecked}
+          />
+        ) : (
+          <Body
+            size={settings.size}
+            membersLoading={membersLoading}
+            membersError={membersError}
+            activeMember={activeMember}
+            scheduleData={scheduleData}
+            scheduleLoading={scheduleLoading}
+            scheduleError={scheduleError}
+          />
+        )}
       </main>
-      {lastUpdated && !scheduleError && (
+      {showFooter && (
         <footer className={styles.footer}>
           마지막 갱신 {formatTime(lastUpdated)}
           {scheduleLoading ? ' · 갱신 중…' : ''}
         </footer>
       )}
     </div>
+  )
+}
+
+function TabButton({ label, active, onClick }) {
+  return (
+    <button
+      type="button"
+      className={`${styles.tab} ${active ? styles.tabActive : ''}`}
+      onClick={onClick}
+    >
+      {label}
+    </button>
   )
 }
 

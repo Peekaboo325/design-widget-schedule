@@ -98,6 +98,35 @@
   overflow: hidden;
 }
 
+/* 탭 네비게이션 — L 사이즈에서만 표시 */
+.tabs {
+  display: flex;
+  gap: 2px;
+  padding: 6px 12px 0;
+  flex-shrink: 0;
+}
+
+.tab {
+  background: transparent;
+  border: none;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--widget-muted);
+  cursor: pointer;
+  border-radius: 4px 4px 0 0;
+  border-bottom: 2px solid transparent;
+}
+
+.tab:hover {
+  color: var(--widget-fg);
+}
+
+.tabActive {
+  color: var(--widget-fg);
+  border-bottom-color: var(--widget-accent);
+}
+
 /* 본문 직계가 자체 레이아웃을 가질 수 있도록 height 100% */
 .body > * {
   flex: 1;
