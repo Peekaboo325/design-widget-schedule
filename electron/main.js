@@ -5,6 +5,13 @@ import Store from 'electron-store'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
+// GAS Web App 베이스 URL
+// 렌더러는 CSP/CORS 때문에 직접 호출 불가 → main에서 fetch 후 IPC 응답
+const GAS_BASE =
+  'https://script.google.com/macros/s/AKfycbzzY6vue1tzVVvKwNfja4ZSxWXSvlkY5rNUXNSnv40WMH6oaEBcqcrfeYaAz9wrKr-syw/exec'
+
+const API_TIMEOUT_MS = 12000
+
 // 위젯 크기 프리셋
 const SIZE_PRESETS = {
   S: { width: 220, height: 180 },
@@ -108,6 +115,36 @@ ipcMain.handle('settings:set-theme-color', (_event, hex) => {
   }
   store.set('themeColor', hex)
   return hex
+})
+
+// GAS API 호출 프록시
+// params: { type: 'members' } 또는 { type: 'schedule', member: '이름' }
+// 응답: { ok: true, data } | { ok: false, error }
+ipcMain.handle('api:get', async (_event, params) => {
+  if (!params || typeof params !== 'object') {
+    return { ok: false, error: 'invalid params' }
+  }
+  const search = new URLSearchParams(params).toString()
+  const url = `${GAS_BASE}?${search}`
+
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), API_TIMEOUT_MS)
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      redirect: 'follow',
+      signal: controller.signal
+    })
+    if (!res.ok) {
+      return { ok: false, error: `HTTP ${res.status}` }
+    }
+    const data = await res.json()
+    return { ok: true, data }
+  } catch (err) {
+    return { ok: false, error: String(err?.message ?? err) }
+  } finally {
+    clearTimeout(timer)
+  }
 })
 
 app.whenReady().then(() => {

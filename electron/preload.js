@@ -16,7 +16,10 @@ const api = {
   setSize: (sizeKey) => ipcRenderer.invoke('window:set-size', sizeKey),
 
   // 테마 컬러 저장 (적용은 렌더러에서 CSS 변수로)
-  setThemeColor: (hex) => ipcRenderer.invoke('settings:set-theme-color', hex)
+  setThemeColor: (hex) => ipcRenderer.invoke('settings:set-theme-color', hex),
+
+  // GAS API 프록시 호출 (CSP/CORS 우회용)
+  apiGet: (params) => ipcRenderer.invoke('api:get', params)
 }
 
 contextBridge.exposeInMainWorld('widgetAPI', api)
