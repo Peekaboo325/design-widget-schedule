@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import styles from './App.module.css'
 import SettingsPanel from './components/SettingsPanel.jsx'
+import ScheduleView from './components/ScheduleView.jsx'
 import useSettings from './hooks/useSettings.js'
 import useMembers from './hooks/useMembers.js'
 import useSchedule from './hooks/useSchedule.js'
@@ -79,28 +80,34 @@ export default function App() {
 
       <main className={styles.body}>
         <Body
+          size={settings.size}
           membersLoading={membersLoading}
           membersError={membersError}
           activeMember={activeMember}
           scheduleData={scheduleData}
           scheduleLoading={scheduleLoading}
           scheduleError={scheduleError}
-          lastUpdated={lastUpdated}
         />
       </main>
+      {lastUpdated && !scheduleError && (
+        <footer className={styles.footer}>
+          마지막 갱신 {formatTime(lastUpdated)}
+          {scheduleLoading ? ' · 갱신 중…' : ''}
+        </footer>
+      )}
     </div>
   )
 }
 
-// 3단계 본문: 연결 확인용 요약만. 4단계에서 사이즈별 상세 렌더링으로 교체.
+// 본문 분기: 로딩/에러/빈 상태 + 정상 데이터는 사이즈별 ScheduleView로 위임
 function Body({
+  size,
   membersLoading,
   membersError,
   activeMember,
   scheduleData,
   scheduleLoading,
-  scheduleError,
-  lastUpdated
+  scheduleError
 }) {
   if (membersLoading) return <p className={styles.muted}>팀원 목록 불러오는 중…</p>
   if (membersError) {
@@ -114,7 +121,7 @@ function Body({
 
   if (scheduleError) {
     return (
-      <div className={styles.stack}>
+      <div>
         <p className={styles.error}>
           스케줄 로드 실패: {String(scheduleError.message ?? scheduleError)}
         </p>
@@ -127,26 +134,7 @@ function Body({
     return <p className={styles.muted}>스케줄 불러오는 중…</p>
   }
 
-  const { summary, schedule, pending } = scheduleData
-  return (
-    <div className={styles.stack}>
-      <div className={styles.row}>
-        <span className={styles.metricLabel}>스케줄</span>
-        <span className={styles.metricValue}>{summary.total}건</span>
-      </div>
-      <div className={styles.row}>
-        <span className={styles.metricLabel}>공유대기</span>
-        <span className={styles.metricValue}>{summary.pending}건</span>
-      </div>
-      <p className={styles.hint}>
-        목록: 스케줄 {schedule.length} / 공유대기 {pending.length}
-        {scheduleLoading ? ' · 갱신 중…' : ''}
-      </p>
-      {lastUpdated && (
-        <p className={styles.timestamp}>마지막 갱신 {formatTime(lastUpdated)}</p>
-      )}
-    </div>
-  )
+  return <ScheduleView size={size} data={scheduleData} loading={scheduleLoading} />
 }
 
 // 예: "5월 19일 (월)"

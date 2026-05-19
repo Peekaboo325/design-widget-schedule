@@ -1,0 +1,253 @@
+/* S / M 공통 */
+.containerSM {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 10px;
+  min-height: 0;
+}
+
+/* S: 큰 숫자 */
+.bigMetric {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+.bigLabel {
+  font-size: 11px;
+  color: var(--widget-muted);
+  letter-spacing: -0.2px;
+}
+
+.bigValue {
+  font-size: 38px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--widget-fg);
+  letter-spacing: -1px;
+}
+
+/* M: 광고주별 리스트 */
+.mediumStack {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+}
+
+.mediumHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.mediumLabel {
+  font-size: 11px;
+  color: var(--widget-muted);
+}
+
+.mediumTotal {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.clientList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow-y: auto;
+}
+
+.clientItem {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 2px 0;
+}
+
+.clientName {
+  color: var(--widget-fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 8px;
+}
+
+.clientCount {
+  color: var(--widget-muted);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* 공유대기 뱃지 */
+.pendingBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--widget-accent) 18%, transparent);
+  font-size: 11px;
+  align-self: flex-start;
+}
+
+.pendingBadgeDim {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--widget-muted);
+}
+
+.pendingDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--widget-accent);
+}
+
+.pendingBadgeDim .pendingDot {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.pendingText strong {
+  font-weight: 700;
+  margin: 0 2px;
+}
+
+/* L: 스케줄 + 공유대기 두 섹션 */
+.containerL {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  gap: 8px;
+}
+
+.divider {
+  height: 1px;
+  background: var(--widget-border);
+  flex-shrink: 0;
+}
+
+.tableWrap {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.tableEmpty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: 4px;
+  margin-bottom: 4px;
+}
+
+.sectionLabel {
+  font-size: 11px;
+  color: var(--widget-muted);
+  letter-spacing: -0.2px;
+}
+
+.sectionCount {
+  font-size: 11px;
+  color: var(--widget-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.table {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tableRow {
+  display: grid;
+  grid-template-columns: minmax(50px, 1.2fr) minmax(50px, 1.5fr) auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 11.5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.tableRow:last-child {
+  border-bottom: none;
+}
+
+.cellClient {
+  font-weight: 600;
+  color: var(--widget-fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cellNote {
+  color: var(--widget-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cellQty {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--widget-fg);
+  min-width: 16px;
+}
+
+.cellStatus {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  white-space: nowrap;
+  min-width: 24px;
+  text-align: center;
+}
+
+.statusActive {
+  background: color-mix(in oklab, var(--widget-accent) 22%, transparent);
+  color: var(--widget-accent);
+}
+
+.statusWaiting {
+  background: rgba(255, 217, 61, 0.18);
+  color: #ffd93d;
+}
+
+.statusUndefined {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--widget-muted);
+}
+
+.empty {
+  margin: 0;
+  font-size: 11px;
+  color: var(--widget-muted);
+  padding: 4px 0;
+}
+
+/* 공유대기 영역은 화면을 덜 먹도록 max-height 제한 */
+.containerL > .tableWrap:nth-of-type(2) {
+  flex: 0 1 auto;
+  max-height: 40%;
+}
