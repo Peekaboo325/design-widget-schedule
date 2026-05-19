@@ -11,24 +11,25 @@
   backdrop-filter: blur(12px);
 }
 
-/* 헤더 — 컬러 카드 (폴더 탭 느낌). 드래그 영역 */
-.header {
+/* 헤더 row — 좌측 컬러 카드 + 우측 독립 아이콘들 */
+.headerRow {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 12px 14px;
   margin: 8px 8px 0;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* 헤더 카드 — 컬러 블록 (아바타 + 날짜만 포함). 드래그 영역 */
+.headerCard {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
   background: var(--widget-header-bg);
   color: var(--widget-on-header);
   border-radius: var(--widget-card-radius);
   -webkit-app-region: drag;
-  gap: 10px;
-  flex-shrink: 0;
-}
-
-.headerLeft {
-  display: flex;
-  align-items: center;
   gap: 10px;
   min-width: 0;
 }
@@ -46,10 +47,12 @@
   white-space: nowrap;
 }
 
+/* 우측 액션 아이콘 — 헤더 카드 밖에 독립적으로 떠 있음 */
 .headerActions {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
   -webkit-app-region: no-drag;
 }
 
@@ -229,9 +232,13 @@
   border-radius: 18px;
 }
 
-.widget[data-size='S'] .header {
-  padding: 8px 10px;
+.widget[data-size='S'] .headerRow {
   margin: 6px 6px 0;
+  gap: 6px;
+}
+
+.widget[data-size='S'] .headerCard {
+  padding: 7px 10px;
   gap: 8px;
   border-radius: 12px;
 }

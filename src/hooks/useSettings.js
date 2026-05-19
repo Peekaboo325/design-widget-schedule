@@ -125,7 +125,11 @@ function applyTheme(hex, mode) {
   root.style.setProperty('--widget-on-header', onAccent)
 
   if (mode === 'light') {
-    root.style.setProperty('--widget-bg', 'rgba(252, 252, 254, 0.96)')
+    // 위젯 베이스에 옅은 액센트 틴트 → 흰 카드와 시각적 분리
+    root.style.setProperty(
+      '--widget-bg',
+      `color-mix(in oklab, ${hex} 10%, rgba(252, 252, 254, 0.96))`
+    )
     root.style.setProperty(
       '--widget-header-bg',
       `color-mix(in oklab, ${hex} 55%, white)`
@@ -139,7 +143,11 @@ function applyTheme(hex, mode) {
     root.style.setProperty('--widget-overlay-strong', 'rgba(0, 0, 0, 0.08)')
     root.style.setProperty('--widget-row-border', 'rgba(0, 0, 0, 0.06)')
   } else {
-    root.style.setProperty('--widget-bg', 'rgba(26, 26, 30, 0.94)')
+    // 다크 베이스에도 옅은 액센트 틴트 → 카드와 분리
+    root.style.setProperty(
+      '--widget-bg',
+      `color-mix(in oklab, ${hex} 12%, rgba(20, 20, 24, 0.94))`
+    )
     // 다크 모드 헤더 — 액센트 비중 강화 (칙칙함 해소)
     root.style.setProperty(
       '--widget-header-bg',

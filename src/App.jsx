@@ -310,8 +310,8 @@ export default function App() {
 
   return (
     <div className={styles.widget} data-size={settings.size}>
-      <header className={styles.header}>
-        <div className={styles.headerLeft}>
+      <header className={styles.headerRow}>
+        <div className={styles.headerCard}>
           {activeMember && (
             <div className={styles.avatarSlot}>
               <Avatar
