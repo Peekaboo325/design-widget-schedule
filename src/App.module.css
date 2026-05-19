@@ -4,8 +4,7 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--widget-card-bg);
-  border: 1px solid var(--widget-card-border);
+  background: transparent;
   border-radius: var(--widget-radius);
   overflow: hidden;
 }
@@ -22,7 +21,7 @@
   display: flex;
   align-items: center;
   padding: 14px 14px;
-  padding-right: 116px; /* 우측 아이콘 자리 */
+  padding-right: 130px; /* 우측 아이콘 자리 */
   background: var(--widget-header-bg);
   color: var(--widget-on-header);
   -webkit-app-region: drag;
@@ -36,10 +35,10 @@
   position: absolute;
   top: 0;
   right: 0;
-  width: 116px;
+  width: 130px;
   height: 100%;
   background: var(--widget-card-bg);
-  border-radius: 0 0 0 24px;
+  border-radius: 0 0 0 38px;
   pointer-events: none;
 }
 
@@ -155,6 +154,7 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  background: var(--widget-card-bg);
 }
 
 /* 탭 네비게이션 — 헤더 바로 아래 */
@@ -163,6 +163,7 @@
   gap: 0;
   padding: 6px 14px 0;
   flex-shrink: 0;
+  background: var(--widget-card-bg);
 }
 
 .tab {
@@ -195,6 +196,7 @@
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
+  background: var(--widget-card-bg);
 }
 
 .body > * {
@@ -203,11 +205,12 @@
 }
 
 .footer {
-  padding: 6px 16px 10px;
+  padding: 4px 16px 12px;
   font-size: 11px;
   color: var(--widget-muted);
-  text-align: right;
+  text-align: left;
   flex-shrink: 0;
+  background: var(--widget-card-bg);
 }
 
 .muted {
@@ -230,13 +233,13 @@
 
 .widget[data-size='S'] .headerCard {
   padding: 10px 12px;
-  padding-right: 92px;
+  padding-right: 100px;
   gap: 8px;
 }
 
 .widget[data-size='S'] .headerCard::after {
-  width: 92px;
-  border-radius: 0 0 0 18px;
+  width: 100px;
+  border-radius: 0 0 0 28px;
 }
 
 .widget[data-size='S'] .headerActions {
