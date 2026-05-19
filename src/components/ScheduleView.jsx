@@ -17,13 +17,17 @@ const STATUS_STYLE = {
 // S: 큰 숫자 + 공유 대기 뱃지
 // M: 광고주별 합계 + 공유 대기 뱃지
 // L: 전체 테이블 + 구분선 + 공유 대기 목록
-export default function ScheduleView({ size, data, newKeys }) {
+export default function ScheduleView({ size, data, newKeys, onStatusClick }) {
   const { schedule, pending, summary } = data
 
   if (size === 'L') {
     return (
       <div className={styles.containerL}>
-        <ScheduleTable schedule={schedule} newKeys={newKeys} />
+        <ScheduleTable
+          schedule={schedule}
+          newKeys={newKeys}
+          onStatusClick={onStatusClick}
+        />
         <PendingRow pending={pending} />
       </div>
     )
@@ -88,7 +92,7 @@ function PendingBadge({ count }) {
   )
 }
 
-function ScheduleTable({ schedule, newKeys }) {
+function ScheduleTable({ schedule, newKeys, onStatusClick }) {
   if (schedule.length === 0) {
     return (
       <div className={styles.tableEmpty}>
@@ -122,13 +126,16 @@ function ScheduleTable({ schedule, newKeys }) {
                 {item['비고']}
               </span>
               <span className={styles.cellQty}>{item['수량']}</span>
-              <span
-                className={`${styles.cellStatus} ${
+              <button
+                type="button"
+                className={`${styles.cellStatus} ${styles.cellStatusBtn} ${
                   STATUS_STYLE[item['상태']] ?? ''
                 }`}
+                title="클릭하면 다음 상태로"
+                onClick={() => onStatusClick?.(item)}
               >
                 {item['상태']}
-              </span>
+              </button>
             </li>
           )
         })}

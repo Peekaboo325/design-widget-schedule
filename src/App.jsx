@@ -8,7 +8,9 @@ import useSettings from './hooks/useSettings.js'
 import useMembers from './hooks/useMembers.js'
 import useSchedule from './hooks/useSchedule.js'
 import useSeenSchedule from './hooks/useSeenSchedule.js'
-import { shortName } from './lib/format.js'
+import Toast from './components/Toast.jsx'
+import { shortName, nextStatus } from './lib/format.js'
+import { setRowStatus } from './lib/api.js'
 
 // 위젯 셸: 헤더(드래그·설정·새로고침) + 설정 패널 + 본문(탭 전환)
 // 5단계: L 사이즈에서 점검 체크리스트 탭 활성화.
@@ -90,8 +92,71 @@ export default function App() {
     loading: scheduleLoading,
     error: scheduleError,
     lastUpdated,
-    refresh
+    refresh,
+    mutate: mutateSchedule
   } = useSchedule(activeMember)
+
+  // 토스트 (액션 결과 안내 + Undo)
+  const [toast, setToast] = useState(null)
+  const dismissToast = useCallback(() => setToast(null), [])
+
+  // 상태 chip 클릭 — 다음 상태로 순환 + 낙관적 업데이트 + Undo
+  const handleStatusClick = useCallback(
+    async (item) => {
+      if (!item || !item.rowIndex) return
+      const prevStatus = item['상태']
+      const next = nextStatus(prevStatus)
+      const rowIndex = item.rowIndex
+
+      // 낙관적 업데이트: 완료면 잔여 스케줄에서 즉시 제거, 아니면 상태만 변경
+      mutateSchedule((prev) => {
+        const updated = prev.schedule
+          .map((it) =>
+            it.rowIndex === rowIndex ? { ...it, ['상태']: next } : it
+          )
+          .filter((it) => it['상태'] !== '완료')
+        return {
+          ...prev,
+          schedule: updated,
+          summary: { ...prev.summary, total: updated.length }
+        }
+      })
+
+      // 시트에 반영
+      try {
+        await setRowStatus(rowIndex, next)
+        setToast({
+          key: Date.now(),
+          message: `${item['광고주']} → ${next}`,
+          tone: 'info',
+          action: {
+            label: '취소',
+            onClick: async () => {
+              try {
+                await setRowStatus(rowIndex, prevStatus)
+                refresh()
+              } catch (err) {
+                setToast({
+                  key: Date.now(),
+                  tone: 'error',
+                  message: `취소 실패: ${err.message ?? err}`
+                })
+              }
+            }
+          }
+        })
+      } catch (err) {
+        // 실패 시 다시 fetch로 정확한 상태 복구
+        refresh()
+        setToast({
+          key: Date.now(),
+          tone: 'error',
+          message: `변경 실패: ${err.message ?? err}`
+        })
+      }
+    },
+    [mutateSchedule, refresh]
+  )
 
   // 트레이 '새로고침' 메뉴 → 즉시 재조회
   useEffect(() => {
@@ -241,6 +306,7 @@ export default function App() {
                 scheduleLoading={scheduleLoading}
                 scheduleError={scheduleError}
                 newKeys={newKeys}
+                onStatusClick={handleStatusClick}
               />
             )}
           </main>
@@ -256,6 +322,7 @@ export default function App() {
           )}
         </>
       )}
+      <Toast toast={toast} onDismiss={dismissToast} />
     </div>
   )
 }
@@ -321,7 +388,8 @@ function Body({
   scheduleData,
   scheduleLoading,
   scheduleError,
-  newKeys
+  newKeys,
+  onStatusClick
 }) {
   if (membersLoading) return <p className={styles.muted}>팀원 목록 불러오는 중…</p>
   if (membersError) {
@@ -348,7 +416,14 @@ function Body({
     return <p className={styles.muted}>스케줄 불러오는 중…</p>
   }
 
-  return <ScheduleView size={size} data={scheduleData} newKeys={newKeys} />
+  return (
+    <ScheduleView
+      size={size}
+      data={scheduleData}
+      newKeys={newKeys}
+      onStatusClick={onStatusClick}
+    />
+  )
 }
 
 // 예: "5월 19일 (월)"

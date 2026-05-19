@@ -279,6 +279,22 @@
   text-align: center;
 }
 
+/* 상태 버튼 — 클릭 시 다음 상태로 순환 */
+.cellStatusBtn {
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: filter 0.12s ease, transform 0.08s ease;
+}
+
+.cellStatusBtn:hover {
+  filter: brightness(1.15);
+}
+
+.cellStatusBtn:active {
+  transform: scale(0.94);
+}
+
 .statusActive {
   background: color-mix(in oklab, var(--widget-accent) 22%, transparent);
   color: var(--widget-accent);

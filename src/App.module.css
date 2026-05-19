@@ -1,4 +1,5 @@
 .widget {
+  position: relative; /* Toast absolute 기준 */
   width: 100%;
   height: 100vh;
   display: flex;

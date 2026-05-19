@@ -52,5 +52,10 @@ export default function useSchedule(memberName) {
     }
   }, [memberName, load])
 
-  return { data, loading, error, lastUpdated, refresh: load }
+  // 낙관적 업데이트 — POST 호출 전후로 화면을 즉시 갱신 / 롤백
+  const mutate = useCallback((updater) => {
+    setData((prev) => (prev ? updater(prev) : prev))
+  }, [])
+
+  return { data, loading, error, lastUpdated, refresh: load, mutate }
 }

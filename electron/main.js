@@ -33,7 +33,7 @@ if (process.platform === 'win32') {
 // GAS Web App 베이스 URL
 // 렌더러는 CSP/CORS 때문에 직접 호출 불가 → main에서 fetch 후 IPC 응답
 const GAS_BASE =
-  'https://script.google.com/macros/s/AKfycbyaYWSplz1MRhUhDx1xhO7jpRqNviyf2DuRleZKe_NaNy3b7kAsw1RF62ngiMQ_xl2XIQ/exec'
+  'https://script.google.com/macros/s/AKfycbxaYt08ke5gN38BmuRRp3dWO_tUKoAA76BAPuotgjqOrrDqX_-OfOoyvWhQ4dYmMQY2PA/exec'
 
 const API_TIMEOUT_MS = 12000
 
