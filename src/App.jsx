@@ -9,7 +9,7 @@ import useMembers from './hooks/useMembers.js'
 import useSchedule from './hooks/useSchedule.js'
 import useSeenSchedule from './hooks/useSeenSchedule.js'
 import Toast from './components/Toast.jsx'
-import PendingPopover from './components/PendingPopover.jsx'
+import PendingPanel from './components/PendingPanel.jsx'
 import Avatar from './components/Avatar.jsx'
 import EmojiPicker from './components/EmojiPicker.jsx'
 import { shortName, nextStatus } from './lib/format.js'
@@ -210,17 +210,17 @@ export default function App() {
     [mutateSchedule, refresh, markSeen]
   )
 
-  // 공유 대기 팝오버 열고 닫기
-  const [pendingOpen, setPendingOpen] = useState(false)
-  const handlePendingClick = useCallback(() => setPendingOpen(true), [])
-  const closePendingPopover = useCallback(() => setPendingOpen(false), [])
+  // 공유 대기 패널 — 우측에서 슬라이드 인. 풋터의 '>' 의미와 일치
+  const [pendingViewOpen, setPendingViewOpen] = useState(false)
+  const handlePendingClick = useCallback(() => setPendingViewOpen(true), [])
+  const closePendingView = useCallback(() => setPendingViewOpen(false), [])
 
-  // 팝오버 열려있는데 공유 대기가 0건이 되면 자동 닫기
+  // 공유 대기가 0건이 되면 자동으로 패널 닫음 (마지막 항목 처리 후)
   useEffect(() => {
-    if (pendingOpen && (scheduleData?.pending?.length ?? 0) === 0) {
-      setPendingOpen(false)
+    if (pendingViewOpen && (scheduleData?.pending?.length ?? 0) === 0) {
+      setPendingViewOpen(false)
     }
-  }, [pendingOpen, scheduleData])
+  }, [pendingViewOpen, scheduleData])
 
   // 공유 체크 클릭 — L열 TRUE + 낙관적으로 pending에서 제거 + Undo
   const handleShareCheck = useCallback(
@@ -444,6 +444,12 @@ export default function App() {
                 onToggle={toggleChecked}
                 onResetAll={resetChecked}
               />
+            ) : pendingViewOpen && settings.size === 'L' ? (
+              <PendingPanel
+                pending={scheduleData?.pending ?? []}
+                onCheck={handleShareCheck}
+                onBack={closePendingView}
+              />
             ) : (
               <Body
                 size={settings.size}
@@ -474,17 +480,6 @@ export default function App() {
           )}
         </div>
       )}
-      {pendingOpen &&
-        settings.size === 'L' &&
-        (scheduleData?.pending?.length ?? 0) > 0 && (
-          <PendingPopover
-            pending={scheduleData.pending}
-            onCheck={(item) => {
-              handleShareCheck(item)
-            }}
-            onClose={closePendingPopover}
-          />
-        )}
       <Toast toast={toast} onDismiss={dismissToast} />
     </div>
   )
