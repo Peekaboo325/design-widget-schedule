@@ -1,22 +1,21 @@
 import styles from './ScheduleView.module.css'
 
 // 스케줄 항목의 안정적 키 — '광고주|비고' 조합
-// NEW 추적, seenScheduleKeys 비교에 공통 사용
 export function scheduleKey(item) {
   return `${item?.['광고주'] ?? ''}|${item?.['비고'] ?? ''}`
 }
 
-// 상태 → 색상 매핑
+// 상태별 chip 스타일
 const STATUS_STYLE = {
   진행: styles.statusActive,
   대기: styles.statusWaiting,
   미정: styles.statusUndefined
 }
 
-// 사이즈별 정보 단계 렌더링
+// 사이즈별 정보 단계
 // S: 큰 숫자 + 공유 대기 뱃지
 // M: 광고주별 합계 + 공유 대기 뱃지
-// L: 전체 테이블 + 구분선 + 공유 대기 목록
+// L: 메트릭 카드 + 행 카드 리스트 + 공유 대기 풋터
 export default function ScheduleView({
   size,
   data,
@@ -29,12 +28,13 @@ export default function ScheduleView({
   if (size === 'L') {
     return (
       <div className={styles.containerL}>
-        <ScheduleTable
+        <MetricCard count={schedule.length} />
+        <CardList
           schedule={schedule}
           newKeys={newKeys}
           onStatusClick={onStatusClick}
         />
-        <PendingRow pending={pending} onClick={onPendingClick} />
+        <PendingFooter pending={pending} onClick={onPendingClick} />
       </div>
     )
   }
@@ -98,77 +98,127 @@ function PendingBadge({ count }) {
   )
 }
 
-function ScheduleTable({ schedule, newKeys, onStatusClick }) {
-  if (schedule.length === 0) {
-    return (
-      <div className={styles.tableEmpty}>
-        <p className={styles.empty}>처리할 작업 없음</p>
-      </div>
-    )
-  }
-  // NEW 항목이 하나라도 있을 때만 dot 컬럼 노출 → 평소엔 광고주가 좌측 끝
-  const hasAnyNew = (newKeys?.size ?? 0) > 0
+// L 메트릭 카드 — 옅은 액센트 배경 + 캘린더 아이콘 + 라벨 + 큰 카운트
+function MetricCard({ count }) {
   return (
-    <div className={styles.tableWrap}>
-      <div className={styles.sectionHead}>
-        <span className={styles.sectionLabel}>잔여 스케줄</span>
-        <span className={styles.sectionCount}>{schedule.length}건</span>
-      </div>
-      <ul className={`${styles.table} ${hasAnyNew ? '' : styles.tableNoMarker}`}>
-        {schedule.map((item, i) => {
-          const isNew = newKeys?.has(scheduleKey(item))
-          return (
-            <li key={i} className={styles.tableRow}>
-              {hasAnyNew && (
-                <span
-                  className={`${styles.cellMarker} ${isNew ? styles.cellMarkerNew : ''}`}
-                  aria-label={isNew ? '새 항목' : undefined}
-                />
-              )}
-              <span className={styles.cellClient} title={item['광고주']}>
-                {item['광고주']}
-              </span>
-              <span className={styles.cellNote} title={item['비고']}>
-                {item['비고']}
-              </span>
-              <span className={styles.cellQty}>{item['수량']}</span>
-              <button
-                type="button"
-                className={`${styles.cellStatus} ${styles.cellStatusBtn} ${
-                  STATUS_STYLE[item['상태']] ?? ''
-                }`}
-                title="클릭하면 다음 상태로"
-                onClick={() => onStatusClick?.(item)}
-              >
-                {item['상태']}
-              </button>
-            </li>
-          )
-        })}
-      </ul>
+    <div className={styles.metricCard}>
+      <span className={styles.metricIcon}>
+        <CalendarIcon />
+      </span>
+      <span className={styles.metricLabel}>잔여 스케줄</span>
+      <span className={styles.metricCount}>
+        {count}
+        <span className={styles.metricUnit}>건</span>
+      </span>
     </div>
   )
 }
 
-// L 모드 공유 대기: 한 줄 요약 (라벨 + 카운트)
-// 0건이 아니면 클릭 가능 → 위에서 팝오버 펼침
-function PendingRow({ pending, onClick }) {
+// L 행 카드 리스트
+function CardList({ schedule, newKeys, onStatusClick }) {
+  if (schedule.length === 0) {
+    return (
+      <div className={styles.listEmpty}>
+        <p className={styles.empty}>처리할 작업 없음</p>
+      </div>
+    )
+  }
+  return (
+    <div className={styles.cardList}>
+      {schedule.map((item, i) => {
+        const isNew = newKeys?.has(scheduleKey(item))
+        return (
+          <div key={i} className={styles.rowCard}>
+            <span
+              className={`${styles.rowDot} ${isNew ? styles.rowDotNew : ''}`}
+              aria-label={isNew ? '새 항목' : undefined}
+            />
+            <span className={styles.rowClient} title={item['광고주']}>
+              {item['광고주']}
+            </span>
+            <span className={styles.rowNote} title={item['비고']}>
+              {item['비고']}
+            </span>
+            <span className={styles.rowQty}>{item['수량']}</span>
+            <button
+              type="button"
+              className={`${styles.chip} ${STATUS_STYLE[item['상태']] ?? ''}`}
+              title="클릭하면 다음 상태로"
+              onClick={() => onStatusClick?.(item)}
+            >
+              {item['상태']}
+            </button>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// L 공유 대기 풋터 — 사람 아이콘 + 라벨 + 카운트 알약 + 화살표
+function PendingFooter({ pending, onClick }) {
   const empty = pending.length === 0
   return (
     <button
       type="button"
-      className={`${styles.pendingRow} ${empty ? styles.pendingRowEmpty : ''}`}
+      className={`${styles.pendingFooter} ${empty ? styles.pendingFooterEmpty : ''}`}
       onClick={() => !empty && onClick?.()}
       disabled={empty}
       title={empty ? undefined : '클릭하면 목록 펼침'}
     >
-      <span className={styles.pendingRowLabel}>공유 대기</span>
-      <span className={styles.pendingRowCount}>{pending.length}건</span>
+      <span className={styles.pendingFooterIcon}>
+        <UsersIcon />
+      </span>
+      <span className={styles.pendingFooterLabel}>공유 대기</span>
+      <span className={styles.pendingFooterCount}>{pending.length}건</span>
+      {!empty && <span className={styles.pendingFooterArrow}>›</span>}
     </button>
   )
 }
 
-// 광고주별 합계 (M 사이즈 전용) — 원본 순서 유지
+function CalendarIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  )
+}
+
+function UsersIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  )
+}
+
+// 광고주별 합계 (M 사이즈 전용)
 function groupByClient(schedule) {
   const map = new Map()
   for (const item of schedule) {

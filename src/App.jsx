@@ -16,11 +16,9 @@ import { shortName, nextStatus } from './lib/format.js'
 import { resolveMemberEmoji } from './lib/emoji.js'
 import { setRowStatus, setRowShare } from './lib/api.js'
 import { scheduleKey } from './components/ScheduleView.jsx'
-import {
-  getShapeParams,
-  buildOuterPath,
-  buildHeaderPath
-} from './lib/widgetShape.js'
+
+// 사이즈별 헤더 높이 (CSS와 일치)
+const HEADER_H = { S: 64, M: 84, L: 92 }
 
 // 위젯 셸: 헤더(드래그·설정·새로고침) + 설정 패널 + 본문(탭 전환)
 // 5단계: L 사이즈에서 점검 체크리스트 탭 활성화.
@@ -315,38 +313,28 @@ export default function App() {
     !scheduleError &&
     !settingsOpen
 
-  // 위젯 사이즈별 외곽/헤더 path 계산 — clip-path 인라인 주입용
-  const shapeParams = useMemo(() => getShapeParams(settings.size), [settings.size])
-  const outerClip = useMemo(
-    () => `path('${buildOuterPath(shapeParams)}')`,
-    [shapeParams]
-  )
-  const headerClip = useMemo(
-    () => `path('${buildHeaderPath(shapeParams)}')`,
-    [shapeParams]
-  )
-  const headerPx = `${shapeParams.headerH}px`
+  const headerPx = `${HEADER_H[settings.size] ?? HEADER_H.L}px`
 
   return (
-    <div
-      className={styles.widget}
-      data-size={settings.size}
-      style={{ '--header-h': headerPx }}
-    >
-      {/* 위젯 외곽 형상 + 본문 카드 색 (헤더 카드는 이 위에 별도로 덮임) */}
-      <div
-        className={styles.shapeLayer}
-        style={{ clipPath: outerClip, WebkitClipPath: outerClip }}
-        aria-hidden="true"
-      />
-      <div
-        className={styles.headerCard}
-        style={{
-          height: headerPx,
-          clipPath: headerClip,
-          WebkitClipPath: headerClip
-        }}
-      >
+    <div className={styles.widget} data-size={settings.size}>
+      <div className={styles.headerCard} style={{ height: headerPx }}>
+        {activeMember && (
+          <div className={styles.avatarSlot}>
+            <Avatar
+              emoji={resolveMemberEmoji(activeMember, settings.memberEmoji)}
+              size={settings.size === 'S' ? 32 : 44}
+              onClick={() => setEmojiPickerOpen((v) => !v)}
+              title={`${activeMember} — 클릭해서 이모지 변경`}
+            />
+            {emojiPickerOpen && (
+              <EmojiPicker
+                value={resolveMemberEmoji(activeMember, settings.memberEmoji)}
+                onChange={(emoji) => setMemberEmoji(activeMember, emoji)}
+                onClose={() => setEmojiPickerOpen(false)}
+              />
+            )}
+          </div>
+        )}
         <div className={styles.headerText}>
           <span className={styles.date}>{todayLabel}</span>
           {showHeaderMeta && (
@@ -358,71 +346,45 @@ export default function App() {
             </span>
           )}
         </div>
-      </div>
-
-      {/* 아바타 슬롯은 헤더 카드 밖에 둠 — 헤더 path clip-path에 잘리지 않도록
-          (이모지 피커 펼침이 헤더 path 밖으로 나가야 함) */}
-      {activeMember && (
-        <div className={styles.avatarSlot}>
-          <Avatar
-            emoji={resolveMemberEmoji(activeMember, settings.memberEmoji)}
-            size={settings.size === 'S' ? 32 : 40}
-            onClick={() => setEmojiPickerOpen((v) => !v)}
-            title={`${activeMember} — 클릭해서 이모지 변경`}
-          />
-          {emojiPickerOpen && (
-            <EmojiPicker
-              value={resolveMemberEmoji(activeMember, settings.memberEmoji)}
-              onChange={(emoji) => setMemberEmoji(activeMember, emoji)}
-              onClose={() => setEmojiPickerOpen(false)}
-            />
+        <div className={styles.headerActions}>
+          {newCount > 0 && activeTab === 'schedule' && !settingsOpen && (
+            <button
+              type="button"
+              className={styles.newBadge}
+              aria-label={`새 스케줄 ${newCount}건. 클릭하면 본 것으로 표시`}
+              title="클릭하면 본 것으로 표시"
+              onClick={markAllSeen}
+            >
+              +{newCount}
+            </button>
           )}
+          {activeTab === 'schedule' && !needsMemberPick && !settingsOpen && (
+            <button
+              type="button"
+              className={`${styles.iconBtn} ${refreshing ? styles.iconBtnSpinning : ''}`}
+              aria-label="새로고침"
+              disabled={!activeMember || refreshing}
+              onClick={() => refresh()}
+            >
+              <RefreshIcon />
+            </button>
+          )}
+          <button
+            ref={settingsBtnRef}
+            type="button"
+            className={`${styles.iconBtn} ${settingsOpen ? styles.iconBtnActive : ''}`}
+            aria-label="설정"
+            aria-expanded={settingsOpen}
+            onClick={() => setSettingsOpen((v) => !v)}
+          >
+            <GearIcon />
+          </button>
         </div>
-      )}
-
-      <div className={styles.headerActions}>
-        {/* 새 스케줄 알림 뱃지 — 클릭 시 모두 '본 것'으로 */}
-        {newCount > 0 && activeTab === 'schedule' && !settingsOpen && (
-          <button
-            type="button"
-            className={styles.newBadge}
-            aria-label={`새 스케줄 ${newCount}건. 클릭하면 본 것으로 표시`}
-            title="클릭하면 본 것으로 표시"
-            onClick={markAllSeen}
-          >
-            +{newCount}
-          </button>
-        )}
-        {activeTab === 'schedule' && !needsMemberPick && !settingsOpen && (
-          <button
-            type="button"
-            className={`${styles.iconBtn} ${refreshing ? styles.iconBtnSpinning : ''}`}
-            aria-label="새로고침"
-            disabled={!activeMember || refreshing}
-            onClick={() => refresh()}
-          >
-            <RefreshIcon />
-          </button>
-        )}
-        <button
-          ref={settingsBtnRef}
-          type="button"
-          className={`${styles.iconBtn} ${settingsOpen ? styles.iconBtnActive : ''}`}
-          aria-label="설정"
-          aria-expanded={settingsOpen}
-          onClick={() => setSettingsOpen((v) => !v)}
-        >
-          <GearIcon />
-        </button>
       </div>
 
       {/* 설정 펼친 상태에서는 본문/탭 숨김 — 본문 가림·잘림 방지 */}
       {settingsOpen && ready ? (
-        <div
-          ref={settingsPanelRef}
-          className={styles.bodyCard}
-          style={{ paddingTop: headerPx }}
-        >
+        <div ref={settingsPanelRef} className={styles.bodyCard}>
           <div className={styles.settingsArea}>
             <SettingsPanel
               size={settings.size}
@@ -439,7 +401,7 @@ export default function App() {
           </div>
         </div>
       ) : (
-        <div className={styles.bodyCard} style={{ paddingTop: headerPx }}>
+        <div className={styles.bodyCard}>
           {showTabs && (
             <nav className={styles.tabs}>
               <TabButton

@@ -122,17 +122,55 @@
   cursor: pointer;
 }
 
-/* 컬러 프리셋 + 피커 */
+/* 테마 컬러 — hue 슬라이더 + 프리셋 */
+.colorStack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.hueSlider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 10px;
+  border-radius: var(--widget-pill);
+  background: linear-gradient(
+    to right,
+    #ff6b6b 0%,
+    #ffd166 16.66%,
+    #b6e88a 33.33%,
+    #6ee7d3 50%,
+    #6e9eff 66.66%,
+    #c98aff 83.33%,
+    #ff6b6b 100%
+  );
+  outline: none;
+  cursor: pointer;
+  border: 1px solid var(--widget-card-border);
+}
+
+.hueSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--widget-surface);
+  border: 2px solid var(--widget-fg);
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
 .colorRow {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .swatch {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   border: 2px solid transparent;
   cursor: pointer;
@@ -141,36 +179,5 @@
 
 .swatchActive {
   border-color: var(--widget-fg);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
-}
-
-/* 컬러피커: 네이티브 input은 작은 점 + 클릭 영역만 노출 */
-.picker {
-  position: relative;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 1px dashed var(--widget-muted);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  overflow: hidden;
-}
-
-.pickerDot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-
-.picker input[type='color'] {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
-  border: none;
-  padding: 0;
+  box-shadow: 0 0 0 1px var(--widget-surface);
 }

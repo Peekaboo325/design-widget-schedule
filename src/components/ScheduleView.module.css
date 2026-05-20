@@ -1,4 +1,6 @@
-/* S / M 공통 */
+/* ─────────────────────────────────────────
+   S / M 공통
+   ───────────────────────────────────────── */
 .containerSM {
   display: flex;
   flex-direction: column;
@@ -18,14 +20,13 @@
 
 .bigLabel {
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--widget-muted);
-  letter-spacing: 0;
 }
 
 .bigValue {
   font-size: 44px;
-  font-weight: 800;
+  font-weight: 900;
   line-height: 1;
   color: var(--widget-accent);
   letter-spacing: -1.8px;
@@ -45,20 +46,19 @@
   align-items: baseline;
   justify-content: space-between;
   padding-bottom: 4px;
-  border-bottom: 1px solid var(--widget-border);
+  border-bottom: 1px solid var(--widget-row-border);
   margin-bottom: 6px;
 }
 
 .mediumLabel {
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--widget-muted);
-  letter-spacing: 0;
 }
 
 .mediumTotal {
   font-size: 22px;
-  font-weight: 800;
+  font-weight: 900;
   color: var(--widget-accent);
   letter-spacing: -0.6px;
   line-height: 1;
@@ -87,6 +87,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   margin-right: 8px;
+  font-weight: 600;
 }
 
 .clientCount {
@@ -95,16 +96,17 @@
   flex-shrink: 0;
 }
 
-/* 공유 대기 뱃지 (S/M 모드) */
+/* S/M 공유 대기 뱃지 */
 .pendingBadge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 7px 12px;
   border-radius: var(--widget-pill);
-  background: color-mix(in oklab, var(--widget-accent) 18%, transparent);
+  background: var(--widget-accent-soft);
+  color: var(--widget-accent);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   align-self: flex-start;
 }
 
@@ -126,240 +128,269 @@
 }
 
 .pendingText strong {
-  font-weight: 700;
+  font-weight: 800;
   margin: 0 2px;
 }
 
-/* L: 스케줄 + 공유대기 두 섹션 */
+/* ─────────────────────────────────────────
+   L 모드 — 메트릭 카드 + 행 카드 리스트 + 공유 대기 풋터
+   ───────────────────────────────────────── */
 .containerL {
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  gap: 8px;
+  gap: 10px;
 }
 
-.divider {
-  height: 1px;
-  background: var(--widget-border);
+/* 메트릭 카드 — 옅은 액센트 배경 + 캘린더 아이콘 + 라벨 + 큰 카운트 */
+.metricCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: var(--widget-accent-soft);
+  border-radius: 16px;
   flex-shrink: 0;
 }
 
-.tableWrap {
+.metricIcon {
   display: flex;
-  flex-direction: column;
-  min-height: 0;
-  flex: 1;
+  align-items: center;
+  justify-content: center;
+  color: var(--widget-accent);
+  flex-shrink: 0;
 }
 
-.tableEmpty {
+.metricLabel {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--widget-fg);
+  letter-spacing: -0.2px;
+}
+
+.metricCount {
+  font-size: 30px;
+  font-weight: 900;
+  color: var(--widget-accent);
+  letter-spacing: -1.2px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.metricUnit {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+/* 행 카드 리스트 */
+.cardList {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  padding: 2px 2px;
+}
+
+.listEmpty {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.sectionHead {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  padding-bottom: 6px;
-  margin-bottom: 6px;
-  border-bottom: 1px solid var(--widget-border);
-}
-
-.sectionLabel {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--widget-muted);
-  letter-spacing: 0;
-}
-
-.sectionCount {
-  font-size: 28px;
-  font-weight: 800;
-  color: var(--widget-accent);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.8px;
-  line-height: 1;
-}
-
-.table {
-  list-style: none;
-  padding: 0 8px 0 4px;
-  margin: 0;
-  overflow-y: auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.tableRow {
+/* 개별 행 카드 — 흰 카드 + 옅은 보더 + 그림자 */
+.rowCard {
   display: grid;
-  grid-template-columns: 14px minmax(60px, 1fr) minmax(80px, 2.4fr) auto auto;
-  gap: 8px;
+  grid-template-columns: auto minmax(60px, 1.2fr) minmax(60px, 1.6fr) auto auto;
   align-items: center;
-  padding: 8px 0;
-  font-size: 13px;
-  border-bottom: 1px solid var(--widget-row-border);
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--widget-surface);
+  border: 1px solid var(--widget-card-border);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: transform 0.08s ease, box-shadow 0.12s ease;
 }
 
-/* NEW 0건일 때: dot 컬럼 제거 → 광고주가 좌측 끝부터 시작 */
-.tableNoMarker .tableRow {
-  grid-template-columns: minmax(60px, 1fr) minmax(80px, 2.4fr) auto auto;
+.rowCard:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
 }
 
-.tableRow:last-child {
-  border-bottom: none;
-}
-
-/* NEW 항목 좌측 dot */
-.cellMarker {
-  width: 7px;
-  height: 7px;
+/* 행 좌측 dot — 액센트. NEW일 때 펄스 */
+.rowDot {
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: transparent;
-  justify-self: center;
+  background: var(--widget-accent);
+  flex-shrink: 0;
 }
 
-.cellMarkerNew {
-  background: var(--widget-accent);
+.rowDotNew {
   animation: dotPulse 1.3s ease-in-out infinite;
 }
 
 @keyframes dotPulse {
   0%,
   100% {
-    opacity: 0.55;
-    filter: brightness(1);
-    box-shadow: 0 0 0 0 color-mix(in oklab, var(--widget-accent) 50%, transparent);
+    box-shadow: 0 0 0 0 var(--widget-accent-soft);
   }
   50% {
-    opacity: 1;
-    filter: brightness(1.35);
-    box-shadow: 0 0 0 2px color-mix(in oklab, var(--widget-accent) 0%, transparent),
-      0 0 6px 1px color-mix(in oklab, var(--widget-accent) 60%, transparent);
+    box-shadow: 0 0 0 5px var(--widget-accent-soft);
   }
 }
 
-.cellClient {
-  font-size: 13px;
-  font-weight: 700;
+.rowClient {
+  font-size: 14px;
+  font-weight: 800;
   color: var(--widget-fg);
+  letter-spacing: -0.3px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* 비고는 광고주와 함께 강조 (수량보다 위계 위) */
-.cellNote {
+.rowNote {
   font-size: 12.5px;
   font-weight: 500;
-  color: var(--widget-fg);
+  color: var(--widget-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* 수량은 작고 흐리게 (대부분 1) */
-.cellQty {
+.rowQty {
   text-align: right;
-  font-size: 11px;
+  font-size: 11.5px;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
-  color: var(--widget-muted);
+  color: var(--widget-fg);
   min-width: 14px;
 }
 
-.cellStatus {
+/* 상태 chip */
+.chip {
   font-size: 11px;
-  padding: 3px 10px;
+  padding: 4px 10px;
   border-radius: var(--widget-pill);
-  font-weight: 700;
+  font-weight: 800;
   white-space: nowrap;
-  min-width: 32px;
+  min-width: 36px;
   text-align: center;
-}
-
-/* 상태 버튼 — 클릭 시 다음 상태로 순환 */
-.cellStatusBtn {
   border: none;
   cursor: pointer;
   font-family: inherit;
   transition: filter 0.12s ease, transform 0.08s ease;
+  letter-spacing: -0.2px;
 }
 
-.cellStatusBtn:hover {
-  filter: brightness(1.15);
+.chip:hover {
+  filter: brightness(0.95);
 }
 
-.cellStatusBtn:active {
+.chip:active {
   transform: scale(0.94);
 }
 
+/* 진행 — 액센트 톤 (옅은 액센트 배경 + 진한 액센트 텍스트) */
 .statusActive {
-  background: color-mix(in oklab, var(--widget-accent) 22%, transparent);
+  background: var(--widget-accent-soft);
   color: var(--widget-accent);
 }
 
-/* 대기: 무채색 회색 (요청에 따라 회색조) */
+/* 대기 — 무채색 */
 .statusWaiting {
   background: var(--widget-overlay-strong);
   color: var(--widget-fg);
-  opacity: 0.85;
 }
 
+/* 미정 — 더 옅게 */
 .statusUndefined {
   background: var(--widget-overlay);
   color: var(--widget-muted);
 }
 
-.empty {
-  margin: 0;
-  font-size: 11px;
-  color: var(--widget-muted);
-  padding: 4px 0;
-}
-
-/* L 모드: 잔여 스케줄(나머지 공간 전부) + 공유 대기 한 줄 요약 */
-.containerL > .tableWrap {
-  flex: 1 1 0;
-  min-height: 0;
-}
-
-/* L 공유 대기 한 줄 — 부차 정보라 라벨 + 카운트만. 클릭 시 팝오버 펼침 */
-.pendingRow {
+/* L 공유 대기 풋터 */
+.pendingFooter {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  width: 100%;
-  padding: 10px 4px 4px;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 6px 6px;
   border: none;
-  border-top: 1px solid var(--widget-border);
+  border-top: 1px solid var(--widget-row-border);
   background: transparent;
   cursor: pointer;
-  flex-shrink: 0;
-  font-family: inherit;
+  width: 100%;
   text-align: left;
+  font-family: inherit;
+  color: inherit;
+  flex-shrink: 0;
+  transition: opacity 0.12s ease;
 }
 
-.pendingRow:hover:not(:disabled) {
-  background: var(--widget-overlay-strong);
+.pendingFooter:hover:not(:disabled) {
+  opacity: 0.85;
 }
 
-.pendingRowEmpty {
+.pendingFooterEmpty {
   cursor: default;
 }
 
-.pendingRowLabel {
-  font-size: 12px;
-  font-weight: 500;
+.pendingFooterIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--widget-accent-soft);
+  color: var(--widget-accent);
+  flex-shrink: 0;
+}
+
+.pendingFooter:disabled .pendingFooterIcon {
+  background: var(--widget-overlay-strong);
   color: var(--widget-muted);
 }
 
-.pendingRowCount {
-  font-size: 14px;
+.pendingFooterLabel {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--widget-fg);
+}
+
+.pendingFooter:disabled .pendingFooterLabel {
+  color: var(--widget-muted);
+  font-weight: 500;
+}
+
+.pendingFooterCount {
+  font-size: 12px;
   font-weight: 700;
   color: var(--widget-muted);
+  background: var(--widget-overlay-strong);
+  border-radius: var(--widget-pill);
+  padding: 4px 12px;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.2px;
+}
+
+.pendingFooterArrow {
+  color: var(--widget-muted);
+  font-size: 20px;
+  line-height: 1;
+  font-weight: 400;
+}
+
+.empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--widget-muted);
 }

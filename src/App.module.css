@@ -1,80 +1,62 @@
-/* 위젯 루트
-   - clip-path는 별도 .shapeLayer에서 처리 (root에 걸면 우상단 노치 영역의 아이콘들도 같이 잘리므로 분리)
-   - 자체는 transparent. 모양은 자식 레이어들이 그림. */
+/* 위젯 루트 — 단순 둥근 카드 (폴더 탭 폐기)
+   외곽 border-radius + overflow:hidden으로 둥근 모서리 적용
+   배경은 본문 카드 색. 상단 영역만 헤더 그라데이션이 덮음. */
 .widget {
   position: relative;
   width: 100%;
   height: 100vh;
-  background: transparent;
-}
-
-/* 위젯 외곽 형상 레이어
-   - 본문 카드 색을 깔고 외곽 path로 clip → 위젯 전체 실루엣 + 본문 카드 영역
-   - 헤더 카드는 이 위에 별도 path로 덮어 그려짐 */
-.shapeLayer {
-  position: absolute;
-  inset: 0;
   background: var(--widget-card-bg);
-  z-index: 0;
-  /* clip-path는 inline style로 주입 (사이즈별 path 문자열) */
+  border-radius: var(--widget-radius);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--widget-fg);
 }
 
-/* 헤더 카드
-   - 위젯 전체 폭으로 깔되 header path로 clip → 좌상단 + inverse curve 형상
-   - 헤더 path 외부(= 우상단 노치)는 자동으로 잘려 본문 카드 색이 비침
-   - padding-left는 아바타(헤더 카드 밖 별도 레이어) 자리만큼 비워둠 */
+/* 헤더 카드 — 위젯 상단 영역. 그라데이션 + 위쪽만 라운드(외곽 라운드와 일치) */
 .headerCard {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  /* height, clip-path는 inline style로 주입 */
+  position: relative;
+  flex-shrink: 0;
+  /* height inline */
   display: flex;
   align-items: center;
-  padding: 0 14px 0 64px;
-  background: var(--widget-header-bg);
+  padding: 0 18px;
+  background: linear-gradient(
+    135deg,
+    var(--widget-header-from) 0%,
+    var(--widget-header-to) 100%
+  );
   color: var(--widget-on-header);
   -webkit-app-region: drag;
-  gap: 10px;
-  z-index: 2;
+  gap: 12px;
   box-sizing: border-box;
 }
 
-/* 본문 콘텐츠 컨테이너
-   - 위젯 영역 전부 차지하되 padding-top으로 헤더 높이만큼 비워둠
-   - 배경 없음 (shapeLayer가 본문색 깔아줌). 외곽 clip은 부모(shapeLayer)에서 처리되지 않으므로
-     bodyCard의 자식 콘텐츠가 path 외부로 삐져나오면 보일 수 있어 overflow:hidden + 자체 clip은 불필요
-     (path 외부는 .shapeLayer 색이 없는 영역 = 투명. 본문 콘텐츠가 그 위로 겹치면 path 밖에서도 텍스트가 보임)
-   - 콘텐츠는 일반적으로 path 안쪽에 들어가므로 문제 없음. 단 padding 충분히 줌. */
+/* 본문 카드 — 헤더 아래 채움 */
 .bodyCard {
-  position: absolute;
-  inset: 0;
-  /* padding-top은 inline style로 주입 (헤더 높이) */
+  flex: 1;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  z-index: 1;
+  background: var(--widget-card-bg);
   box-sizing: border-box;
 }
 
-/* 아바타 슬롯 — 헤더 카드 밖, .widget 직속. 헤더 vertical center에 배치.
-   이모지 피커가 펼쳐질 때 헤더 path 영역 밖으로 나갈 수 있도록 분리 */
+/* 아바타 슬롯 — 헤더 안 flex item, no-drag */
 .avatarSlot {
-  position: absolute;
-  top: calc((var(--header-h) - 40px) / 2);
-  left: 14px;
-  z-index: 4;
+  position: relative;
   -webkit-app-region: no-drag;
+  flex-shrink: 0;
 }
 
-/* 헤더 텍스트 스택 — 큰 위계(날짜) + 작은 위계(멤버·갱신시간) 2줄 */
+/* 헤더 텍스트 스택 — 큰 위계(날짜) + 작은 위계(멤버·갱신시간) */
 .headerText {
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 2px;
   min-width: 0;
-  flex: 0 1 auto;
+  flex: 1 1 auto;
 }
 
 .date {
@@ -86,34 +68,29 @@
   line-height: 1.15;
 }
 
-/* 보조 정보 — 멤버명 · 마지막 갱신 시간 */
 .headerMeta {
   font-size: 11px;
   font-weight: 500;
   letter-spacing: -0.1px;
-  color: color-mix(in oklab, var(--widget-on-header) 65%, transparent);
+  color: color-mix(in oklab, var(--widget-on-header) 75%, transparent);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.2;
 }
 
-/* 우측 액션 아이콘 — 우상단 노치 영역(투명) 위에 absolute. clip 영향 안 받음
-   top은 헤더 vertical center에 맞춤 (CSS var로 헤더 높이 주입받음) */
+/* 우측 액션 아이콘 — 헤더 안 flex item */
 .headerActions {
-  position: absolute;
-  top: calc((var(--header-h) - 40px) / 2);
-  right: 14px;
   display: flex;
   align-items: center;
   gap: 8px;
   -webkit-app-region: no-drag;
-  z-index: 3;
+  flex-shrink: 0;
 }
 
-/* 원형 아이콘 버튼 — 흰 카드 배경 + 액센트 아이콘. 아바타 크기와 통일 */
+/* 원형 아이콘 버튼 — 흰 알약 + 액센트 아이콘 */
 .iconBtn {
-  background: var(--widget-card-bg);
+  background: var(--widget-surface);
   border: none;
   border-radius: 50%;
   width: 40px;
@@ -125,7 +102,7 @@
   color: var(--widget-accent);
   flex-shrink: 0;
   transition: filter 0.12s ease, transform 0.08s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 .iconBtn:hover:not(:disabled) {
@@ -143,7 +120,7 @@
 
 .iconBtnActive {
   background: var(--widget-fg);
-  color: var(--widget-card-bg);
+  color: var(--widget-surface);
 }
 
 .iconBtnSpinning {
@@ -156,10 +133,9 @@
   }
 }
 
-/* 새 스케줄 알림 뱃지 (+N) */
+/* 새 스케줄 알림 뱃지 (+N) — 흰 알약 + 액센트 텍스트 */
 .newBadge {
-  position: relative;
-  background: var(--widget-card-bg);
+  background: var(--widget-surface);
   color: var(--widget-accent);
   border: none;
   border-radius: var(--widget-pill);
@@ -170,7 +146,7 @@
   line-height: 1;
   letter-spacing: -0.2px;
   animation: badgePulse 1.2s ease-in-out infinite;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.10);
 }
 
 .newBadge:hover {
@@ -181,18 +157,14 @@
 @keyframes badgePulse {
   0%,
   100% {
-    filter: brightness(1);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12),
-      inset 0 0 0 0 rgba(255, 255, 255, 0);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.10);
   }
   50% {
-    filter: brightness(1.1);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.16),
-      inset 0 0 0 1.5px color-mix(in oklab, var(--widget-accent) 35%, transparent);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
   }
 }
 
-/* 설정 펼친 상태 — bodyCard 안 채움 */
+/* 설정 펼친 상태 */
 .settingsArea {
   flex: 1;
   min-height: 0;
@@ -203,22 +175,24 @@
 .tabs {
   display: flex;
   gap: 0;
-  padding: 6px 14px 0;
+  padding: 10px 18px 0;
   flex-shrink: 0;
+  border-bottom: 1px solid var(--widget-row-border);
 }
 
 .tab {
   flex: 1 1 0;
   background: transparent;
   border: none;
-  padding: 8px 0;
+  padding: 12px 0;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--widget-muted);
   cursor: pointer;
-  border-radius: 8px 8px 0 0;
   border-bottom: 2px solid transparent;
   text-align: center;
+  margin-bottom: -1px;
+  transition: color 0.12s ease, border-color 0.12s ease;
 }
 
 .tab:hover {
@@ -226,13 +200,13 @@
 }
 
 .tabActive {
-  color: var(--widget-fg);
+  color: var(--widget-accent);
   border-bottom-color: var(--widget-accent);
 }
 
 .body {
   flex: 1;
-  padding: 12px 14px;
+  padding: 16px 16px 8px;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -253,25 +227,18 @@
 .error {
   margin: 0;
   font-size: 13px;
-  color: #ff8a8a;
+  color: #ff5470;
   word-break: keep-all;
 }
 
-/* S 사이즈 — 컴팩트하게 (아바타 32 → 아이콘 32 통일) */
+/* S 사이즈 — 컴팩트 */
+.widget[data-size='S'] {
+  border-radius: 20px;
+}
+
 .widget[data-size='S'] .headerCard {
-  padding: 0 10px 0 52px;
-  gap: 8px;
-}
-
-.widget[data-size='S'] .avatarSlot {
-  top: calc((var(--header-h) - 32px) / 2);
-  left: 12px;
-}
-
-.widget[data-size='S'] .headerActions {
-  top: calc((var(--header-h) - 32px) / 2);
-  right: 10px;
-  gap: 6px;
+  padding: 0 12px;
+  gap: 10px;
 }
 
 .widget[data-size='S'] .iconBtn {
@@ -289,10 +256,14 @@
 }
 
 .widget[data-size='S'] .body {
-  padding: 10px 12px;
+  padding: 12px 12px 6px;
 }
 
 .widget[data-size='S'] .newBadge {
   padding: 5px 10px;
   font-size: 10px;
+}
+
+.widget[data-size='S'] .headerActions {
+  gap: 6px;
 }

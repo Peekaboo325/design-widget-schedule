@@ -1,16 +1,11 @@
 import styles from './SettingsPanel.module.css'
 import Dropdown from './Dropdown.jsx'
 import { shortName } from '../lib/format.js'
+import { hexFromHue, hueFromHex } from '../lib/color.js'
 
-// 프리셋 컬러 (액센트 + 배경 틴트 모두에 사용)
-const COLOR_PRESETS = [
-  '#7aa2ff', // 블루
-  '#6ddc94', // 그린
-  '#ff8a5c', // 오렌지
-  '#d28aff', // 퍼플
-  '#ffd93d', // 옐로
-  '#ff6b8a' // 핑크
-]
+// 프리셋 hue 6개 (60도 간격, 디폴트 핑크 346 시작 기준)
+const PRESET_HUES = [346, 30, 90, 150, 210, 270]
+const COLOR_PRESETS = PRESET_HUES.map((h) => hexFromHue(h))
 
 const SIZE_OPTIONS = [
   { key: 'S', label: 'S' },
@@ -129,34 +124,37 @@ export default function SettingsPanel({
         </div>
       </Row>
 
-      {/* 테마 컬러 */}
+      {/* 테마 컬러 — hue 슬라이더(두 색 평행이동) + 프리셋 */}
       <Row label="테마 컬러" vertical>
-        <div className={styles.colorRow}>
-          {COLOR_PRESETS.map((hex) => (
-            <button
-              key={hex}
-              type="button"
-              aria-label={`프리셋 ${hex}`}
-              className={`${styles.swatch} ${
-                settings.themeColor.toLowerCase() === hex.toLowerCase()
-                  ? styles.swatchActive
-                  : ''
-              }`}
-              style={{ background: hex }}
-              onClick={() => onChangeThemeColor(hex)}
-            />
-          ))}
-          <label className={styles.picker} aria-label="커스텀 컬러">
-            <span
-              className={styles.pickerDot}
-              style={{ background: settings.themeColor }}
-            />
-            <input
-              type="color"
-              value={settings.themeColor}
-              onChange={(e) => onChangeThemeColor(e.target.value)}
-            />
-          </label>
+        <div className={styles.colorStack}>
+          <input
+            type="range"
+            min="0"
+            max="359"
+            step="1"
+            value={hueFromHex(settings.themeColor)}
+            onChange={(e) =>
+              onChangeThemeColor(hexFromHue(parseInt(e.target.value, 10)))
+            }
+            className={styles.hueSlider}
+            aria-label="색상(hue)"
+          />
+          <div className={styles.colorRow}>
+            {COLOR_PRESETS.map((hex) => (
+              <button
+                key={hex}
+                type="button"
+                aria-label={`프리셋 ${hex}`}
+                className={`${styles.swatch} ${
+                  settings.themeColor.toLowerCase() === hex.toLowerCase()
+                    ? styles.swatchActive
+                    : ''
+                }`}
+                style={{ background: hex }}
+                onClick={() => onChangeThemeColor(hex)}
+              />
+            ))}
+          </div>
         </div>
       </Row>
     </div>

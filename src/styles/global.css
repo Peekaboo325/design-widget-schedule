@@ -9,27 +9,39 @@
 }
 
 :root {
-  /* 베이스 — 다크 기본값 (useSettings.applyTheme이 모드에 따라 덮어씀) */
-  --widget-bg: rgba(26, 26, 30, 0.94);
-  --widget-header-bg: rgba(122, 162, 255, 0.45);
-  --widget-card-bg: #25252b;
-  --widget-card-border: rgba(255, 255, 255, 0.06);
-  --widget-fg: #f4f4f6;
-  --widget-muted: rgba(244, 244, 246, 0.72);
-  --widget-accent: #7aa2ff;
+  /* 디폴트 — 라이트 + 핑크 그라데이션 (useSettings.applyTheme이 덮어씀) */
+  --widget-card-bg: #ffffff;
+  --widget-fg: #1a1a1f;
+  --widget-muted: rgba(26, 26, 31, 0.55);
+  --widget-accent: #ff86a2;
+  --widget-accent-soft: rgba(255, 134, 162, 0.12);
+  --widget-accent-strong: #ff6b8a;
   --widget-on-accent: #ffffff;
   --widget-on-header: #ffffff;
 
+  /* 헤더 그라데이션 두 색 (연한 → 진한, hue 슬라이더로 평행이동) */
+  --widget-header-from: #f39ebb;
+  --widget-header-to: #ff86a2;
+
+  /* 흰 알약 / 검정 CTA */
+  --widget-surface: #ffffff;
+  --widget-on-surface: #1a1a1f;
+
   /* 쉐입 */
   --widget-radius: 24px;
-  --widget-card-radius: 16px;
+  --widget-card-radius: 14px;
   --widget-pill: 999px;
 
-  /* 표면 */
-  --widget-border: rgba(255, 255, 255, 0.08);
-  --widget-overlay: rgba(255, 255, 255, 0.06);
-  --widget-overlay-strong: rgba(255, 255, 255, 0.12);
-  --widget-row-border: rgba(255, 255, 255, 0.05);
+  /* 표면 (라이트 모드 베이스 — 검정 알파) */
+  --widget-card-border: rgba(26, 26, 31, 0.06);
+  --widget-border: rgba(26, 26, 31, 0.10);
+  --widget-overlay: rgba(26, 26, 31, 0.04);
+  --widget-overlay-strong: rgba(26, 26, 31, 0.08);
+  --widget-row-border: rgba(26, 26, 31, 0.06);
+
+  /* bg는 외곽 영역 색 (위젯 안 보이는 영역). 라이트는 흰. */
+  --widget-bg: #ffffff;
+  --widget-header-bg: var(--widget-header-to);
 }
 
 * {
