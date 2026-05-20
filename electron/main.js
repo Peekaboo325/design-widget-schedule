@@ -42,6 +42,17 @@ stamp(`isPackaged=${app.isPackaged} platform=${process.platform} version=${proce
 stamp(`__dirname=${__dirname}`)
 stamp(`resourcesPath=${process.resourcesPath}`)
 
+// macOS Sequoia(15.x)에서 unsigned 앱의 ready 이벤트 hang 회피
+// keychain/GPU 권한 dialog 화면 밖 대기로 app.whenReady가 resolve 안 되는 케이스가 있음
+try {
+  app.commandLine.appendSwitch('use-mock-keychain')
+  app.commandLine.appendSwitch('disable-gpu-sandbox')
+  app.disableHardwareAcceleration()
+  stamp('command line switches applied')
+} catch (err) {
+  logCrash('command line switch failed', err)
+}
+
 // 트레이/창 아이콘 — OS별로 다른 파일
 // Windows: .ico (작업표시줄 자연스러움)
 // macOS / Linux: .png (macOS는 .ico 인식 못함)
