@@ -1,7 +1,7 @@
 /* ─────────────────────────────────────────
-   S / M 공통
+   S 모드 — 큰 숫자 + 공유 대기 뱃지
    ───────────────────────────────────────── */
-.containerSM {
+.containerS {
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -9,7 +9,6 @@
   min-height: 0;
 }
 
-/* S: 큰 숫자 */
 .bigMetric {
   flex: 1;
   display: flex;
@@ -32,71 +31,7 @@
   letter-spacing: -1.8px;
 }
 
-/* M: 광고주별 리스트 */
-.mediumStack {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-height: 0;
-}
-
-.mediumHeader {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  padding-bottom: 4px;
-  border-bottom: 1px solid var(--widget-row-border);
-  margin-bottom: 6px;
-}
-
-.mediumLabel {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--widget-muted);
-}
-
-.mediumTotal {
-  font-size: 22px;
-  font-weight: 900;
-  color: var(--widget-accent-strong);
-  letter-spacing: -0.6px;
-  line-height: 1;
-}
-
-.clientList {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  overflow-y: auto;
-}
-
-.clientItem {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  padding: 2px 0;
-}
-
-.clientName {
-  color: var(--widget-fg);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  margin-right: 8px;
-  font-weight: 600;
-}
-
-.clientCount {
-  color: var(--widget-muted);
-  font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
-}
-
-/* S/M 공유 대기 뱃지 */
+/* S 공유 대기 뱃지 */
 .pendingBadge {
   display: inline-flex;
   align-items: center;

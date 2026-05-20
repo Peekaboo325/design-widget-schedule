@@ -48,10 +48,17 @@ const GAS_BASE =
 const API_TIMEOUT_MS = 12000
 
 // 위젯 크기 프리셋 (마우스 드래그 시 가장 가까운 프리셋으로 스냅)
+// M은 사용 패턴상 의미 약해 폐기 — S(카운트만) / L(전체) 두 단계만 유지
 const SIZE_PRESETS = {
   S: { width: 240, height: 220 },
-  M: { width: 300, height: 380 },
   L: { width: 360, height: 560 }
+}
+
+// 마이그레이션: 기존에 size: 'M' 저장된 사용자는 'L'로 정정
+function migrateSize(stored) {
+  if (stored === 'M') return 'L'
+  if (SIZE_PRESETS[stored]) return stored
+  return 'L'
 }
 
 // 영구 저장: 설정값 (다음 실행 시 복원)
@@ -83,10 +90,12 @@ let tray = null
 let isQuitting = false
 
 function createWindow() {
+  const migratedSize = migrateSize(store.get('size'))
+  if (migratedSize !== store.get('size')) store.set('size', migratedSize)
   const initial = {
     alwaysOnTop: store.get('alwaysOnTop'),
     opacity: store.get('opacity'),
-    size: store.get('size')
+    size: migratedSize
   }
   const sizePreset = SIZE_PRESETS[initial.size] ?? SIZE_PRESETS.L
 

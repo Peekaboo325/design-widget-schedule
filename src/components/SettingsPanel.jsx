@@ -9,7 +9,6 @@ const COLOR_PRESETS = PRESET_HUES.map((h) => hexFromHue(h))
 
 const SIZE_OPTIONS = [
   { key: 'S', label: 'S' },
-  { key: 'M', label: 'M' },
   { key: 'L', label: 'L' }
 ]
 

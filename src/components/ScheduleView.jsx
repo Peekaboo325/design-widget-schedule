@@ -12,9 +12,8 @@ const STATUS_STYLE = {
   미정: styles.statusUndefined
 }
 
-// 사이즈별 정보 단계
+// 사이즈별 정보 단계 — M 폐기, S/L 두 단계만
 // S: 큰 숫자 + 공유 대기 뱃지
-// M: 광고주별 합계 + 공유 대기 뱃지
 // L: 메트릭 카드 + 행 카드 리스트 + 공유 대기 풋터
 export default function ScheduleView({
   size,
@@ -39,49 +38,14 @@ export default function ScheduleView({
     )
   }
 
+  // S
   return (
-    <div className={styles.containerSM}>
-      {size === 'S' ? (
-        <SmallSummary total={summary.total} />
-      ) : (
-        <MediumSummary schedule={schedule} total={summary.total} />
-      )}
-      <PendingBadge count={summary.pending} />
-    </div>
-  )
-}
-
-function SmallSummary({ total }) {
-  return (
-    <div className={styles.bigMetric}>
-      <span className={styles.bigLabel}>잔여 스케줄</span>
-      <span className={styles.bigValue}>{total}</span>
-    </div>
-  )
-}
-
-function MediumSummary({ schedule, total }) {
-  const grouped = groupByClient(schedule)
-  return (
-    <div className={styles.mediumStack}>
-      <div className={styles.mediumHeader}>
-        <span className={styles.mediumLabel}>잔여 스케줄</span>
-        <span className={styles.mediumTotal}>{total}건</span>
+    <div className={styles.containerS}>
+      <div className={styles.bigMetric}>
+        <span className={styles.bigLabel}>잔여 스케줄</span>
+        <span className={styles.bigValue}>{summary.total}</span>
       </div>
-      {grouped.length === 0 ? (
-        <p className={styles.empty}>처리할 작업 없음</p>
-      ) : (
-        <ul className={styles.clientList}>
-          {grouped.map((g) => (
-            <li key={g.client} className={styles.clientItem}>
-              <span className={styles.clientName} title={g.client}>
-                {g.client}
-              </span>
-              <span className={styles.clientCount}>{g.count}</span>
-            </li>
-          ))}
-        </ul>
-      )}
+      <PendingBadge count={summary.pending} />
     </div>
   )
 }
@@ -216,14 +180,4 @@ function UsersIcon() {
       <path d="M16 3.13a4 4 0 0 1 0 7.75" />
     </svg>
   )
-}
-
-// 광고주별 합계 (M 사이즈 전용)
-function groupByClient(schedule) {
-  const map = new Map()
-  for (const item of schedule) {
-    const key = item['광고주'] ?? '(미지정)'
-    map.set(key, (map.get(key) ?? 0) + (Number(item['수량']) || 1))
-  }
-  return Array.from(map.entries()).map(([client, count]) => ({ client, count }))
 }
