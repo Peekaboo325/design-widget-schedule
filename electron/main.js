@@ -11,9 +11,23 @@ import {
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { execFile } from 'node:child_process'
+import fs from 'node:fs'
+import os from 'node:os'
 import Store from 'electron-store'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+// 패키지 환경 크래시 진단용 — 홈 폴더에 자동 로그
+// 위젯이 dock에서 튀고 안 뜨는 등의 silent crash 발생 시 ~/widget-debug.log에 기록
+const DEBUG_LOG = path.join(os.homedir(), 'widget-debug.log')
+function logCrash(prefix, err) {
+  try {
+    const line = `[${new Date().toISOString()}] ${prefix}\n${err?.stack || err}\n\n`
+    fs.appendFileSync(DEBUG_LOG, line)
+  } catch (_) {}
+}
+process.on('uncaughtException', (err) => logCrash('uncaughtException', err))
+process.on('unhandledRejection', (err) => logCrash('unhandledRejection', err))
 
 // 트레이/창 아이콘 — OS별로 다른 파일
 // Windows: .ico (작업표시줄 자연스러움)
@@ -29,7 +43,8 @@ function iconFilename() {
 function resolveIconPath() {
   const filename = iconFilename()
   if (app.isPackaged) {
-    return path.join(process.resourcesPath, filename)
+    // electron-builder.yml의 extraResources(to: resources)로 복사된 위치
+    return path.join(process.resourcesPath, 'resources', filename)
   }
   return path.join(__dirname, '../../resources', filename)
 }
