@@ -68,16 +68,10 @@ body,
   overflow: hidden;
 }
 
-/* 위젯 외곽 그림자가 그려질 padding 영역 — BrowserWindow는 위젯 + 28px이고
-   #root가 그 안에 14px 안쪽으로 들어가 padding 영역이 shadow에 할당됨 */
-body {
-  padding: 14px;
-  box-sizing: border-box;
-  /* padding 영역 클릭은 위젯 외부이므로 무시 (불필요한 hit-test 방지) */
-  pointer-events: none;
-}
+html,
+body,
 #root {
-  pointer-events: auto;
+  padding: 0;
 }
 
 button {

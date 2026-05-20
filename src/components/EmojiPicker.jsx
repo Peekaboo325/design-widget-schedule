@@ -27,7 +27,8 @@ export default function EmojiPicker({ value, onChange, onClose }) {
   function applyCustom() {
     const trimmed = custom.trim()
     if (!trimmed) return
-    onChange(Array.from(trimmed).slice(0, 2).join(''))
+    // 1 grapheme(이모지 1자)만 적용. surrogate pair는 Array.from으로 안전 분리
+    onChange(Array.from(trimmed).slice(0, 1).join(''))
     onClose()
   }
 
@@ -52,10 +53,13 @@ export default function EmojiPicker({ value, onChange, onClose }) {
       <div className={styles.customRow}>
         <input
           type="text"
-          maxLength={4}
-          placeholder="직접 입력"
+          placeholder="이모지 1자"
           value={custom}
-          onChange={(e) => setCustom(e.target.value)}
+          onChange={(e) => {
+            // 1 grapheme(이모지 1자)만 허용. 더 타이핑되어도 즉시 자름
+            const v = Array.from(e.target.value).slice(0, 1).join('')
+            setCustom(v)
+          }}
           onFocus={() => {
             // macOS면 시스템 이모지 패널을 자동으로 띄움 (Windows/Linux는 무시)
             window.widgetAPI?.showEmojiPanel?.()

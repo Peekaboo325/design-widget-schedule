@@ -12,19 +12,21 @@
   flex-direction: column;
   overflow: hidden;
   color: var(--widget-fg);
-  box-shadow: 0 6px 14px rgba(14, 14, 16, 0.12),
-    0 2px 4px rgba(14, 14, 16, 0.06), 0 0 0 1px rgba(14, 14, 16, 0.04);
+  /* 그림자 대신 옅은 border — 흰 배경 위에서도 외곽 명확. 잘림 없음 */
+  box-sizing: border-box;
+  border: 1px solid rgba(14, 14, 16, 0.10);
 }
 
 /* 헤더 카드 — 위젯 상단 영역. 그라데이션
-   본문 카드가 위로 살짝 끌어올려져서 헤더 위에 떠 보이게 함 (layered) */
+   본문 카드가 위로 살짝 끌어올려져서 헤더 위에 떠 보이게 함 (layered)
+   padding-left에 아바타 자리(absolute 별도 레이어) 비워둠 */
 .headerCard {
   position: relative;
   flex-shrink: 0;
   /* height inline */
   display: flex;
   align-items: center;
-  padding: 0 18px;
+  padding: 0 18px 0 74px;
   background: linear-gradient(
     135deg,
     var(--widget-header-from) 0%,
@@ -53,11 +55,14 @@
   box-shadow: 0 -6px 16px -4px rgba(26, 26, 31, 0.14);
 }
 
-/* 아바타 슬롯 — 헤더 안 flex item, no-drag */
+/* 아바타 슬롯 — 헤더 카드 밖, .widget 직속 absolute.
+   z-index 10으로 본문 카드(2)보다 위에 올라가 이모지 피커가 가려지지 않음 */
 .avatarSlot {
-  position: relative;
+  position: absolute;
+  top: calc((var(--header-h) - 44px) / 2);
+  left: 18px;
+  z-index: 10;
   -webkit-app-region: no-drag;
-  flex-shrink: 0;
 }
 
 /* 헤더 위 placeholder — 그라데이션 위에서 보이게 흰/검정 alpha 자동 */
@@ -344,8 +349,13 @@
 }
 
 .widget[data-size='S'] .headerCard {
-  padding: 14px 14px;
+  padding: 14px 14px 14px 52px;
   gap: 10px;
+}
+
+.widget[data-size='S'] .avatarSlot {
+  top: calc((var(--header-h) - 28px) / 2);
+  left: 14px;
 }
 
 .widget[data-size='S'] .iconBtn {

@@ -83,42 +83,37 @@
 
 .row {
   display: grid;
-  grid-template-columns: auto minmax(60px, 1.2fr) minmax(60px, 1.6fr) auto;
+  grid-template-columns: minmax(60px, 1.2fr) minmax(60px, 1.6fr) auto auto;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
+  padding: 10px 14px;
   background: var(--widget-surface);
   border: 1px solid var(--widget-card-border);
   border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  cursor: pointer;
   font-family: inherit;
-  text-align: left;
-  transition: box-shadow 0.12s ease, transform 0.08s ease;
 }
 
-.row:hover {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+/* 완료 버튼 — 검정 알약 CTA. 클릭으로 명확하게 공유 처리 */
+.doneBtn {
+  background: var(--widget-fg);
+  color: var(--widget-surface);
+  border: none;
+  border-radius: var(--widget-pill);
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  cursor: pointer;
+  transition: filter 0.12s ease, transform 0.08s ease;
+  font-family: inherit;
 }
 
-.row:active {
-  transform: scale(0.99);
+.doneBtn:hover {
+  filter: brightness(1.15);
 }
 
-.row:hover .checkbox {
-  border-color: var(--widget-accent-strong);
-  background: var(--widget-accent-soft);
-}
-
-/* 체크박스 — 클릭하면 즉시 사라지므로 체크 표시 없는 빈 사각형 */
-.checkbox {
-  width: 18px;
-  height: 18px;
-  border-radius: 6px;
-  border: 1.5px solid var(--widget-border);
-  background: transparent;
-  transition: border-color 0.12s ease, background 0.12s ease;
-  flex-shrink: 0;
+.doneBtn:active {
+  transform: scale(0.94);
 }
 
 .client {

@@ -321,32 +321,12 @@ export default function App() {
   const headerPx = `${HEADER_H[settings.size] ?? HEADER_H.L}px`
 
   return (
-    <div className={styles.widget} data-size={settings.size}>
+    <div
+      className={styles.widget}
+      data-size={settings.size}
+      style={{ '--header-h': headerPx }}
+    >
       <div className={styles.headerCard} style={{ height: headerPx }}>
-        {activeMember ? (
-          <div className={styles.avatarSlot}>
-            <Avatar
-              emoji={resolveMemberEmoji(activeMember, settings.memberEmoji)}
-              size={settings.size === 'S' ? 28 : 44}
-              onClick={() => setEmojiPickerOpen((v) => !v)}
-              title={`${activeMember} — 클릭해서 이모지 변경`}
-            />
-            {emojiPickerOpen && (
-              <EmojiPicker
-                value={resolveMemberEmoji(activeMember, settings.memberEmoji)}
-                onChange={(emoji) => setMemberEmoji(activeMember, emoji)}
-                onClose={() => setEmojiPickerOpen(false)}
-              />
-            )}
-          </div>
-        ) : (
-          // 활성 멤버 확정 전 — 아바타 자리에 회색 원 (레이아웃 보존)
-          <div
-            className={`${styles.avatarSlot} ${styles.avatarSkeleton}`}
-            style={{ width: settings.size === 'S' ? 28 : 44, height: settings.size === 'S' ? 28 : 44 }}
-            aria-hidden="true"
-          />
-        )}
         <div className={styles.headerText}>
           <span className={styles.date}>{todayLabel}</span>
           {showHeaderMeta ? (
@@ -396,6 +376,33 @@ export default function App() {
           </button>
         </div>
       </div>
+
+      {/* 아바타 슬롯은 헤더 카드 밖, 위젯 직속 absolute로 배치
+          - 헤더 카드 z-index보다 본문 카드가 위라(layered) 헤더 자식이면
+            이모지 피커가 본문 카드에 가려짐. 분리로 z-index 우선권 확보 */}
+      {activeMember ? (
+        <div className={styles.avatarSlot}>
+          <Avatar
+            emoji={resolveMemberEmoji(activeMember, settings.memberEmoji)}
+            size={settings.size === 'S' ? 28 : 44}
+            onClick={() => setEmojiPickerOpen((v) => !v)}
+            title={`${activeMember} — 클릭해서 이모지 변경`}
+          />
+          {emojiPickerOpen && (
+            <EmojiPicker
+              value={resolveMemberEmoji(activeMember, settings.memberEmoji)}
+              onChange={(emoji) => setMemberEmoji(activeMember, emoji)}
+              onClose={() => setEmojiPickerOpen(false)}
+            />
+          )}
+        </div>
+      ) : (
+        <div
+          className={`${styles.avatarSlot} ${styles.avatarSkeleton}`}
+          style={{ width: settings.size === 'S' ? 28 : 44, height: settings.size === 'S' ? 28 : 44 }}
+          aria-hidden="true"
+        />
+      )}
 
       {/* 설정 펼친 상태에서는 본문/탭 숨김 — 본문 가림·잘림 방지 */}
       {settingsOpen && ready ? (

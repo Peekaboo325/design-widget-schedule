@@ -39,14 +39,7 @@ export default function PendingPanel({ pending, onCheck, onBack }) {
       ) : (
         <div className={styles.list}>
           {pending.map((item, i) => (
-            <button
-              key={`${item.rowIndex ?? i}`}
-              type="button"
-              className={styles.row}
-              onClick={() => onCheck?.(item)}
-              title="클릭하면 공유 처리"
-            >
-              <span className={styles.checkbox} aria-hidden="true" />
+            <div key={`${item.rowIndex ?? i}`} className={styles.row}>
               <span className={styles.client} title={item['광고주']}>
                 {item['광고주']}
               </span>
@@ -56,7 +49,15 @@ export default function PendingPanel({ pending, onCheck, onBack }) {
               <span className={styles.qty}>
                 {Number(item['수량']) > 1 ? `${item['수량']}건` : ''}
               </span>
-            </button>
+              <button
+                type="button"
+                className={styles.doneBtn}
+                onClick={() => onCheck?.(item)}
+                title="공유 발송 완료 처리"
+              >
+                완료
+              </button>
+            </div>
           ))}
         </div>
       )}
