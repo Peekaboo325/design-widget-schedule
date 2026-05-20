@@ -294,6 +294,21 @@ ipcMain.handle('cache:set-schedule', (_event, member, data) => {
   store.set('cachedScheduleByMember', all)
 })
 
+// 멤버별 '본 키' 영구 저장 — 위젯 종료 사이에 추가된 새 일정 감지용
+// 위젯이 꺼져있는 동안 시트에 새 작업이 추가되면, 재실행 시 store에서
+// 이전 seen 집합을 복원 → 새 키들은 NEW로 잡힘
+ipcMain.handle('cache:get-seen', (_event, member) => {
+  if (typeof member !== 'string' || !member) return null
+  const all = store.get('seenKeysByMember') ?? {}
+  return Array.isArray(all[member]) ? all[member] : null
+})
+ipcMain.handle('cache:set-seen', (_event, member, keys) => {
+  if (typeof member !== 'string' || !member || !Array.isArray(keys)) return
+  const all = store.get('seenKeysByMember') ?? {}
+  all[member] = keys
+  store.set('seenKeysByMember', all)
+})
+
 // 멤버별 프로필 이모지 저장
 ipcMain.handle('settings:set-member-emoji', (_event, member, emoji) => {
   if (typeof member !== 'string' || !member) return null

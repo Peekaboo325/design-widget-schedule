@@ -46,6 +46,11 @@ const api = {
   setCachedSchedule: (member, data) =>
     ipcRenderer.invoke('cache:set-schedule', member, data),
 
+  // 멤버별 '본 키' 영구 저장 — 위젯 종료 사이 새 일정 감지
+  getSeenKeys: (member) => ipcRenderer.invoke('cache:get-seen', member),
+  setSeenKeys: (member, keys) =>
+    ipcRenderer.invoke('cache:set-seen', member, keys),
+
   // 트레이 새로고침 메뉴 → 렌더러 콜백
   onTrayRefresh: (cb) => {
     const handler = () => cb()

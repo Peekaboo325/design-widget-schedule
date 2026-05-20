@@ -1,37 +1,56 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { scheduleKey } from '../components/ScheduleView.jsx'
 
-// 새 스케줄 알림 — 세션 기반 (메모리만, 영구 저장 X)
-// - 첫 fetch: 현재 키 전체를 기준선으로 등록 (NEW 0)
-// - 이후 fetch:
-//   - 기준선에서 '이번 fetch에 없는 키'는 자동 제거 (이동/삭제된 항목)
-//     → 같은 키가 나중에 다시 들어오면 NEW로 정확히 잡힘
-//   - 기준선에 없는 현재 키 = NEW
-// - +N 클릭(markAllSeen): 현재 키 전체로 기준선 갱신 → NEW 사라짐
-// - 멤버 변경/위젯 재시작: 기준선 리셋 → 다시 첫 fetch 기준
+// 새 스케줄 알림 — persistent (electron-store에 멤버별 seen keys 저장)
+// - 위젯 종료해도 멤버별 '본 키' 기억 → 컴퓨터 끄고 켰을 때 그 사이 추가된
+//   새 일정이 NEW로 잡힘 (출근하면 알림 보기 쉬움)
+// - 첫 마운트(또는 멤버 변경): store에서 seen keys 복원
+//   · store에 데이터 없으면(첫 사용): 첫 fetch 결과 전체를 기준선
+//   · store에 있으면: 그걸 기준선 → 첫 fetch에서 새 키가 NEW로 잡힘
+// - 매 fetch: 기준선에서 사라진 키 자동 제거 (재등장 시 NEW 잡히도록)
+// - +N 클릭(markAllSeen): 현재 키 전체로 기준선 갱신
+// - seen 변경 시 자동으로 store 저장
 export default function useSeenSchedule(activeMember, scheduleItems) {
-  const [seenKeys, setSeenKeys] = useState(null) // Set | null(첫 fetch 전)
-  const lastMemberRef = useRef(null)
+  const [seenKeys, setSeenKeys] = useState(null) // Set | null(아직 복원 중)
+  const hydratedRef = useRef(null) // 마지막으로 hydrate 완료한 멤버명
 
-  // 멤버 변경 시 기준선 리셋
+  // 멤버 변경 시 — store에서 복원
   useEffect(() => {
-    if (lastMemberRef.current !== activeMember) {
-      lastMemberRef.current = activeMember
+    if (!activeMember) {
       setSeenKeys(null)
+      hydratedRef.current = null
+      return
+    }
+    if (hydratedRef.current === activeMember) return
+    let cancelled = false
+    setSeenKeys(null)
+    window.widgetAPI?.getSeenKeys?.(activeMember).then((stored) => {
+      if (cancelled) return
+      hydratedRef.current = activeMember
+      if (Array.isArray(stored)) {
+        setSeenKeys(new Set(stored))
+      } else {
+        // 첫 사용 — null 유지 → 다음 effect에서 첫 fetch 결과를 기준선으로
+        setSeenKeys(null)
+      }
+    })
+    return () => {
+      cancelled = true
     }
   }, [activeMember])
 
-  // 매 fetch 결과 반영: 첫 fetch는 기준선 등록, 이후는 사라진 키 정리
+  // 매 fetch 결과 반영
   useEffect(() => {
     if (!activeMember || !scheduleItems) return
+    if (hydratedRef.current !== activeMember) return // 복원 완료 전엔 패스
     const currentKeys = new Set(scheduleItems.map(scheduleKey))
 
     setSeenKeys((prev) => {
       if (prev === null) {
-        // 첫 fetch: 현재 키 전체가 기준선
+        // 첫 사용(store에 데이터 없었음): 현재 키 전체가 기준선
         return currentKeys
       }
-      // 이후 fetch: 기준선에서 사라진 키 제거 (재등장 시 NEW 잡히도록)
+      // 사라진 키 제거 (재등장 시 NEW 잡히도록)
       let changed = false
       const next = new Set()
       for (const k of prev) {
@@ -41,6 +60,13 @@ export default function useSeenSchedule(activeMember, scheduleItems) {
       return changed ? next : prev
     })
   }, [activeMember, scheduleItems])
+
+  // seenKeys 변경 시 store에 저장 (debounce 없이 즉시 — 양 작아서 부담 없음)
+  useEffect(() => {
+    if (!activeMember || !seenKeys) return
+    if (hydratedRef.current !== activeMember) return
+    window.widgetAPI?.setSeenKeys?.(activeMember, Array.from(seenKeys))
+  }, [activeMember, seenKeys])
 
   // 기준선에 없는 키 = NEW
   const newKeys = useMemo(() => {
