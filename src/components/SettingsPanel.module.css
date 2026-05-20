@@ -42,38 +42,38 @@
   align-items: center;
 }
 
-/* 토글 스위치 */
+/* 토글 스위치 — iOS 표준 톤
+   OFF: 옅은 회색 트랙 + 흰 knob, ON: 액센트 트랙 + 흰 knob */
 .toggle {
   position: relative;
-  width: 32px;
-  height: 18px;
+  width: 34px;
+  height: 20px;
   border-radius: 999px;
-  border: 1px solid var(--widget-border);
-  background: var(--widget-overlay-strong);
+  border: none;
+  background: rgba(14, 14, 16, 0.16);
   cursor: pointer;
   padding: 0;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease;
 }
 
 .toggleOn {
   background: var(--widget-accent-strong);
-  border-color: var(--widget-accent-strong);
 }
 
 .toggleKnob {
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: var(--widget-fg);
-  transition: transform 0.15s ease, background 0.15s ease;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(14, 14, 16, 0.20);
+  transition: transform 0.15s ease;
 }
 
 .toggleOn .toggleKnob {
   transform: translateX(14px);
-  background: var(--widget-on-accent);
 }
 
 /* 세그먼티드 (S/M/L, 다크/라이트) — 알약 */

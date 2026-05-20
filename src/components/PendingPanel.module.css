@@ -93,10 +93,10 @@
   font-family: inherit;
 }
 
-/* 완료 버튼 — 검정 알약 CTA. 클릭으로 명확하게 공유 처리 */
+/* 완료 버튼 — 옅은 액센트 + 진한 액센트 텍스트. chip과 통일 톤이되 살짝 더 강조 */
 .doneBtn {
-  background: var(--widget-fg);
-  color: var(--widget-surface);
+  background: var(--widget-accent-soft);
+  color: var(--widget-accent-strong);
   border: none;
   border-radius: var(--widget-pill);
   padding: 6px 14px;
@@ -109,7 +109,7 @@
 }
 
 .doneBtn:hover {
-  filter: brightness(1.15);
+  filter: brightness(0.95);
 }
 
 .doneBtn:active {
