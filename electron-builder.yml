@@ -1,0 +1,80 @@
+# electron-builder 설정 — 패키징(.dmg / .exe) 빌드 옵션
+# 사용:
+#   npm run build:mac   → dist/ 안에 .dmg
+#   npm run build:win   → dist/ 안에 .exe (NSIS 인스톨러)
+#   npm run build:all   → 둘 다 (Mac에서 Windows 빌드는 wine 또는 GitHub Actions 권장)
+
+# 앱 식별자 — OS 알림·자동 실행 등에서 이 이름으로 인식됨
+appId: com.peekaboo325.design-widget-schedule
+# 인스톨러·파일 메타데이터에 표시될 사용자 친화 이름
+productName: 디자인팀 스케줄 위젯
+copyright: © Peekaboo325
+
+# 빌드 결과물 위치
+directories:
+  output: dist
+  buildResources: resources
+
+# 패키징에 포함할 파일 (electron-vite 빌드 산출물 + main 실행에 필요한 deps)
+files:
+  - out/**/*
+  - package.json
+  - "!**/{.DS_Store,.git,.gitignore,.vscode,*.log}"
+
+# main 프로세스에서 electron-store를 require하므로 asar 풀어둠
+asar: true
+asarUnpack:
+  - resources/**/*
+
+# 외부 의존성 — node_modules에서 main이 import하는 것들
+extraResources:
+  - from: resources
+    to: resources
+    filter: ["**/*"]
+
+# ── macOS ──────────────────────────────────────────────────────────
+mac:
+  category: public.app-category.productivity
+  icon: resources/design-widget-schedule.png
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+  # notarization 없이 일단 (개발자 인증서 없으면 첫 실행 시 우클릭→열기 필요)
+  hardenedRuntime: false
+  gatekeeperAssess: false
+
+dmg:
+  title: ${productName} ${version}
+  icon: resources/design-widget-schedule.png
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+
+# ── Windows ────────────────────────────────────────────────────────
+win:
+  icon: resources/design-widget-schedule.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+  # OS 알림에 표시될 이름 (Windows AppUserModelID와 자동 매칭)
+  # appId를 그대로 사용. 추가로 main에서 app.setAppUserModelId 호출됨
+
+nsis:
+  oneClick: false                # 사용자가 설치 경로 선택 가능
+  perMachine: false              # 사용자 단위 설치 (관리자 권한 불필요)
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true    # 바탕화면 바로가기
+  createStartMenuShortcut: true  # 시작 메뉴
+  shortcutName: 디자인팀 스케줄 위젯
+  installerIcon: resources/design-widget-schedule.ico
+  uninstallerIcon: resources/design-widget-schedule.ico
+
+# ── 자동 업데이트는 일단 끄기 (추후 GitHub Releases로 연결 가능) ──
+publish: null
