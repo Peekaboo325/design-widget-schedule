@@ -53,7 +53,7 @@ export default function EmojiPicker({ value, onChange, onClose }) {
       <div className={styles.customRow}>
         <input
           type="text"
-          placeholder="이모지 1자"
+          placeholder="이모지 더보기"
           value={custom}
           onChange={(e) => {
             // 1 grapheme(이모지 1자)만 허용. 더 타이핑되어도 즉시 자름
