@@ -305,9 +305,9 @@ export default function App() {
   const refreshing = scheduleLoading
   const needsMemberPick = ready && !activeMember
   const showTabs = settings.size === 'L' && !needsMemberPick
-  // 헤더 보조정보(멤버명·최근 갱신) — 스케줄/디자인 체크 둘 다 동일 헤더 유지
+  // 헤더 보조정보(멤버명·최근 갱신) — 모든 탭/설정창에서 동일 헤더 유지
   const showHeaderMeta =
-    !needsMemberPick && lastUpdated && !scheduleError && !settingsOpen
+    !needsMemberPick && lastUpdated && !scheduleError
 
   const headerPx = `${HEADER_H[settings.size] ?? HEADER_H.L}px`
 
@@ -354,7 +354,9 @@ export default function App() {
               +{newCount}
             </button>
           )}
-          {!needsMemberPick && !settingsOpen && (
+          {/* 새로고침 — S 사이즈는 빠듯하므로 숨김(자동 폴링으로 충분).
+              설정창에서도 의미 약해 숨김 */}
+          {!needsMemberPick && !settingsOpen && settings.size === 'L' && (
             <button
               type="button"
               className={`${styles.iconBtn} ${refreshing ? styles.iconBtnSpinning : ''}`}
@@ -365,6 +367,16 @@ export default function App() {
               <RefreshIcon />
             </button>
           )}
+          {/* 사이즈 토글 — 한 클릭으로 S↔L 전환 */}
+          <button
+            type="button"
+            className={styles.iconBtn}
+            aria-label={settings.size === 'L' ? '작게' : '크게'}
+            title={settings.size === 'L' ? '작게' : '크게'}
+            onClick={() => setSize(settings.size === 'L' ? 'S' : 'L')}
+          >
+            {settings.size === 'L' ? <MinimizeIcon /> : <MaximizeIcon />}
+          </button>
           <button
             ref={settingsBtnRef}
             type="button"
@@ -476,6 +488,50 @@ function GearIcon() {
     >
       <circle cx="12" cy="12" r="3" />
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+  )
+}
+
+// 사이즈 키움 — 대각선 바깥쪽 화살표 두 개
+function MaximizeIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <polyline points="15 3 21 3 21 9" />
+      <polyline points="9 21 3 21 3 15" />
+      <line x1="21" y1="3" x2="14" y2="10" />
+      <line x1="3" y1="21" x2="10" y2="14" />
+    </svg>
+  )
+}
+
+// 사이즈 줄임 — 대각선 안쪽 화살표 두 개
+function MinimizeIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <polyline points="4 14 10 14 10 20" />
+      <polyline points="20 10 14 10 14 4" />
+      <line x1="14" y1="10" x2="21" y2="3" />
+      <line x1="3" y1="21" x2="10" y2="14" />
     </svg>
   )
 }
