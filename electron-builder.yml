@@ -41,7 +41,10 @@ mac:
       arch:
         - x64
         - arm64
-  # notarization 없이 일단 (개발자 인증서 없으면 첫 실행 시 우클릭→열기 필요)
+  # ad-hoc 서명 ('-' = identity 없이 임시 서명)
+  # Apple Developer 인증서 없이도 macOS Sequoia의 unsigned 앱 hang 회피
+  # (Sequoia의 보안 데몬이 unsigned 헬퍼 프로세스 검문하느라 메인 스레드 데드락)
+  identity: '-'
   hardenedRuntime: false
   gatekeeperAssess: false
 
