@@ -52,7 +52,6 @@ export default function App() {
     setOpacity,
     setSize,
     setThemeColor,
-    setMode,
     setActiveMember,
     setLaunchOnBoot,
     setMemberEmoji
@@ -410,8 +409,6 @@ export default function App() {
               onToggleAlwaysOnTop={setAlwaysOnTop}
               onChangeOpacity={setOpacity}
               onChangeThemeColor={setThemeColor}
-              onChangeMode={setMode}
-              onChangeSize={setSize}
               onChangeLaunchOnBoot={setLaunchOnBoot}
             />
           </div>

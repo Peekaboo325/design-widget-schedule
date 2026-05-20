@@ -7,16 +7,6 @@ import { hexFromHue, hueFromHex } from '../lib/color.js'
 const PRESET_HUES = [346, 30, 90, 150, 210, 270]
 const COLOR_PRESETS = PRESET_HUES.map((h) => hexFromHue(h))
 
-const SIZE_OPTIONS = [
-  { key: 'S', label: 'S' },
-  { key: 'L', label: 'L' }
-]
-
-const MODE_OPTIONS = [
-  { key: 'dark', label: '다크' },
-  { key: 'light', label: '라이트' }
-]
-
 export default function SettingsPanel({
   size,
   settings,
@@ -25,8 +15,6 @@ export default function SettingsPanel({
   onToggleAlwaysOnTop,
   onChangeOpacity,
   onChangeThemeColor,
-  onChangeMode,
-  onChangeSize,
   onChangeLaunchOnBoot
 }) {
   // 멤버 옵션: value는 풀네임(저장/식별용), label은 성씨 뗀 단축 이름
@@ -74,24 +62,6 @@ export default function SettingsPanel({
         </button>
       </Row>
 
-      {/* 크기 전환 */}
-      <Row label="크기">
-        <div className={styles.segmented}>
-          {SIZE_OPTIONS.map((opt) => (
-            <button
-              key={opt.key}
-              type="button"
-              className={`${styles.segment} ${
-                settings.size === opt.key ? styles.segmentActive : ''
-              }`}
-              onClick={() => onChangeSize(opt.key)}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </Row>
-
       {/* 투명도 */}
       <Row label={`투명도 ${Math.round(settings.opacity * 100)}%`}>
         <input
@@ -103,24 +73,6 @@ export default function SettingsPanel({
           onChange={(e) => onChangeOpacity(parseFloat(e.target.value))}
           className={styles.range}
         />
-      </Row>
-
-      {/* 다크/라이트 모드 */}
-      <Row label="모드">
-        <div className={styles.segmented}>
-          {MODE_OPTIONS.map((opt) => (
-            <button
-              key={opt.key}
-              type="button"
-              className={`${styles.segment} ${
-                settings.mode === opt.key ? styles.segmentActive : ''
-              }`}
-              onClick={() => onChangeMode(opt.key)}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
       </Row>
 
       {/* 테마 컬러 — hue 슬라이더(두 색 평행이동) + 프리셋 */}

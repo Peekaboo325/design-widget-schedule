@@ -7,7 +7,6 @@ const DEFAULTS = {
   themeColor: DEFAULT_TO, // 핑크 #ff86a2
   size: 'L',
   activeMember: null,
-  mode: 'light',
   launchOnBoot: false,
   memberEmoji: {} // { '부수빈': '🐰', ... }
 }
@@ -28,7 +27,7 @@ export default function useSettings() {
       if (cancelled) return
       const merged = { ...DEFAULTS, ...initial }
       setSettings(merged)
-      applyTheme(merged.themeColor, merged.mode)
+      applyTheme(merged.themeColor)
       setReady(true)
     }
     init()
@@ -53,21 +52,9 @@ export default function useSettings() {
   }, [])
 
   const setThemeColor = useCallback(async (hex) => {
-    setSettings((s) => {
-      applyTheme(hex, s.mode)
-      return s
-    })
+    applyTheme(hex)
     const saved = await window.widgetAPI?.setThemeColor(hex)
     setSettings((s) => ({ ...s, themeColor: saved ?? hex }))
-  }, [])
-
-  const setMode = useCallback(async (mode) => {
-    setSettings((s) => {
-      applyTheme(s.themeColor, mode)
-      return s
-    })
-    const saved = await window.widgetAPI?.setMode(mode)
-    setSettings((s) => ({ ...s, mode: saved ?? mode }))
   }, [])
 
   const setActiveMember = useCallback(async (name) => {
@@ -97,56 +84,31 @@ export default function useSettings() {
     setOpacity,
     setSize,
     setThemeColor,
-    setMode,
     setActiveMember,
     setLaunchOnBoot,
     setMemberEmoji
   }
 }
 
-// 테마 컬러 + 모드를 CSS 변수로 적용
-// 컨셉:
+// 테마 컬러를 CSS 변수로 적용 (라이트 단일 모드)
 //   - 헤더는 두 색 그라데이션 (사용자 hue로 평행이동)
-//   - 본문은 흰 카드 (다크 모드는 어두운 카드로 인버스)
-//   - 강조 텍스트(메트릭 카운트, chip 등)는 액센트 컬러
-//   - 행은 흰 카드 + 옅은 그림자로 위계 분리
-function applyTheme(hex, mode) {
+//   - 본문은 흰 카드
+//   - 강조 텍스트는 액센트(strong) 컬러, hue별 perceptual L 보정으로 가독성 일정
+function applyTheme(hex) {
   const root = document.documentElement
   const baseHue = hueFromHex(hex)
   const { from, to, onHeader, accent, accentStrong, accentSoft } =
     getThemeColors(baseHue)
 
-  // 헤더 그라데이션 + 텍스트 색
   root.style.setProperty('--widget-header-from', from)
   root.style.setProperty('--widget-header-to', to)
   // 헤더 위 텍스트는 to의 luminance로 흑/백 자동 결정
-  // (옐로/라임/시안/그린은 검정, 빨강/블루/마젠타/핑크는 흰)
   root.style.setProperty('--widget-on-header', onHeader)
-  // accent = 헤더 grad와 어울리는 옅은 톤
   root.style.setProperty('--widget-accent', accent)
-  // accent-strong = 흰 배경 위 강조용 진한 톤 (chip 텍스트·dot·메트릭 카운트 등)
-  // hue별 perceptual lightness 보정으로 옐로/시안에서도 비슷한 시각 무게감
   root.style.setProperty('--widget-accent-strong', accentStrong)
-  // accent-soft = 메트릭 카드/chip 배경용 흰에 가까운 옅은 hue
   root.style.setProperty('--widget-accent-soft', accentSoft)
 
-  if (mode === 'dark') {
-    // 다크: 본문만 어둡게. 헤더 그라데이션은 그대로 (포인트 컬러).
-    root.style.setProperty('--widget-card-bg', '#1f1f24')
-    root.style.setProperty('--widget-surface', '#2a2a30')
-    root.style.setProperty('--widget-on-surface', '#f4f4f6')
-    root.style.setProperty('--widget-fg', '#f4f4f6')
-    root.style.setProperty('--widget-muted', 'rgba(244, 244, 246, 0.55)')
-    root.style.setProperty('--widget-card-border', 'rgba(255, 255, 255, 0.06)')
-    root.style.setProperty('--widget-border', 'rgba(255, 255, 255, 0.10)')
-    root.style.setProperty('--widget-overlay', 'rgba(255, 255, 255, 0.06)')
-    root.style.setProperty('--widget-overlay-strong', 'rgba(255, 255, 255, 0.12)')
-    root.style.setProperty('--widget-row-border', 'rgba(255, 255, 255, 0.06)')
-    root.style.setProperty('--widget-on-accent', '#1a1a1f')
-    return
-  }
-
-  // 라이트
+  // 라이트 단일 모드
   root.style.setProperty('--widget-card-bg', '#ffffff')
   root.style.setProperty('--widget-surface', '#ffffff')
   root.style.setProperty('--widget-on-surface', '#1a1a1f')

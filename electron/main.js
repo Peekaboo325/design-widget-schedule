@@ -69,10 +69,9 @@ const store = new Store({
   defaults: {
     alwaysOnTop: true,
     opacity: 1.0,
-    themeColor: '#7aa2ff',
+    themeColor: '#ff86a2',
     size: 'L',
     activeMember: null,
-    mode: 'dark',
     launchOnBoot: false,
     memberEmoji: {}, // { '부수빈': '🐰', ... }
     // 첫 실행 시 깜빡임 방지용 캐시 — fetch 동안 stale 데이터로 즉시 렌더
@@ -276,7 +275,6 @@ ipcMain.handle('settings:get-all', () => ({
   themeColor: store.get('themeColor'),
   size: store.get('size'),
   activeMember: store.get('activeMember'),
-  mode: store.get('mode'),
   launchOnBoot: store.get('launchOnBoot'),
   memberEmoji: store.get('memberEmoji') ?? {}
 }))
@@ -322,12 +320,6 @@ ipcMain.handle('settings:set-launch-on-boot', (_event, value) => {
   return enabled
 })
 
-// 다크/라이트 모드 저장
-ipcMain.handle('settings:set-mode', (_event, mode) => {
-  const next = mode === 'light' ? 'light' : 'dark'
-  store.set('mode', next)
-  return next
-})
 
 // OS 알림 표시 (새 스케줄 알림용)
 // 클릭 시 위젯을 보여주고 포커스

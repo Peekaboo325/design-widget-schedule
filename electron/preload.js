@@ -21,9 +21,6 @@ const api = {
   // 활성 팀원 저장
   setActiveMember: (name) => ipcRenderer.invoke('settings:set-active-member', name),
 
-  // 다크/라이트 모드
-  setMode: (mode) => ipcRenderer.invoke('settings:set-mode', mode),
-
   // 컴퓨터 시작 시 자동 실행
   setLaunchOnBoot: (value) =>
     ipcRenderer.invoke('settings:set-launch-on-boot', value),
