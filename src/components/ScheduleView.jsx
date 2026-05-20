@@ -137,8 +137,8 @@ function formatDueHeader(key) {
 }
 
 // L 행 카드 리스트 — 마감일 그룹별로 묶음
-// NEW 항목이 있을 때만 좌측 dot 컬럼 추가. 0건이면 컬럼 자체 제거하여
-// 좌우 여백 균등 (dot 자리 빈 공간 시각 비대칭 방지)
+// NEW dot은 grid 컬럼이 아니라 카드 위 absolute로 떠 있음 →
+// NEW 발생/소멸 시 다른 행 정렬에 영향 없음 (개별 레이아웃만 변경)
 function CardList({ schedule, newKeys, onStatusClick }) {
   if (schedule.length === 0) {
     return (
@@ -147,12 +147,9 @@ function CardList({ schedule, newKeys, onStatusClick }) {
       </div>
     )
   }
-  const hasAnyNew = (newKeys?.size ?? 0) > 0
   const groups = groupByDue(schedule)
   return (
-    <div
-      className={`${styles.cardList} ${hasAnyNew ? '' : styles.cardListNoMarker}`}
-    >
+    <div className={styles.cardList}>
       {groups.map(([dueKey, items]) => (
         <div key={dueKey} className={styles.dueGroup}>
           <div
@@ -164,11 +161,8 @@ function CardList({ schedule, newKeys, onStatusClick }) {
             const isNew = newKeys?.has(scheduleKey(item))
             return (
               <div key={`${dueKey}-${i}`} className={styles.rowCard}>
-                {hasAnyNew && (
-                  <span
-                    className={`${styles.rowDot} ${isNew ? styles.rowDotNew : ''}`}
-                    aria-label={isNew ? '새 항목' : undefined}
-                  />
+                {isNew && (
+                  <span className={styles.rowDot} aria-label="새 항목" />
                 )}
                 <span className={styles.rowClient} title={item['광고주']}>
                   {item['광고주']}

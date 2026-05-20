@@ -165,58 +165,53 @@
   justify-content: center;
 }
 
-/* 개별 행 카드 — 흰 카드 + 옅은 보더 */
+/* 개별 행 카드 — 흰 카드 + 옅은 보더
+   grid 4컬럼 고정. NEW dot은 카드 위 absolute로 떠 있어 정렬 영향 없음 */
 .rowCard {
+  position: relative;
   display: grid;
-  grid-template-columns: auto minmax(60px, 1.2fr) minmax(60px, 1.6fr) auto auto;
+  grid-template-columns: minmax(60px, 1.2fr) minmax(60px, 1.6fr) auto auto;
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
   background: var(--widget-surface);
   border: 1px solid var(--widget-card-border);
   border-radius: 12px;
-  transition: transform 0.08s ease;
-}
-
-/* NEW 0건일 때: dot 컬럼 자체 제거 → 좌우 여백 균등 */
-.cardListNoMarker .rowCard {
-  grid-template-columns: minmax(60px, 1.2fr) minmax(60px, 1.6fr) auto auto;
+  transition: border-color 0.12s ease;
 }
 
 .rowCard:hover {
   border-color: rgba(14, 14, 16, 0.14);
 }
 
-/* 행 좌측 dot — NEW일 때만 시각적으로 표시. 평소엔 자리만 차지(투명).
-   레이아웃 정렬 일관성을 위해 grid 컬럼 자체는 유지 */
+/* NEW dot — 카드 위 absolute. grid에 영향 X (다른 행 정렬 유지).
+   카드 좌측 padding 안쪽에 자리잡음. NEW 아닌 행은 렌더되지 않아 깔끔 */
 .rowDot {
-  width: 8px;
-  height: 8px;
+  position: absolute;
+  left: 5px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: transparent;
-  flex-shrink: 0;
-}
-
-.rowDotNew {
   background: var(--widget-accent-strong);
+  transform: translateY(-50%);
   animation: dotPulse 1.6s ease-out infinite;
+  pointer-events: none;
 }
 
-/* 펄스 — scale로 커지면서 ring이 바깥으로 퍼져 나가 사라짐. ease-out으로 유려하게 */
+/* 펄스 — ring expand로 유려하게. transform은 translateY 고정이라 키프레임에서 변경 X.
+   대신 box-shadow ring 확장 + opacity 변화로 충분히 강한 시각 효과 */
 @keyframes dotPulse {
   0% {
     box-shadow: 0 0 0 0
-      color-mix(in oklab, var(--widget-accent-strong) 55%, transparent);
-    transform: scale(1);
+      color-mix(in oklab, var(--widget-accent-strong) 60%, transparent);
   }
   70% {
     box-shadow: 0 0 0 9px
       color-mix(in oklab, var(--widget-accent-strong) 0%, transparent);
-    transform: scale(1.15);
   }
   100% {
     box-shadow: 0 0 0 0 transparent;
-    transform: scale(1);
   }
 }
 
