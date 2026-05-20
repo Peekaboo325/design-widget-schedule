@@ -116,9 +116,12 @@
   flex: 1 1 auto;
 }
 
+/* 헤더 텍스트 weight는 CSS 변수로 — useSettings.applyTheme에서
+   onHeader(흰/검정) + platform(win/mac) 조합 따라 동적 결정.
+   흰 텍스트는 시각적으로 굵어 보여 1단계 풀고, Windows ClearType은 +1단계 보정. */
 .date {
   font-size: 18px;
-  font-weight: 800;
+  font-weight: var(--header-date-weight, 800);
   letter-spacing: -0.4px;
   color: var(--widget-on-header);
   white-space: nowrap;
@@ -127,7 +130,7 @@
 
 .headerMeta {
   font-size: 11px;
-  font-weight: 500;
+  font-weight: var(--header-meta-weight, 500);
   letter-spacing: -0.1px;
   color: color-mix(in oklab, var(--widget-on-header) 75%, transparent);
   white-space: nowrap;
@@ -420,11 +423,6 @@
   gap: 6px;
 }
 
-/* Windows 폰트 보정 — ClearType이 굵기를 더 야위게 그려서 강조 텍스트의 시각 무게가 약함.
-   주요 강조 위치만 한 단계씩 살짝 올려 맥 톤에 가깝게 */
-.widget[data-platform='win32'] .date {
-  font-weight: 850;
-}
-.widget[data-platform='win32'] .headerMeta {
-  font-weight: 600;
-}
+/* Windows 폰트 보정은 이제 useSettings.applyTheme에서
+   onHeader 색까지 함께 보고 CSS 변수(--header-date-weight, --header-meta-weight)로
+   동적 결정함 → 별도 platform selector 불필요 */

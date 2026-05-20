@@ -56,9 +56,15 @@ export default function EmojiPicker({ value, onChange, onClose }) {
           placeholder="이모지 더보기"
           value={custom}
           onChange={(e) => {
-            // 1 grapheme(이모지 1자)만 허용. 더 타이핑되어도 즉시 자름
+            // 1 grapheme(이모지 1자)만 허용. 입력 즉시 적용 + picker 자동 닫힘
+            // (시스템 이모지 패널에서 하나 클릭 → input에 들어옴 → 즉시 close)
             const v = Array.from(e.target.value).slice(0, 1).join('')
-            setCustom(v)
+            if (v) {
+              onChange(v)
+              onClose()
+            } else {
+              setCustom('')
+            }
           }}
           onFocus={() => {
             // macOS면 시스템 이모지 패널을 자동으로 띄움 (Windows/Linux는 무시)

@@ -115,6 +115,18 @@ function applyTheme(hex) {
   root.style.setProperty('--widget-accent-strong', accentStrong)
   root.style.setProperty('--widget-accent-soft', accentSoft)
 
+  // 헤더 텍스트 weight — 흰 글자는 시각적으로 굵어 보여서 1단계 풀기
+  // Windows ClearType은 야위게 보여서 +1단계 보정
+  const isWin = window.widgetAPI?.platform === 'win32'
+  const isWhiteText = onHeader === '#ffffff'
+  if (isWhiteText) {
+    root.style.setProperty('--header-date-weight', isWin ? '750' : '700')
+    root.style.setProperty('--header-meta-weight', isWin ? '500' : '400')
+  } else {
+    root.style.setProperty('--header-date-weight', isWin ? '850' : '800')
+    root.style.setProperty('--header-meta-weight', isWin ? '600' : '500')
+  }
+
   // 라이트 단일 모드
   root.style.setProperty('--widget-card-bg', '#ffffff')
   root.style.setProperty('--widget-surface', '#ffffff')
