@@ -18,7 +18,7 @@ import { setRowStatus, setRowShare } from './lib/api.js'
 import { scheduleKey } from './components/ScheduleView.jsx'
 
 // 사이즈별 헤더 높이 (CSS와 일치)
-const HEADER_H = { S: 64, L: 92 }
+const HEADER_H = { S: 72, L: 92 }
 
 // 위젯 셸: 헤더(드래그·설정·새로고침) + 설정 패널 + 본문(탭 전환)
 // 5단계: L 사이즈에서 점검 체크리스트 탭 활성화.
@@ -328,7 +328,7 @@ export default function App() {
           <div className={styles.avatarSlot}>
             <Avatar
               emoji={resolveMemberEmoji(activeMember, settings.memberEmoji)}
-              size={settings.size === 'S' ? 32 : 44}
+              size={settings.size === 'S' ? 28 : 44}
               onClick={() => setEmojiPickerOpen((v) => !v)}
               title={`${activeMember} — 클릭해서 이모지 변경`}
             />
@@ -344,7 +344,7 @@ export default function App() {
           // 활성 멤버 확정 전 — 아바타 자리에 회색 원 (레이아웃 보존)
           <div
             className={`${styles.avatarSlot} ${styles.avatarSkeleton}`}
-            style={{ width: settings.size === 'S' ? 32 : 44, height: settings.size === 'S' ? 32 : 44 }}
+            style={{ width: settings.size === 'S' ? 28 : 44, height: settings.size === 'S' ? 28 : 44 }}
             aria-hidden="true"
           />
         )}
