@@ -3,10 +3,10 @@ import { useCallback, useEffect, useState } from 'react'
 const DEFAULTS = {
   alwaysOnTop: true,
   opacity: 1.0,
-  themeColor: '#d9ff66', // 라임 그린 (hue 75, S60 B100)
+  themeColor: '#7aa2ff',
   size: 'L',
   activeMember: null,
-  mode: 'light',
+  mode: 'dark',
   launchOnBoot: false,
   memberEmoji: {} // { '부수빈': '🐰', ... }
 }
@@ -112,58 +112,68 @@ export default function useSettings() {
 }
 
 // 테마 컬러 + 모드를 CSS 변수로 적용
-// 새 컨셉 (풀컬러):
-//   - 라이트 모드: 위젯 전체가 한 액센트 컬러(S60 B100)로 채워진 단일 카드
-//                  모든 텍스트는 검정. 위계는 굵기/크기/opacity로
-//                  흰 알약(surface) = 강조 컴포넌트(아바타·아이콘·chip 진행·팝오버)
-//                  검정 알약(CTA) = 가장 강한 액션 (활성 설정 등)
-//   - 다크 모드: hue 무시 + 단색 블랙 반전 (사용자 결정)
-//                위젯 = 다크 단색, 텍스트 = 흰, 흰 알약 자리는 elevated 다크
+// 핵심 컨셉:
+//   - 베이스(위젯 바깥 면)는 거의 무채색
+//   - 헤더는 액센트 컬러 풀로 채운 컬러 블록
+//   - 본문은 흰/옅은 흑 카드로 분리
+//   - 액센트 위 텍스트는 자동 흑/백 (WCAG 휘도)
 function applyTheme(hex, mode) {
   const root = document.documentElement
-
-  if (mode === 'dark') {
-    // 다크 = 블랙 반전. hue 사용 안 함 (단색).
-    const accent = '#1a1a1c' // 위젯 베이스
-    const surface = '#2c2c32' // elevated 알약 (라이트의 흰 알약 자리)
-    const fg = '#f4f4f6'
-    root.style.setProperty('--widget-bg', accent)
-    root.style.setProperty('--widget-header-bg', accent)
-    root.style.setProperty('--widget-card-bg', accent)
-    root.style.setProperty('--widget-accent', hex) // dot 등 보조용으로만 hue 유지
-    root.style.setProperty('--widget-fg', fg)
-    root.style.setProperty('--widget-muted', 'rgba(244, 244, 246, 0.62)')
-    root.style.setProperty('--widget-on-header', fg)
-    root.style.setProperty('--widget-on-accent', fg)
-    root.style.setProperty('--widget-surface', surface)
-    root.style.setProperty('--widget-on-surface', fg)
-    root.style.setProperty('--widget-cta-bg', '#ffffff') // 다크에서 inverse: 흰 알약 = CTA
-    root.style.setProperty('--widget-cta-fg', '#0e0e10')
-    root.style.setProperty('--widget-card-border', 'rgba(255, 255, 255, 0.06)')
-    root.style.setProperty('--widget-border', 'rgba(255, 255, 255, 0.10)')
-    root.style.setProperty('--widget-overlay', 'rgba(255, 255, 255, 0.06)')
-    root.style.setProperty('--widget-overlay-strong', 'rgba(255, 255, 255, 0.14)')
-    root.style.setProperty('--widget-row-border', 'rgba(255, 255, 255, 0.06)')
-    return
-  }
-
-  // 라이트 = 풀컬러. 위젯 전체가 액센트 한 덩어리. 텍스트 검정.
-  const fg = '#0e0e10'
-  root.style.setProperty('--widget-bg', hex)
-  root.style.setProperty('--widget-header-bg', hex)
-  root.style.setProperty('--widget-card-bg', hex)
   root.style.setProperty('--widget-accent', hex)
-  root.style.setProperty('--widget-fg', fg)
-  root.style.setProperty('--widget-muted', 'rgba(14, 14, 16, 0.62)')
-  root.style.setProperty('--widget-on-header', fg)
-  root.style.setProperty('--widget-on-accent', fg)
-  root.style.setProperty('--widget-surface', '#ffffff')
-  root.style.setProperty('--widget-on-surface', fg)
-  root.style.setProperty('--widget-cta-bg', fg)
-  root.style.setProperty('--widget-cta-fg', '#ffffff')
-  root.style.setProperty('--widget-card-border', 'rgba(14, 14, 16, 0.08)')
-  root.style.setProperty('--widget-border', 'rgba(14, 14, 16, 0.14)')
-  root.style.setProperty('--widget-overlay', 'rgba(14, 14, 16, 0.06)')
-  root.style.setProperty('--widget-overlay-strong', 'rgba(14, 14, 16, 0.12)')
-  root.style.setProperty('--widget-row-border', 'rgba(14, 14, 16, 0.10)')
+  const onAccent = getContrastText(hex)
+  root.style.setProperty('--widget-on-accent', onAccent)
+  root.style.setProperty('--widget-on-header', onAccent)
+
+  if (mode === 'light') {
+    // 위젯 베이스에 옅은 액센트 틴트 → 흰 카드와 시각적 분리
+    root.style.setProperty(
+      '--widget-bg',
+      `color-mix(in oklab, ${hex} 10%, rgba(252, 252, 254, 0.96))`
+    )
+    root.style.setProperty(
+      '--widget-header-bg',
+      `color-mix(in oklab, ${hex} 55%, white)`
+    )
+    root.style.setProperty('--widget-card-bg', '#ffffff')
+    root.style.setProperty('--widget-card-border', 'rgba(0, 0, 0, 0.06)')
+    root.style.setProperty('--widget-fg', '#0f0f12')
+    root.style.setProperty('--widget-muted', 'rgba(20, 20, 24, 0.62)')
+    root.style.setProperty('--widget-border', 'rgba(0, 0, 0, 0.08)')
+    root.style.setProperty('--widget-overlay', 'rgba(0, 0, 0, 0.04)')
+    root.style.setProperty('--widget-overlay-strong', 'rgba(0, 0, 0, 0.08)')
+    root.style.setProperty('--widget-row-border', 'rgba(0, 0, 0, 0.06)')
+  } else {
+    // 다크 베이스에도 옅은 액센트 틴트 → 카드와 분리
+    root.style.setProperty(
+      '--widget-bg',
+      `color-mix(in oklab, ${hex} 12%, rgba(20, 20, 24, 0.94))`
+    )
+    // 다크 모드 헤더 — 액센트 비중 강화 (칙칙함 해소)
+    root.style.setProperty(
+      '--widget-header-bg',
+      `color-mix(in oklab, ${hex} 78%, #1a1a1e)`
+    )
+    root.style.setProperty('--widget-card-bg', '#25252b')
+    root.style.setProperty('--widget-card-border', 'rgba(255, 255, 255, 0.06)')
+    root.style.setProperty('--widget-fg', '#f4f4f6')
+    root.style.setProperty('--widget-muted', 'rgba(244, 244, 246, 0.72)')
+    root.style.setProperty('--widget-border', 'rgba(255, 255, 255, 0.08)')
+    root.style.setProperty('--widget-overlay', 'rgba(255, 255, 255, 0.06)')
+    root.style.setProperty('--widget-overlay-strong', 'rgba(255, 255, 255, 0.12)')
+    root.style.setProperty('--widget-row-border', 'rgba(255, 255, 255, 0.05)')
+  }
+}
+
+function getContrastText(hex) {
+  const c = hex.replace('#', '')
+  if (c.length !== 6) return '#ffffff'
+  const r = parseInt(c.slice(0, 2), 16) / 255
+  const g = parseInt(c.slice(2, 4), 16) / 255
+  const b = parseInt(c.slice(4, 6), 16) / 255
+  const lum = 0.2126 * toLin(r) + 0.7152 * toLin(g) + 0.0722 * toLin(b)
+  return lum > 0.55 ? '#1c1c20' : '#ffffff'
+}
+
+function toLin(v) {
+  return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)
 }

@@ -1,12 +1,16 @@
 import styles from './SettingsPanel.module.css'
 import Dropdown from './Dropdown.jsx'
 import { shortName } from '../lib/format.js'
-import { hexFromHue, hueFromHex } from '../lib/color.js'
 
-// 프리셋 컬러 — S60 B100 고정, hue만 다른 6단계 (60도 간격)
-// 핑크 → 옐로 → 라임 → 시안 → 블루 → 마젠타
-const PRESET_HUES = [0, 60, 120, 180, 240, 300]
-const COLOR_PRESETS = PRESET_HUES.map((h) => hexFromHue(h))
+// 프리셋 컬러 (액센트 + 배경 틴트 모두에 사용)
+const COLOR_PRESETS = [
+  '#7aa2ff', // 블루
+  '#6ddc94', // 그린
+  '#ff8a5c', // 오렌지
+  '#d28aff', // 퍼플
+  '#ffd93d', // 옐로
+  '#ff6b8a' // 핑크
+]
 
 const SIZE_OPTIONS = [
   { key: 'S', label: 'S' },
@@ -125,40 +129,34 @@ export default function SettingsPanel({
         </div>
       </Row>
 
-      {/* 테마 컬러 — hue slider (S60 B100 고정) + 6 hue 프리셋
-          다크 모드는 hue 무시하고 단색 블랙 반전 */}
+      {/* 테마 컬러 */}
       <Row label="테마 컬러" vertical>
-        <div className={styles.colorStack}>
-          <input
-            type="range"
-            min="0"
-            max="359"
-            step="1"
-            value={hueFromHex(settings.themeColor)}
-            onChange={(e) =>
-              onChangeThemeColor(hexFromHue(parseInt(e.target.value, 10)))
-            }
-            className={styles.hueSlider}
-            aria-label="색상(hue)"
-            disabled={settings.mode === 'dark'}
-          />
-          <div className={styles.colorRow}>
-            {COLOR_PRESETS.map((hex) => (
-              <button
-                key={hex}
-                type="button"
-                aria-label={`프리셋 ${hex}`}
-                className={`${styles.swatch} ${
-                  settings.themeColor.toLowerCase() === hex.toLowerCase()
-                    ? styles.swatchActive
-                    : ''
-                }`}
-                style={{ background: hex }}
-                onClick={() => onChangeThemeColor(hex)}
-                disabled={settings.mode === 'dark'}
-              />
-            ))}
-          </div>
+        <div className={styles.colorRow}>
+          {COLOR_PRESETS.map((hex) => (
+            <button
+              key={hex}
+              type="button"
+              aria-label={`프리셋 ${hex}`}
+              className={`${styles.swatch} ${
+                settings.themeColor.toLowerCase() === hex.toLowerCase()
+                  ? styles.swatchActive
+                  : ''
+              }`}
+              style={{ background: hex }}
+              onClick={() => onChangeThemeColor(hex)}
+            />
+          ))}
+          <label className={styles.picker} aria-label="커스텀 컬러">
+            <span
+              className={styles.pickerDot}
+              style={{ background: settings.themeColor }}
+            />
+            <input
+              type="color"
+              value={settings.themeColor}
+              onChange={(e) => onChangeThemeColor(e.target.value)}
+            />
+          </label>
         </div>
       </Row>
     </div>

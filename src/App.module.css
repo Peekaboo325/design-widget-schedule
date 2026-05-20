@@ -111,10 +111,9 @@
   z-index: 3;
 }
 
-/* 원형 아이콘 버튼 — 흰 알약 + 검정 아이콘 (액센트 위에 강조).
-   활성 상태(설정 열림)는 검정 알약 CTA로 inverse */
+/* 원형 아이콘 버튼 — 흰 카드 배경 + 액센트 아이콘. 아바타 크기와 통일 */
 .iconBtn {
-  background: var(--widget-surface);
+  background: var(--widget-card-bg);
   border: none;
   border-radius: 50%;
   width: 40px;
@@ -123,10 +122,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--widget-on-surface);
+  color: var(--widget-accent);
   flex-shrink: 0;
-  transition: filter 0.12s ease, transform 0.08s ease, background 0.12s ease;
-  box-shadow: 0 2px 8px rgba(14, 14, 16, 0.10);
+  transition: filter 0.12s ease, transform 0.08s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
 .iconBtn:hover:not(:disabled) {
@@ -143,8 +142,8 @@
 }
 
 .iconBtnActive {
-  background: var(--widget-cta-bg);
-  color: var(--widget-cta-fg);
+  background: var(--widget-fg);
+  color: var(--widget-card-bg);
 }
 
 .iconBtnSpinning {
@@ -157,11 +156,11 @@
   }
 }
 
-/* 새 스케줄 알림 뱃지 (+N) — 검정 알약 CTA (가장 강한 액션 톤) */
+/* 새 스케줄 알림 뱃지 (+N) */
 .newBadge {
   position: relative;
-  background: var(--widget-cta-bg);
-  color: var(--widget-cta-fg);
+  background: var(--widget-card-bg);
+  color: var(--widget-accent);
   border: none;
   border-radius: var(--widget-pill);
   padding: 6px 12px;
@@ -171,7 +170,7 @@
   line-height: 1;
   letter-spacing: -0.2px;
   animation: badgePulse 1.2s ease-in-out infinite;
-  box-shadow: 0 2px 8px rgba(14, 14, 16, 0.18);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
 .newBadge:hover {
@@ -183,11 +182,13 @@
   0%,
   100% {
     filter: brightness(1);
-    box-shadow: 0 2px 8px rgba(14, 14, 16, 0.18);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12),
+      inset 0 0 0 0 rgba(255, 255, 255, 0);
   }
   50% {
-    filter: brightness(1.15);
-    box-shadow: 0 2px 12px rgba(14, 14, 16, 0.28);
+    filter: brightness(1.1);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.16),
+      inset 0 0 0 1.5px color-mix(in oklab, var(--widget-accent) 35%, transparent);
   }
 }
 

@@ -27,7 +27,7 @@
   font-size: 44px;
   font-weight: 800;
   line-height: 1;
-  color: var(--widget-fg);
+  color: var(--widget-accent);
   letter-spacing: -1.8px;
 }
 
@@ -59,7 +59,7 @@
 .mediumTotal {
   font-size: 22px;
   font-weight: 800;
-  color: var(--widget-fg);
+  color: var(--widget-accent);
   letter-spacing: -0.6px;
   line-height: 1;
 }
@@ -95,15 +95,14 @@
   flex-shrink: 0;
 }
 
-/* 공유 대기 뱃지 (S/M 모드) — 흰 알약 */
+/* 공유 대기 뱃지 (S/M 모드) */
 .pendingBadge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 7px 12px;
   border-radius: var(--widget-pill);
-  background: var(--widget-surface);
-  color: var(--widget-on-surface);
+  background: color-mix(in oklab, var(--widget-accent) 18%, transparent);
   font-size: 11px;
   font-weight: 600;
   align-self: flex-start;
@@ -118,7 +117,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--widget-on-surface);
+  background: var(--widget-accent);
 }
 
 .pendingBadgeDim .pendingDot {
@@ -179,7 +178,7 @@
 .sectionCount {
   font-size: 28px;
   font-weight: 800;
-  color: var(--widget-fg);
+  color: var(--widget-accent);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.8px;
   line-height: 1;
@@ -224,7 +223,7 @@
 }
 
 .cellMarkerNew {
-  background: var(--widget-fg);
+  background: var(--widget-accent);
   animation: dotPulse 1.3s ease-in-out infinite;
 }
 
@@ -232,10 +231,14 @@
   0%,
   100% {
     opacity: 0.55;
+    filter: brightness(1);
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--widget-accent) 50%, transparent);
   }
   50% {
     opacity: 1;
-    box-shadow: 0 0 6px 1px color-mix(in oklab, var(--widget-fg) 40%, transparent);
+    filter: brightness(1.35);
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--widget-accent) 0%, transparent),
+      0 0 6px 1px color-mix(in oklab, var(--widget-accent) 60%, transparent);
   }
 }
 
@@ -293,17 +296,16 @@
   transform: scale(0.94);
 }
 
-/* 진행 = 흰 알약(강조). 대기 = 옅은 검정 알약. 미정 = 더 옅게.
-   모두 텍스트 검정. 위계는 알약 배경 농도 + 폰트로 표현 */
 .statusActive {
-  background: var(--widget-surface);
-  color: var(--widget-on-surface);
-  font-weight: 800;
+  background: color-mix(in oklab, var(--widget-accent) 22%, transparent);
+  color: var(--widget-accent);
 }
 
+/* 대기: 무채색 회색 (요청에 따라 회색조) */
 .statusWaiting {
   background: var(--widget-overlay-strong);
   color: var(--widget-fg);
+  opacity: 0.85;
 }
 
 .statusUndefined {
@@ -357,7 +359,7 @@
 .pendingRowCount {
   font-size: 14px;
   font-weight: 700;
-  color: var(--widget-fg);
+  color: var(--widget-muted);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.2px;
 }

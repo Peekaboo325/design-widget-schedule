@@ -4,15 +4,15 @@
   justify-content: center;
   border: none;
   border-radius: 50%;
-  background: var(--widget-surface);
-  color: var(--widget-on-surface);
+  background: var(--widget-card-bg);
+  color: var(--widget-fg);
   cursor: pointer;
   padding: 0;
   flex-shrink: 0;
   -webkit-app-region: no-drag;
   line-height: 1;
   transition: filter 0.12s ease, transform 0.08s ease;
-  box-shadow: 0 2px 6px rgba(14, 14, 16, 0.10);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 button.avatar:hover {
