@@ -102,7 +102,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
   flex: 1 1 auto;
 }
@@ -220,12 +220,12 @@
 }
 
 /* S 사이즈: FAB을 공유대기 뱃지와 같은 하단 라인에 두기
-   bottom 12px = .body padding-bottom 12px와 일치 */
+   bottom/right 14px = .body padding 14px와 일치 → 좌우 정렬도 통일 */
 .widget[data-size='S'] .refreshFab {
   width: 32px;
   height: 32px;
-  right: 12px;
-  bottom: 12px;
+  right: 14px;
+  bottom: 14px;
 }
 .widget[data-size='S'] .refreshFab svg {
   width: 14px;
@@ -336,7 +336,7 @@
 }
 
 .widget[data-size='S'] .headerCard {
-  padding: 12px 12px;
+  padding: 14px 14px;
   gap: 10px;
 }
 
@@ -359,9 +359,10 @@
   font-size: 10px;
 }
 
-/* S body — 공유대기 뱃지와 FAB 하단을 같은 라인에 두기 위해 padding-bottom을 FAB 위치와 일치 */
+/* S body — 헤더와 동일 패딩(14)으로 좌우 정렬 통일.
+   하단 14 = FAB bottom 14와 일치하여 뱃지/FAB 베이스라인 정렬 */
 .widget[data-size='S'] .body {
-  padding: 12px 12px 12px;
+  padding: 14px;
 }
 
 .widget[data-size='S'] .newBadge {

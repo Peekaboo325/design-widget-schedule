@@ -18,7 +18,7 @@ import { setRowStatus, setRowShare } from './lib/api.js'
 import { scheduleKey } from './components/ScheduleView.jsx'
 
 // 사이즈별 헤더 높이 (CSS와 일치)
-const HEADER_H = { S: 72, L: 92 }
+const HEADER_H = { S: 76, L: 92 }
 
 // 위젯 셸: 헤더(드래그·설정·새로고침) + 설정 패널 + 본문(탭 전환)
 // 5단계: L 사이즈에서 점검 체크리스트 탭 활성화.
