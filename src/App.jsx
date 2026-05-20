@@ -347,23 +347,6 @@ export default function App() {
           WebkitClipPath: headerClip
         }}
       >
-        {activeMember && (
-          <div className={styles.avatarSlot}>
-            <Avatar
-              emoji={resolveMemberEmoji(activeMember, settings.memberEmoji)}
-              size={settings.size === 'S' ? 32 : 40}
-              onClick={() => setEmojiPickerOpen((v) => !v)}
-              title={`${activeMember} — 클릭해서 이모지 변경`}
-            />
-            {emojiPickerOpen && (
-              <EmojiPicker
-                value={resolveMemberEmoji(activeMember, settings.memberEmoji)}
-                onChange={(emoji) => setMemberEmoji(activeMember, emoji)}
-                onClose={() => setEmojiPickerOpen(false)}
-              />
-            )}
-          </div>
-        )}
         <div className={styles.headerText}>
           <span className={styles.date}>{todayLabel}</span>
           {showHeaderMeta && (
@@ -376,6 +359,26 @@ export default function App() {
           )}
         </div>
       </div>
+
+      {/* 아바타 슬롯은 헤더 카드 밖에 둠 — 헤더 path clip-path에 잘리지 않도록
+          (이모지 피커 펼침이 헤더 path 밖으로 나가야 함) */}
+      {activeMember && (
+        <div className={styles.avatarSlot}>
+          <Avatar
+            emoji={resolveMemberEmoji(activeMember, settings.memberEmoji)}
+            size={settings.size === 'S' ? 32 : 40}
+            onClick={() => setEmojiPickerOpen((v) => !v)}
+            title={`${activeMember} — 클릭해서 이모지 변경`}
+          />
+          {emojiPickerOpen && (
+            <EmojiPicker
+              value={resolveMemberEmoji(activeMember, settings.memberEmoji)}
+              onChange={(emoji) => setMemberEmoji(activeMember, emoji)}
+              onClose={() => setEmojiPickerOpen(false)}
+            />
+          )}
+        </div>
+      )}
 
       <div className={styles.headerActions}>
         {/* 새 스케줄 알림 뱃지 — 클릭 시 모두 '본 것'으로 */}

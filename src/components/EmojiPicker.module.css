@@ -63,7 +63,7 @@
   align-items: center;
 }
 
-/* 직접 입력 — 좁게. macOS에선 focus 시 시스템 이모지 패널이 자동 호출됨 */
+/* 직접 입력 — 좁게. focus 시 OS 이모지 패널 자동 호출 (macOS: 네이티브 API, Windows: Win+. 시뮬레이션) */
 .customInput {
   flex: 1;
   min-width: 0;

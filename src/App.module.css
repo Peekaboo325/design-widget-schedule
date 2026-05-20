@@ -21,7 +21,8 @@
 
 /* 헤더 카드
    - 위젯 전체 폭으로 깔되 header path로 clip → 좌상단 + inverse curve 형상
-   - 헤더 path 외부(= 우상단 노치)는 자동으로 잘려 본문 카드 색이 비침 */
+   - 헤더 path 외부(= 우상단 노치)는 자동으로 잘려 본문 카드 색이 비침
+   - padding-left는 아바타(헤더 카드 밖 별도 레이어) 자리만큼 비워둠 */
 .headerCard {
   position: absolute;
   top: 0;
@@ -30,7 +31,7 @@
   /* height, clip-path는 inline style로 주입 */
   display: flex;
   align-items: center;
-  padding: 0 14px;
+  padding: 0 14px 0 64px;
   background: var(--widget-header-bg);
   color: var(--widget-on-header);
   -webkit-app-region: drag;
@@ -56,8 +57,13 @@
   box-sizing: border-box;
 }
 
+/* 아바타 슬롯 — 헤더 카드 밖, .widget 직속. 헤더 vertical center에 배치.
+   이모지 피커가 펼쳐질 때 헤더 path 영역 밖으로 나갈 수 있도록 분리 */
 .avatarSlot {
-  position: relative;
+  position: absolute;
+  top: calc((var(--header-h) - 40px) / 2);
+  left: 14px;
+  z-index: 4;
   -webkit-app-region: no-drag;
 }
 
@@ -253,8 +259,13 @@
 
 /* S 사이즈 — 컴팩트하게 (아바타 32 → 아이콘 32 통일) */
 .widget[data-size='S'] .headerCard {
-  padding: 0 12px;
+  padding: 0 10px 0 52px;
   gap: 8px;
+}
+
+.widget[data-size='S'] .avatarSlot {
+  top: calc((var(--header-h) - 32px) / 2);
+  left: 12px;
 }
 
 .widget[data-size='S'] .headerActions {

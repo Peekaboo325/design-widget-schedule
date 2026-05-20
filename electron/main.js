@@ -10,6 +10,7 @@ import {
 } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import { execFile } from 'node:child_process'
 import Store from 'electron-store'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -402,10 +403,35 @@ ipcMain.handle('window:set-size', (_event, sizeKey) => {
   return sizeKey
 })
 
-// macOS 시스템 이모지 패널 호출 (직접 입력 input focus 시)
+// 시스템 이모지 패널 호출 (직접 입력 input focus 시)
+// - macOS: app.showEmojiPanel() 네이티브 API
+// - Windows: PowerShell + Win32 keybd_event로 Win+. 단축키 시뮬레이션
+//           (추가 deps 없이 OS 이모지 패널 호출)
+// - Linux: 미지원 (조용히 false)
 ipcMain.handle('show-emoji-panel', () => {
   if (process.platform === 'darwin' && typeof app.showEmojiPanel === 'function') {
     app.showEmojiPanel()
+    return true
+  }
+  if (process.platform === 'win32') {
+    // 위젯 input이 포커스를 유지하도록 강제. 키 이벤트는 foreground window가 받음
+    mainWindow?.focus()
+    const ps = [
+      'Add-Type -TypeDefinition \'using System.Runtime.InteropServices; public class K { [DllImport("user32.dll")] public static extern void keybd_event(byte v, byte s, uint f, uint e); }\'',
+      '[K]::keybd_event(0x5B,0,0,0)', // LWin down
+      '[K]::keybd_event(0xBE,0,0,0)', // OEM_PERIOD down
+      'Start-Sleep -Milliseconds 30',
+      '[K]::keybd_event(0xBE,0,2,0)', // up
+      '[K]::keybd_event(0x5B,0,2,0)'  // up
+    ].join('; ')
+    execFile(
+      'powershell.exe',
+      ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-Command', ps],
+      { windowsHide: true },
+      (err) => {
+        if (err) console.warn('[emoji-panel] PowerShell 실행 실패:', err.message)
+      }
+    )
     return true
   }
   return false
