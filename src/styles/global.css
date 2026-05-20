@@ -56,8 +56,13 @@ body,
   height: 100%;
   background: transparent;
   color: var(--widget-fg);
+  /* 이모지 폰트 명시 — 각 OS의 자체 디자인 강제
+     macOS: Apple Color Emoji (자체)
+     Windows 11: Segoe UI Emoji (Microsoft 3D Fluent)
+     Chromium 기본 fallback이 가끔 Noto Color Emoji(=Google 톤)로 가는 케이스 회피 */
   font-family: 'SUIT Variable', -apple-system, BlinkMacSystemFont, 'Pretendard',
-    'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+    'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif,
+    'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
   font-size: 14px;
   font-weight: 500;
   letter-spacing: -0.15px;
