@@ -3,7 +3,7 @@ import styles from './EmojiPicker.module.css'
 
 // 프로필 이모지 피커 — 프리셋 12개 + 직접 입력
 // 외부 클릭 / ESC로 닫힘
-const PRESETS = ['🐰', '🍓', '🌸', '🐱', '🦊', '🐻', '🍑', '🌿', '☕', '🎨', '✨', '⭐']
+const PRESETS = ['🐶', '🐱', '🐰', '🐻', '🐼', '🌸', '👑', '💸', '🍩', '🎀']
 
 export default function EmojiPicker({ value, onChange, onClose }) {
   const rootRef = useRef(null)

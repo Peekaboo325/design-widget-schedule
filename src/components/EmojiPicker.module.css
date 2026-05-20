@@ -25,14 +25,15 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 2px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
   margin-bottom: 8px;
 }
 
+/* width 고정 X — grid 1fr이 셀 폭 결정. 폭 초과로 박스 밖 튀어나가는 사고 방지 */
 .emoji {
-  width: 30px;
-  height: 30px;
+  width: 100%;
+  aspect-ratio: 1 / 1;
   border: none;
   border-radius: 8px;
   background: transparent;
@@ -42,6 +43,7 @@
   align-items: center;
   justify-content: center;
   transition: background 0.12s ease, transform 0.08s ease;
+  padding: 0;
 }
 
 .emoji:hover {
