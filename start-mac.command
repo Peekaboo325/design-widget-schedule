@@ -21,4 +21,13 @@ fi
 echo "📅 디자인팀 스케줄 위젯 켜는 중..."
 echo ""
 
+# 최신 코드 받기 (실패해도 기존 코드로 진행)
+echo "📥 최신 코드 받는 중..."
+git pull --ff-only || echo "(git pull 실패, 기존 코드로 진행)"
+echo ""
+
+# 새 dependency 있으면 받기 (package.json 변경 감지)
+# npm install이 빠른 캐시 검사라 매번 돌려도 부담 적음
+npm install --silent --no-fund --no-audit || true
+
 npm run dev
