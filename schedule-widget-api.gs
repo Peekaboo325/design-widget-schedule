@@ -2,6 +2,12 @@
 // 스케줄 위젯 API — schedule-widget-api.gs
 // 💛신규·유지보수 시트 기반
 // - doGet: 팀원별 미완료 작업 + 공유대기 반환 (rowIndex 포함)
+//   · 각 작업 행의 '마감일'을 시트 셀 배경색으로 파싱
+//     - 9행 M열~ 끝열에 날짜 헤더가 있음
+//     - 데이터 행의 M열~ 끝열 셀 배경색을 검사:
+//       핑크(#ffdcef)가 하나라도 있으면 가장 우측 핑크 = 마감일
+//       핑크가 없고 빨강(#ff0000)이 있으면 가장 우측 빨강 = 마감일
+//       둘 다 없으면 due = null
 // - doPost: 상태(K열) / 공유(L열) 변경
 //   · LockService로 동시 실행 직렬화
 //   · expect(광고주/비고) 검증으로 행 어긋남(stale rowIndex) 방지
@@ -20,6 +26,12 @@ const COL = {
   상태: 11,    // K
   공유: 12,    // L
 };
+
+// 마감일 추출용
+const DATE_HEADER_ROW = 9;     // 9행에 날짜 헤더
+const DATE_START_COL = 13;     // M열부터 날짜
+const DUE_COLOR_PINK = '#ffdcef';  // 마감 범위
+const DUE_COLOR_RED = '#ff0000';   // 단독 마감일(예: 이미 지난 마감)
 
 // 상태 화이트리스트 (POST 검증)
 const VALID_STATUSES = ['미정', '대기', '진행', '완료'];
@@ -60,7 +72,44 @@ function getSchedule(member) {
   const lastRow = sheet.getLastRow();
   if (lastRow < DATA_START_ROW) return { schedule: [], pending: [], summary: { total: 0, pending: 0 } };
 
-  const range = sheet.getRange(DATA_START_ROW, 1, lastRow - DATA_START_ROW + 1, COL.공유);
+  const lastCol = sheet.getLastColumn();
+  const dateColCount = Math.max(0, lastCol - DATE_START_COL + 1);
+  const dataRowCount = lastRow - DATA_START_ROW + 1;
+
+  // 9행 날짜 헤더 (Date 객체)와 데이터 영역 배경색 일괄 조회
+  let dateValues = [];
+  let bgMatrix = [];
+  if (dateColCount > 0) {
+    dateValues = sheet
+      .getRange(DATE_HEADER_ROW, DATE_START_COL, 1, dateColCount)
+      .getValues()[0];
+    bgMatrix = sheet
+      .getRange(DATA_START_ROW, DATE_START_COL, dataRowCount, dateColCount)
+      .getBackgrounds();
+  }
+
+  const tz = Session.getScriptTimeZone();
+  function findDueForRow(rowIdxInBlock) {
+    const bgRow = bgMatrix[rowIdxInBlock] || [];
+    let pinkIdx = -1;
+    let redIdx = -1;
+    // 가장 우측부터 검사
+    for (let j = bgRow.length - 1; j >= 0; j--) {
+      const c = String(bgRow[j] || '').toLowerCase();
+      if (pinkIdx === -1 && c === DUE_COLOR_PINK) pinkIdx = j;
+      if (redIdx === -1 && c === DUE_COLOR_RED) redIdx = j;
+    }
+    // 핑크 우선, 핑크 없으면 빨강
+    const idx = pinkIdx !== -1 ? pinkIdx : redIdx;
+    if (idx === -1) return null;
+    const v = dateValues[idx];
+    if (v instanceof Date) {
+      return Utilities.formatDate(v, tz, 'yyyy-MM-dd');
+    }
+    return null;
+  }
+
+  const range = sheet.getRange(DATA_START_ROW, 1, dataRowCount, COL.공유);
   const rows = range.getValues();
 
   const schedule = [];
@@ -76,11 +125,12 @@ function getSchedule(member) {
     const 비고 = String(row[COL.비고 - 1] || '');
     const 상태 = String(row[COL.상태 - 1] || '').trim();
     const 공유 = row[COL.공유 - 1];
+    const due = findDueForRow(i); // 'YYYY-MM-DD' or null
 
     if (상태 === '완료' && 공유 !== true) {
       pending.push({ rowIndex, 광고주, 비고, 수량 });
     } else if (상태 !== '완료') {
-      schedule.push({ rowIndex, 광고주, 비고, 수량, 상태 });
+      schedule.push({ rowIndex, 광고주, 비고, 수량, 상태, due });
     }
   });
 

@@ -111,7 +111,32 @@ function MetricCard({ count }) {
   )
 }
 
-// L 행 카드 리스트
+// 마감일별로 그룹핑 (정렬: 이른 날짜부터, '미정'은 맨 뒤)
+function groupByDue(schedule) {
+  const map = new Map()
+  for (const item of schedule) {
+    const key = item.due ?? '미정'
+    if (!map.has(key)) map.set(key, [])
+    map.get(key).push(item)
+  }
+  return Array.from(map.entries()).sort(([a], [b]) => {
+    if (a === '미정') return 1
+    if (b === '미정') return -1
+    return a.localeCompare(b) // YYYY-MM-DD 사전순 = 날짜순
+  })
+}
+
+// '5월 18일(월)까지 마감' / '마감일 미정'
+function formatDueHeader(key) {
+  if (key === '미정') return '마감일 미정'
+  const [y, m, d] = key.split('-').map(Number)
+  if (!y || !m || !d) return key
+  const date = new Date(y, m - 1, d)
+  const weekdays = ['일', '월', '화', '수', '목', '금', '토']
+  return `${m}월 ${d}일(${weekdays[date.getDay()]})까지 마감`
+}
+
+// L 행 카드 리스트 — 마감일 그룹별로 묶음
 // NEW 항목이 있을 때만 좌측 dot 컬럼 추가. 0건이면 컬럼 자체 제거하여
 // 좌우 여백 균등 (dot 자리 빈 공간 시각 비대칭 방지)
 function CardList({ schedule, newKeys, onStatusClick }) {
@@ -123,40 +148,50 @@ function CardList({ schedule, newKeys, onStatusClick }) {
     )
   }
   const hasAnyNew = (newKeys?.size ?? 0) > 0
+  const groups = groupByDue(schedule)
   return (
     <div
       className={`${styles.cardList} ${hasAnyNew ? '' : styles.cardListNoMarker}`}
     >
-      {schedule.map((item, i) => {
-        const isNew = newKeys?.has(scheduleKey(item))
-        return (
-          <div key={i} className={styles.rowCard}>
-            {hasAnyNew && (
-              <span
-                className={`${styles.rowDot} ${isNew ? styles.rowDotNew : ''}`}
-                aria-label={isNew ? '새 항목' : undefined}
-              />
-            )}
-            <span className={styles.rowClient} title={item['광고주']}>
-              {item['광고주']}
-            </span>
-            <span className={styles.rowNote} title={item['비고']}>
-              {item['비고']}
-            </span>
-            <span className={styles.rowQty}>
-              {Number(item['수량']) > 1 ? `${item['수량']}건` : ''}
-            </span>
-            <button
-              type="button"
-              className={`${styles.chip} ${STATUS_STYLE[item['상태']] ?? ''}`}
-              title="클릭하면 다음 상태로"
-              onClick={() => onStatusClick?.(item)}
-            >
-              {item['상태']}
-            </button>
+      {groups.map(([dueKey, items]) => (
+        <div key={dueKey} className={styles.dueGroup}>
+          <div
+            className={`${styles.dueHeader} ${dueKey === '미정' ? styles.dueHeaderMuted : ''}`}
+          >
+            {formatDueHeader(dueKey)}
           </div>
-        )
-      })}
+          {items.map((item, i) => {
+            const isNew = newKeys?.has(scheduleKey(item))
+            return (
+              <div key={`${dueKey}-${i}`} className={styles.rowCard}>
+                {hasAnyNew && (
+                  <span
+                    className={`${styles.rowDot} ${isNew ? styles.rowDotNew : ''}`}
+                    aria-label={isNew ? '새 항목' : undefined}
+                  />
+                )}
+                <span className={styles.rowClient} title={item['광고주']}>
+                  {item['광고주']}
+                </span>
+                <span className={styles.rowNote} title={item['비고']}>
+                  {item['비고']}
+                </span>
+                <span className={styles.rowQty}>
+                  {Number(item['수량']) > 1 ? `${item['수량']}건` : ''}
+                </span>
+                <button
+                  type="button"
+                  className={`${styles.chip} ${STATUS_STYLE[item['상태']] ?? ''}`}
+                  title="클릭하면 다음 상태로"
+                  onClick={() => onStatusClick?.(item)}
+                >
+                  {item['상태']}
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      ))}
     </div>
   )
 }
