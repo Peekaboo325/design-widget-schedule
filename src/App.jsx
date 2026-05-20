@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import styles from './App.module.css'
 import SettingsPanel from './components/SettingsPanel.jsx'
-import ScheduleView from './components/ScheduleView.jsx'
+import ScheduleView, { ScheduleSkeleton } from './components/ScheduleView.jsx'
 import ChecklistView from './components/ChecklistView.jsx'
 import MemberPicker from './components/MemberPicker.jsx'
 import useSettings from './hooks/useSettings.js'
@@ -86,17 +86,22 @@ export default function App() {
   const { members, loading: membersLoading, error: membersError } = useMembers()
 
   // 저장된 멤버가 현재 목록에 없으면 stale로 간주 (입퇴사 대비)
+  // 멤버 목록이 아직 fetch되지 않은 동안엔 savedMember 잠정 활성 (깜빡임 방지)
   const savedMember = settings.activeMember
-  const memberInList =
-    savedMember && members.length > 0 ? members.includes(savedMember) : false
+  const membersReady = members.length > 0 || !membersLoading
+  const memberInList = savedMember
+    ? members.length === 0
+      ? membersLoading // 로딩 중이면 잠정 true, 로딩 끝났는데 빈 목록이면 false
+      : members.includes(savedMember)
+    : false
   const activeMember = memberInList ? savedMember : null
 
   // 저장값이 목록에 없을 때 자동으로 null 처리 (재선택 유도)
   useEffect(() => {
-    if (ready && savedMember && members.length > 0 && !memberInList) {
+    if (ready && savedMember && members.length > 0 && !members.includes(savedMember)) {
       setActiveMember(null)
     }
-  }, [ready, savedMember, members, memberInList, setActiveMember])
+  }, [ready, savedMember, members, setActiveMember])
 
   // 활성 멤버의 스케줄/공유대기
   const {
@@ -303,7 +308,12 @@ export default function App() {
   }, [newKeys, scheduleData])
 
   const refreshing = scheduleLoading
-  const needsMemberPick = ready && !activeMember
+  // 멤버 픽업 화면 표시 조건:
+  //  - 저장된 활성 멤버가 없으면 → 즉시 픽업 (설치 직후 첫 실행)
+  //  - 저장값 있고 fetch 후 목록에 없으면 → 픽업 (입퇴사 stale 케이스)
+  //  - 저장값 있고 fetch 진행 중 → 스켈레톤 (잠정 활성 멤버 유지, 깜빡임 방지)
+  const needsMemberPick =
+    ready && !activeMember && (!savedMember || membersReady)
   const showTabs = settings.size === 'L' && !needsMemberPick
   // 헤더 보조정보(멤버명·최근 갱신) — 모든 탭/설정창에서 동일 헤더 유지
   const showHeaderMeta =
@@ -314,7 +324,7 @@ export default function App() {
   return (
     <div className={styles.widget} data-size={settings.size}>
       <div className={styles.headerCard} style={{ height: headerPx }}>
-        {activeMember && (
+        {activeMember ? (
           <div className={styles.avatarSlot}>
             <Avatar
               emoji={resolveMemberEmoji(activeMember, settings.memberEmoji)}
@@ -330,16 +340,27 @@ export default function App() {
               />
             )}
           </div>
+        ) : (
+          // 활성 멤버 확정 전 — 아바타 자리에 회색 원 (레이아웃 보존)
+          <div
+            className={`${styles.avatarSlot} ${styles.avatarSkeleton}`}
+            style={{ width: settings.size === 'S' ? 32 : 44, height: settings.size === 'S' ? 32 : 44 }}
+            aria-hidden="true"
+          />
         )}
         <div className={styles.headerText}>
           <span className={styles.date}>{todayLabel}</span>
-          {showHeaderMeta && (
+          {showHeaderMeta ? (
             <span className={styles.headerMeta}>
               <span title={activeMember}>{shortName(activeMember)}</span>
               {' · 최근 갱신 '}
               {formatTime(lastUpdated)}
               {scheduleLoading ? ' · 갱신 중…' : ''}
             </span>
+          ) : (
+            !needsMemberPick && (
+              <span className={styles.metaSkeleton} aria-hidden="true" />
+            )
           )}
         </div>
         <div className={styles.headerActions}>
@@ -576,7 +597,6 @@ function Body({
   onStatusClick,
   onPendingClick
 }) {
-  if (membersLoading) return <p className={styles.muted}>팀원 목록 불러오는 중…</p>
   if (membersError) {
     return (
       <p className={styles.error}>
@@ -584,7 +604,6 @@ function Body({
       </p>
     )
   }
-  if (!activeMember) return <p className={styles.muted}>등록된 팀원이 없습니다.</p>
 
   if (scheduleError) {
     return (
@@ -597,8 +616,9 @@ function Body({
     )
   }
 
-  if (!scheduleData) {
-    return <p className={styles.muted}>스케줄 불러오는 중…</p>
+  // 멤버 목록 또는 스케줄이 아직 안 들어왔으면 실제 레이아웃 그대로 스켈레톤
+  if (membersLoading || !activeMember || !scheduleData) {
+    return <ScheduleSkeleton size={size} />
   }
 
   return (

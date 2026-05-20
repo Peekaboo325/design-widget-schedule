@@ -60,6 +60,43 @@
   flex-shrink: 0;
 }
 
+/* 헤더 위 placeholder — 그라데이션 위에서 보이게 흰/검정 alpha 자동 */
+.avatarSkeleton,
+.metaSkeleton {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in oklab, var(--widget-on-header) 22%, transparent);
+}
+.avatarSkeleton::after,
+.metaSkeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in oklab, var(--widget-on-header) 32%, transparent) 50%,
+    transparent 100%
+  );
+  transform: translateX(-100%);
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.avatarSkeleton {
+  border-radius: 50%;
+}
+
+.metaSkeleton {
+  display: inline-block;
+  width: 140px;
+  height: 12px;
+  border-radius: 6px;
+}
+.widget[data-size='S'] .metaSkeleton {
+  width: 100px;
+  height: 10px;
+}
+
 /* 헤더 텍스트 스택 — 큰 위계(날짜) + 작은 위계(멤버·갱신시간) */
 .headerText {
   display: flex;

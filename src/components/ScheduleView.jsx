@@ -15,6 +15,32 @@ const STATUS_STYLE = {
 // 사이즈별 정보 단계 — M 폐기, S/L 두 단계만
 // S: 큰 숫자 + 공유 대기 뱃지
 // L: 메트릭 카드 + 행 카드 리스트 + 공유 대기 풋터
+// 로딩 스켈레톤 — 실제 레이아웃과 같은 모양으로 placeholder
+export function ScheduleSkeleton({ size }) {
+  if (size === 'L') {
+    return (
+      <div className={styles.containerL}>
+        <div className={`${styles.skMetric} skeleton`} />
+        <div className={styles.cardList}>
+          <div className={`${styles.skRow} skeleton`} />
+          <div className={`${styles.skRow} skeleton`} />
+          <div className={`${styles.skRow} skeleton`} />
+        </div>
+        <div className={`${styles.skFooter} skeleton`} />
+      </div>
+    )
+  }
+  return (
+    <div className={styles.containerS}>
+      <div className={styles.skBigMetric}>
+        <div className={`${styles.skBigLabel} skeleton`} />
+        <div className={`${styles.skBigValue} skeleton`} />
+      </div>
+      <div className={`${styles.skBadge} skeleton`} />
+    </div>
+  )
+}
+
 export default function ScheduleView({
   size,
   data,
