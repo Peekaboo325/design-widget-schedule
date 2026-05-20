@@ -9,27 +9,34 @@
 }
 
 :root {
-  /* 베이스 — 다크 기본값 (useSettings.applyTheme이 모드에 따라 덮어씀) */
-  --widget-bg: rgba(26, 26, 30, 0.94);
-  --widget-header-bg: rgba(122, 162, 255, 0.45);
-  --widget-card-bg: #25252b;
-  --widget-card-border: rgba(255, 255, 255, 0.06);
-  --widget-fg: #f4f4f6;
-  --widget-muted: rgba(244, 244, 246, 0.72);
-  --widget-accent: #7aa2ff;
-  --widget-on-accent: #ffffff;
-  --widget-on-header: #ffffff;
+  /* 베이스 — 라이트 풀컬러 기본값 (useSettings.applyTheme이 모드/hue에 따라 덮어씀)
+     컨셉: 위젯 전체가 한 액센트로 채워진 단일 카드. 텍스트는 모두 검정. */
+  --widget-bg: #d9ff66;
+  --widget-header-bg: #d9ff66;
+  --widget-card-bg: #d9ff66;
+  --widget-accent: #d9ff66;
+  --widget-fg: #0e0e10;
+  --widget-muted: rgba(14, 14, 16, 0.62);
+  --widget-on-accent: #0e0e10;
+  --widget-on-header: #0e0e10;
+
+  /* 흰 알약 / 검정 알약 — 강조 컴포넌트와 CTA */
+  --widget-surface: #ffffff;
+  --widget-on-surface: #0e0e10;
+  --widget-cta-bg: #0e0e10;
+  --widget-cta-fg: #ffffff;
 
   /* 쉐입 */
   --widget-radius: 24px;
   --widget-card-radius: 16px;
   --widget-pill: 999px;
 
-  /* 표면 */
-  --widget-border: rgba(255, 255, 255, 0.08);
-  --widget-overlay: rgba(255, 255, 255, 0.06);
-  --widget-overlay-strong: rgba(255, 255, 255, 0.12);
-  --widget-row-border: rgba(255, 255, 255, 0.05);
+  /* 표면(라인·오버레이) — 액센트 위 검정 알파 */
+  --widget-card-border: rgba(14, 14, 16, 0.08);
+  --widget-border: rgba(14, 14, 16, 0.14);
+  --widget-overlay: rgba(14, 14, 16, 0.06);
+  --widget-overlay-strong: rgba(14, 14, 16, 0.12);
+  --widget-row-border: rgba(14, 14, 16, 0.10);
 }
 
 * {

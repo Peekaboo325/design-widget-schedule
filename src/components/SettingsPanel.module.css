@@ -3,8 +3,6 @@
   flex-direction: column;
   gap: 12px;
   padding: 12px 14px 14px;
-  border-bottom: 1px solid var(--widget-border);
-  background: var(--widget-overlay);
 }
 
 /* S 사이즈: 행 수가 줄어든 만큼 여백을 넉넉히 */
@@ -33,7 +31,8 @@
 
 .rowLabel {
   font-size: 11px;
-  color: var(--widget-muted);
+  font-weight: 700;
+  color: var(--widget-fg);
   white-space: nowrap;
 }
 
@@ -42,22 +41,22 @@
   align-items: center;
 }
 
-/* 토글 스위치 */
+/* 토글 스위치 — OFF: 옅은 알약 + 검정 knob / ON: 검정 알약(CTA) + 흰 knob */
 .toggle {
   position: relative;
   width: 32px;
   height: 18px;
   border-radius: 999px;
-  border: 1px solid var(--widget-border);
-  background: var(--widget-overlay-strong);
+  border: 1px solid var(--widget-card-border);
+  background: var(--widget-surface);
   cursor: pointer;
   padding: 0;
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .toggleOn {
-  background: var(--widget-accent);
-  border-color: var(--widget-accent);
+  background: var(--widget-cta-bg);
+  border-color: var(--widget-cta-bg);
 }
 
 .toggleKnob {
@@ -67,19 +66,20 @@
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: var(--widget-fg);
+  background: var(--widget-on-surface);
   transition: transform 0.15s ease, background 0.15s ease;
 }
 
 .toggleOn .toggleKnob {
   transform: translateX(14px);
-  background: var(--widget-on-accent);
+  background: var(--widget-cta-fg);
 }
 
-/* 세그먼티드 (S/M/L, 다크/라이트) — 알약 */
+/* 세그먼티드 (S/M/L, 다크/라이트) — 흰 알약 트랙, 활성은 검정 CTA */
 .segmented {
   display: inline-flex;
-  background: var(--widget-overlay-strong);
+  background: var(--widget-surface);
+  border: 1px solid var(--widget-card-border);
   border-radius: var(--widget-pill);
   padding: 3px;
 }
@@ -87,7 +87,8 @@
 .segment {
   border: none;
   background: transparent;
-  color: var(--widget-muted);
+  color: var(--widget-on-surface);
+  opacity: 0.55;
   font-size: 11px;
   font-weight: 700;
   padding: 4px 11px;
@@ -97,11 +98,12 @@
 }
 
 .segmentActive {
-  background: var(--widget-accent);
-  color: var(--widget-on-accent);
+  background: var(--widget-cta-bg);
+  color: var(--widget-cta-fg);
+  opacity: 1;
 }
 
-/* 슬라이더 */
+/* 투명도 슬라이더 */
 .range {
   -webkit-appearance: none;
   width: 110px;
@@ -114,15 +116,59 @@
 
 .range::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: var(--widget-accent);
-  border: none;
+  background: var(--widget-cta-bg);
+  border: 2px solid var(--widget-surface);
   cursor: pointer;
+  box-shadow: 0 1px 3px rgba(14, 14, 16, 0.2);
 }
 
-/* 컬러 프리셋 + 피커 */
+/* 테마 컬러 — hue slider + 6 hue 프리셋 */
+.colorStack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* hue slider — 트랙이 무지개 컨익 그라데이션 */
+.hueSlider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 12px;
+  border-radius: var(--widget-pill);
+  background: linear-gradient(
+    to right,
+    #ff6666 0%,
+    #ffff66 16.66%,
+    #66ff66 33.33%,
+    #66ffff 50%,
+    #6666ff 66.66%,
+    #ff66ff 83.33%,
+    #ff6666 100%
+  );
+  outline: none;
+  cursor: pointer;
+  border: 1px solid var(--widget-card-border);
+}
+
+.hueSlider:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.hueSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--widget-surface);
+  border: 2px solid var(--widget-cta-bg);
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(14, 14, 16, 0.3);
+}
+
 .colorRow {
   display: flex;
   align-items: center;
@@ -131,46 +177,20 @@
 }
 
 .swatch {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   border: 2px solid transparent;
   cursor: pointer;
   padding: 0;
 }
 
+.swatch:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 .swatchActive {
-  border-color: var(--widget-fg);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
-}
-
-/* 컬러피커: 네이티브 input은 작은 점 + 클릭 영역만 노출 */
-.picker {
-  position: relative;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 1px dashed var(--widget-muted);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  overflow: hidden;
-}
-
-.pickerDot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-
-.picker input[type='color'] {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
-  border: none;
-  padding: 0;
+  border-color: var(--widget-cta-bg);
+  box-shadow: 0 0 0 1px var(--widget-surface);
 }

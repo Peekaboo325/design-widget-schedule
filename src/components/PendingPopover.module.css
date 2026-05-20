@@ -4,10 +4,11 @@
   right: 14px;
   bottom: 48px;
   z-index: 30;
-  background: var(--widget-card-bg);
+  background: var(--widget-surface);
+  color: var(--widget-on-surface);
   border: 1px solid var(--widget-card-border);
   border-radius: 14px;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 10px 24px rgba(14, 14, 16, 0.22);
   overflow: hidden;
   animation: popIn 0.15s ease-out;
 }
@@ -77,8 +78,8 @@
 }
 
 .checkbox:hover {
-  border-color: var(--widget-accent);
-  background: color-mix(in oklab, var(--widget-accent) 12%, transparent);
+  border-color: var(--widget-cta-bg);
+  background: var(--widget-cta-bg);
 }
 
 .client {

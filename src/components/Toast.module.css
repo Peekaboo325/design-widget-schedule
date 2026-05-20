@@ -8,13 +8,13 @@
   gap: 10px;
   padding: 8px 12px 8px 14px;
   border-radius: var(--widget-pill);
-  background: var(--widget-card-bg);
+  background: var(--widget-surface);
+  color: var(--widget-on-surface);
   border: 1px solid var(--widget-card-border);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 6px 16px rgba(14, 14, 16, 0.18);
   font-size: 12px;
   max-width: calc(100% - 24px);
   animation: toastIn 0.2s ease-out;
-  backdrop-filter: blur(12px);
   z-index: 50;
   white-space: nowrap;
   overflow: hidden;
@@ -32,15 +32,15 @@
 }
 
 .toastInfo {
-  border-left: 3px solid var(--widget-accent);
+  border-left: 3px solid var(--widget-cta-bg);
 }
 
 .toastError {
-  border-left: 3px solid #ff8a8a;
+  border-left: 3px solid #ff6b6b;
 }
 
 .message {
-  color: var(--widget-fg);
+  color: var(--widget-on-surface);
   overflow: hidden;
   text-overflow: ellipsis;
   flex: 1 1 auto;
@@ -48,8 +48,8 @@
 
 .action {
   flex-shrink: 0;
-  background: var(--widget-accent);
-  color: var(--widget-on-accent);
+  background: var(--widget-cta-bg);
+  color: var(--widget-cta-fg);
   border: none;
   border-radius: var(--widget-pill);
   padding: 4px 12px;

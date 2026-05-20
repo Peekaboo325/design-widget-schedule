@@ -9,9 +9,9 @@
   justify-content: space-between;
   gap: 6px;
   min-width: 96px;
-  background: var(--widget-overlay-strong);
-  border: 1px solid var(--widget-border);
-  color: var(--widget-fg);
+  background: var(--widget-surface);
+  border: 1px solid var(--widget-card-border);
+  color: var(--widget-on-surface);
   padding: 5px 12px;
   font-size: 11px;
   font-weight: 600;
@@ -21,15 +21,13 @@
 }
 
 .trigger:hover {
-  background: var(--widget-overlay-strong);
-  filter: brightness(1.15);
+  filter: brightness(0.97);
 }
 
 .triggerOpen,
 .trigger:focus-visible {
   outline: none;
-  border-color: var(--widget-accent);
-  background: color-mix(in oklab, var(--widget-accent) 12%, transparent);
+  border-color: var(--widget-cta-bg);
 }
 
 .triggerLabel {
@@ -42,16 +40,17 @@
 
 .caret {
   font-size: 9px;
-  color: var(--widget-muted);
+  color: var(--widget-on-surface);
+  opacity: 0.6;
   transition: transform 0.15s ease;
 }
 
 .caretOpen {
   transform: rotate(180deg);
-  color: var(--widget-accent);
+  opacity: 1;
 }
 
-/* 팝오버 메뉴 — 다크/라이트 모두 대응 */
+/* 팝오버 메뉴 — 흰 알약 카드 */
 .menu {
   position: absolute;
   top: calc(100% + 4px);
@@ -61,13 +60,12 @@
   list-style: none;
   padding: 3px;
   margin: 0;
-  background: var(--widget-bg);
-  border: 1px solid var(--widget-border);
+  background: var(--widget-surface);
+  border: 1px solid var(--widget-card-border);
   border-radius: 6px;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 6px 16px rgba(14, 14, 16, 0.18);
   max-height: 180px;
   overflow-y: auto;
-  backdrop-filter: blur(12px);
 }
 
 .option {
@@ -76,7 +74,7 @@
   text-align: left;
   background: transparent;
   border: none;
-  color: var(--widget-fg);
+  color: var(--widget-on-surface);
   font-size: 11.5px;
   padding: 5px 8px;
   border-radius: 4px;
@@ -89,11 +87,12 @@
 }
 
 .optionActive {
-  background: color-mix(in oklab, var(--widget-accent) 25%, transparent);
-  color: var(--widget-fg);
-  font-weight: 600;
+  background: var(--widget-cta-bg);
+  color: var(--widget-cta-fg);
+  font-weight: 700;
 }
 
 .optionActive:hover {
-  background: color-mix(in oklab, var(--widget-accent) 35%, transparent);
+  background: var(--widget-cta-bg);
+  filter: brightness(1.1);
 }

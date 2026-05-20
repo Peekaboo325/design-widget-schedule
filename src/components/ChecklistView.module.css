@@ -63,9 +63,10 @@
 .sectionTitle {
   margin: 0;
   font-size: 11px;
-  font-weight: 600;
-  color: var(--widget-accent);
+  font-weight: 800;
+  color: var(--widget-fg);
   letter-spacing: -0.2px;
+  text-transform: uppercase;
 }
 
 .items {
@@ -108,8 +109,8 @@
 }
 
 .checkbox:checked {
-  background: var(--widget-accent);
-  border-color: var(--widget-accent);
+  background: var(--widget-cta-bg);
+  border-color: var(--widget-cta-bg);
 }
 
 .checkbox:checked::after {
@@ -119,7 +120,7 @@
   top: 0px;
   width: 4px;
   height: 8px;
-  border: solid var(--widget-on-accent);
+  border: solid var(--widget-cta-fg);
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }

@@ -3,11 +3,12 @@
   top: calc(100% + 8px);
   left: -4px;
   z-index: 40;
-  background: var(--widget-card-bg);
+  background: var(--widget-surface);
+  color: var(--widget-on-surface);
   border: 1px solid var(--widget-card-border);
   border-radius: 14px;
   padding: 10px;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 10px 24px rgba(14, 14, 16, 0.22);
   animation: popIn 0.15s ease-out;
   width: 196px;
 }
@@ -55,8 +56,8 @@
 }
 
 .emojiActive {
-  background: color-mix(in oklab, var(--widget-accent) 22%, transparent);
-  outline: 1.5px solid var(--widget-accent);
+  background: var(--widget-overlay-strong);
+  outline: 1.5px solid var(--widget-cta-bg);
 }
 
 .customRow {
@@ -71,7 +72,7 @@
   min-width: 0;
   background: var(--widget-overlay);
   border: 1px solid var(--widget-card-border);
-  color: var(--widget-fg);
+  color: var(--widget-on-surface);
   font-family: inherit;
   font-size: 13px;
   padding: 5px 10px;
@@ -81,12 +82,12 @@
 }
 
 .customInput:focus {
-  border-color: var(--widget-accent);
+  border-color: var(--widget-cta-bg);
 }
 
 .customApply {
-  background: var(--widget-accent);
-  color: var(--widget-on-accent);
+  background: var(--widget-cta-bg);
+  color: var(--widget-cta-fg);
   border: none;
   border-radius: 50%;
   width: 24px;
