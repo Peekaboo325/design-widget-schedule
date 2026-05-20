@@ -22,27 +22,36 @@ function formatDueHeader(key) {
 }
 
 // 광고주순 모드에서 카드 안에 표시할 짧은 마감일 — YYMMDD (디자이너 파일명 패턴)
-// 예: '2026-05-20' → '260520'
+// 예: '2026-05-20' → '260520'. null/빈 값이면 '------' placeholder (완료 시트로
+// 자동 파싱이라 거의 발생 X, 발생 시에도 정렬 깔끔하게)
 function formatDueShort(iso) {
-  if (!iso) return ''
+  if (!iso) return '------'
   const [y, m, d] = iso.split('-').map(Number)
-  if (!y || !m || !d) return ''
+  if (!y || !m || !d) return '------'
   return `${String(y).slice(-2)}${String(m).padStart(2, '0')}${String(d).padStart(2, '0')}`
 }
 
-// 그룹 정렬 — 마감일: 빠른 날짜 먼저 / 광고주: 가나다순 (둘 다 '미정'은 맨 뒤)
+// 그룹 정렬 — 마감일: 빠른 날짜 먼저 / 광고주: 가나다순
+// '미정'(마감일 없음) / '검토 필요'(광고주 없음 = 데이터 오류)는 맨 뒤
 function groupBy(items, mode) {
   const map = new Map()
   for (const item of items) {
-    const key = mode === 'due'
-      ? (item['마감일'] ?? '미정')
-      : (item['광고주']?.trim() || '미정')
+    let key
+    if (mode === 'due') {
+      key = item['마감일'] ?? '미정'
+    } else {
+      const client = item['광고주']?.trim()
+      // 완료 시트까지 갔는데 광고주 빈 경우 = 데이터 오류로 추정
+      key = client || '검토 필요'
+    }
     if (!map.has(key)) map.set(key, [])
     map.get(key).push(item)
   }
   return Array.from(map.entries()).sort(([a], [b]) => {
-    if (a === '미정') return 1
-    if (b === '미정') return -1
+    const aSpecial = a === '미정' || a === '검토 필요'
+    const bSpecial = b === '미정' || b === '검토 필요'
+    if (aSpecial && !bSpecial) return 1
+    if (!aSpecial && bSpecial) return -1
     return a.localeCompare(b)
   })
 }
@@ -90,7 +99,9 @@ export default function BackupView({ backup, onBackupCheck }) {
           {groups.map(([key, items]) => (
             <div key={key} className={styles.group}>
               <div
-                className={`${styles.groupHeader} ${key === '미정' ? styles.groupHeaderMuted : ''}`}
+                className={`${styles.groupHeader} ${
+                  key === '미정' || key === '검토 필요' ? styles.groupHeaderMuted : ''
+                }`}
               >
                 {groupMode === 'due' ? formatDueHeader(key) : key}
                 <span className={styles.groupCount}>{sumQty(items)}건</span>
@@ -101,9 +112,13 @@ export default function BackupView({ backup, onBackupCheck }) {
                     <span className={styles.rowDueShort}>
                       {formatDueShort(item['마감일'])}
                     </span>
-                  ) : (
+                  ) : item['광고주']?.trim() ? (
                     <span className={styles.rowClient} title={item['광고주']}>
                       {item['광고주']}
+                    </span>
+                  ) : (
+                    <span className={`${styles.rowClient} ${styles.rowClientMuted}`}>
+                      검토 필요
                     </span>
                   )}
                   <span className={styles.rowNote} title={item['비고']}>

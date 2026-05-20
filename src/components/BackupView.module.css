@@ -152,6 +152,16 @@
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.3px;
   white-space: nowrap;
+  /* 마감일 자동 파싱이라 거의 모두 YYMMDD 6자리. width 고정으로
+     '------' placeholder 케이스에서도 비고 컬럼 정렬 깔끔 */
+  width: 52px;
+  flex-shrink: 0;
+}
+
+/* 광고주 검토 필요 — 마감일순 모드에서 광고주 빈 경우 표시 */
+.rowClientMuted {
+  color: var(--widget-muted);
+  font-weight: 700;
 }
 
 .rowClient {
