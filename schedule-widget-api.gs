@@ -13,13 +13,15 @@
 //   · expect(광고주/비고) 검증으로 행 어긋남(stale rowIndex) 방지
 // ============================================================
 
-const SCHEDULE_SHEET_NAME = '💛신규·유지보수';
-const COMPLETED_SHEET_NAME = '💚완료';
-const DATA_START_ROW = 10;
-const MEMBERS = ['부수빈', '이소빈', '조희주', '강진이', '김수현', '서아라'];
+// 같은 Apps Script 프로젝트 다른 .gs 파일(moveRowOnCheck 등)과 const 충돌 방지를 위해
+// WIDGET_ prefix로 namespace 격리
+const WIDGET_SCHEDULE_SHEET = '💛신규·유지보수';
+const WIDGET_DONE_SHEET = '💚완료';
+const WIDGET_DATA_START_ROW = 10;
+const WIDGET_MEMBERS = ['부수빈', '이소빈', '조희주', '강진이', '김수현', '서아라'];
 
 // 컬럼 인덱스 (1-based) — 신규·유지보수 시트
-const COL = {
+const WIDGET_COL = {
   광고주: 5,   // E
   작업자: 6,   // F
   수량: 9,     // I
@@ -29,7 +31,7 @@ const COL = {
 };
 
 // 컬럼 인덱스 (1-based) — 완료 시트 (백업 추적용)
-const DONE_COL = {
+const WIDGET_DONE_COL = {
   광고주: 5,   // E
   작업자: 6,   // F
   수량: 9,     // I
@@ -60,7 +62,7 @@ function doGet(e) {
     let result;
 
     if (type === 'members') {
-      result = { members: MEMBERS };
+      result = { members: WIDGET_MEMBERS };
     } else if (type === 'schedule') {
       result = getSchedule(params.member);
     } else {
@@ -75,17 +77,17 @@ function doGet(e) {
 
 function getSchedule(member) {
   if (!member) return { error: 'member 파라미터 필요' };
-  if (!MEMBERS.includes(member)) return { error: '등록되지 않은 팀원: ' + member };
+  if (!WIDGET_MEMBERS.includes(member)) return { error: '등록되지 않은 팀원: ' + member };
 
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SCHEDULE_SHEET_NAME);
-  if (!sheet) return { error: '시트를 찾을 수 없습니다: ' + SCHEDULE_SHEET_NAME };
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(WIDGET_SCHEDULE_SHEET);
+  if (!sheet) return { error: '시트를 찾을 수 없습니다: ' + WIDGET_SCHEDULE_SHEET };
 
   const lastRow = sheet.getLastRow();
-  if (lastRow < DATA_START_ROW) return { schedule: [], pending: [], summary: { total: 0, pending: 0 } };
+  if (lastRow < WIDGET_DATA_START_ROW) return { schedule: [], pending: [], summary: { total: 0, pending: 0 } };
 
   const lastCol = sheet.getLastColumn();
   const dateColCount = Math.max(0, lastCol - DATE_START_COL + 1);
-  const dataRowCount = lastRow - DATA_START_ROW + 1;
+  const dataRowCount = lastRow - WIDGET_DATA_START_ROW + 1;
 
   // 9행 날짜 헤더 (Date 객체)와 데이터 영역 배경색 일괄 조회
   let dateValues = [];
@@ -95,14 +97,14 @@ function getSchedule(member) {
       .getRange(DATE_HEADER_ROW, DATE_START_COL, 1, dateColCount)
       .getValues()[0];
     bgMatrix = sheet
-      .getRange(DATA_START_ROW, DATE_START_COL, dataRowCount, dateColCount)
+      .getRange(WIDGET_DATA_START_ROW, DATE_START_COL, dataRowCount, dateColCount)
       .getBackgrounds();
   }
 
   // 비고(J열) 셀 메모 일괄 조회 — 메모 = 원본 메일 제목
   // 위젯에서 비고 클릭 시 메일 제목 복사용
   const noteMemos = sheet
-    .getRange(DATA_START_ROW, COL.비고, dataRowCount, 1)
+    .getRange(WIDGET_DATA_START_ROW, WIDGET_COL.비고, dataRowCount, 1)
     .getNotes()
     .map((row) => row[0] || '');
 
@@ -127,22 +129,22 @@ function getSchedule(member) {
     return null;
   }
 
-  const range = sheet.getRange(DATA_START_ROW, 1, dataRowCount, COL.공유);
+  const range = sheet.getRange(WIDGET_DATA_START_ROW, 1, dataRowCount, WIDGET_COL.공유);
   const rows = range.getValues();
 
   const schedule = [];
   const pending = [];
 
   rows.forEach((row, i) => {
-    const 작업자 = String(row[COL.작업자 - 1] || '').trim();
+    const 작업자 = String(row[WIDGET_COL.작업자 - 1] || '').trim();
     if (작업자 !== member) return;
 
-    const rowIndex = DATA_START_ROW + i; // 시트 절대 행 번호 (위젯이 POST 시 사용)
-    const 광고주 = String(row[COL.광고주 - 1] || '');
-    const 수량 = row[COL.수량 - 1] || 0;
-    const 비고 = String(row[COL.비고 - 1] || '');
-    const 상태 = String(row[COL.상태 - 1] || '').trim();
-    const 공유 = row[COL.공유 - 1];
+    const rowIndex = WIDGET_DATA_START_ROW + i; // 시트 절대 행 번호 (위젯이 POST 시 사용)
+    const 광고주 = String(row[WIDGET_COL.광고주 - 1] || '');
+    const 수량 = row[WIDGET_COL.수량 - 1] || 0;
+    const 비고 = String(row[WIDGET_COL.비고 - 1] || '');
+    const 상태 = String(row[WIDGET_COL.상태 - 1] || '').trim();
+    const 공유 = row[WIDGET_COL.공유 - 1];
     const due = findDueForRow(i); // 'YYYY-MM-DD' or null
     const noteText = noteMemos[i] || null; // 비고 셀 메모(=메일 제목), 없으면 null
 
@@ -171,19 +173,19 @@ function getSchedule(member) {
 // 💚완료 시트에서 본인 작업 중 백업 미체크인 행 반환
 // 각 행: { rowIndex, 광고주, 비고, 수량, 마감일: 'YYYY-MM-DD' | null }
 function getBackupRows(member) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(COMPLETED_SHEET_NAME);
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(WIDGET_DONE_SHEET);
   if (!sheet) return [];
 
   const lastRow = sheet.getLastRow();
-  if (lastRow < DATA_START_ROW) return [];
+  if (lastRow < WIDGET_DATA_START_ROW) return [];
 
-  const dataRowCount = lastRow - DATA_START_ROW + 1;
+  const dataRowCount = lastRow - WIDGET_DATA_START_ROW + 1;
   // 광고주(E) ~ 마감일(O)까지 한 번에 읽음
   const range = sheet.getRange(
-    DATA_START_ROW,
+    WIDGET_DATA_START_ROW,
     1,
     dataRowCount,
-    DONE_COL.마감일
+    WIDGET_DONE_COL.마감일
   );
   const rows = range.getValues();
 
@@ -191,17 +193,17 @@ function getBackupRows(member) {
   const result = [];
 
   rows.forEach((row, i) => {
-    const 작업자 = String(row[DONE_COL.작업자 - 1] || '').trim();
+    const 작업자 = String(row[WIDGET_DONE_COL.작업자 - 1] || '').trim();
     if (작업자 !== member) return;
 
-    const 백업 = row[DONE_COL.백업 - 1];
+    const 백업 = row[WIDGET_DONE_COL.백업 - 1];
     if (백업 === true) return; // 이미 백업한 행은 제외
 
-    const rowIndex = DATA_START_ROW + i;
-    const 광고주 = String(row[DONE_COL.광고주 - 1] || '');
-    const 비고 = String(row[DONE_COL.비고 - 1] || '');
-    const 수량 = row[DONE_COL.수량 - 1] || 0;
-    const rawDue = row[DONE_COL.마감일 - 1];
+    const rowIndex = WIDGET_DATA_START_ROW + i;
+    const 광고주 = String(row[WIDGET_DONE_COL.광고주 - 1] || '');
+    const 비고 = String(row[WIDGET_DONE_COL.비고 - 1] || '');
+    const 수량 = row[WIDGET_DONE_COL.수량 - 1] || 0;
+    const rawDue = row[WIDGET_DONE_COL.마감일 - 1];
     const 마감일 = rawDue instanceof Date
       ? Utilities.formatDate(rawDue, tz, 'yyyy-MM-dd')
       : null;
@@ -244,19 +246,19 @@ function doPost(e) {
     const value = body.value;
     const expect = body.expect;
 
-    if (!Number.isInteger(rowIndex) || rowIndex < DATA_START_ROW) {
+    if (!Number.isInteger(rowIndex) || rowIndex < WIDGET_DATA_START_ROW) {
       return jsonResponse({ error: 'invalid rowIndex', code: 'INVALID' });
     }
 
     // setBackup은 💚완료 시트 대상. 별도 흐름으로 분기.
     if (action === 'setBackup') {
-      const doneSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(COMPLETED_SHEET_NAME);
+      const doneSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(WIDGET_DONE_SHEET);
       if (!doneSheet) return jsonResponse({ error: 'completed sheet not found', code: 'INVALID' });
       if (rowIndex > doneSheet.getLastRow()) return jsonResponse({ error: 'rowIndex out of range', code: 'STALE' });
 
       if (expect && (expect['광고주'] != null || expect['비고'] != null)) {
-        const c = String(doneSheet.getRange(rowIndex, DONE_COL.광고주).getValue() || '').trim();
-        const n = String(doneSheet.getRange(rowIndex, DONE_COL.비고).getValue() || '').trim();
+        const c = String(doneSheet.getRange(rowIndex, WIDGET_DONE_COL.광고주).getValue() || '').trim();
+        const n = String(doneSheet.getRange(rowIndex, WIDGET_DONE_COL.비고).getValue() || '').trim();
         if (c !== String(expect['광고주'] || '').trim() || n !== String(expect['비고'] || '').trim()) {
           return jsonResponse({
             error: '시트가 변경되었습니다. 새로고침 후 다시 시도해주세요.',
@@ -265,19 +267,19 @@ function doPost(e) {
         }
       }
 
-      doneSheet.getRange(rowIndex, DONE_COL.백업).setValue(Boolean(value));
+      doneSheet.getRange(rowIndex, WIDGET_DONE_COL.백업).setValue(Boolean(value));
       return jsonResponse({ ok: true, action, rowIndex, value: Boolean(value) });
     }
 
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SCHEDULE_SHEET_NAME);
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(WIDGET_SCHEDULE_SHEET);
     if (!sheet) return jsonResponse({ error: 'sheet not found', code: 'INVALID' });
     if (rowIndex > sheet.getLastRow()) return jsonResponse({ error: 'rowIndex out of range', code: 'STALE' });
 
     // 2) Optimistic Locking — 클라이언트가 본 광고주/비고가 현재 시트와 일치하는지 확인
     //    expect 제공 시에만 적용 (구버전 위젯 호환)
     if (expect && (expect['광고주'] != null || expect['비고'] != null)) {
-      const currentClient = String(sheet.getRange(rowIndex, COL.광고주).getValue() || '').trim();
-      const currentNote   = String(sheet.getRange(rowIndex, COL.비고).getValue() || '').trim();
+      const currentClient = String(sheet.getRange(rowIndex, WIDGET_COL.광고주).getValue() || '').trim();
+      const currentNote   = String(sheet.getRange(rowIndex, WIDGET_COL.비고).getValue() || '').trim();
       const expectClient  = String(expect['광고주'] || '').trim();
       const expectNote    = String(expect['비고'] || '').trim();
       if (currentClient !== expectClient || currentNote !== expectNote) {
@@ -290,13 +292,13 @@ function doPost(e) {
 
     if (action === 'setStatus') {
       if (!VALID_STATUSES.includes(value)) return jsonResponse({ error: 'invalid status', code: 'INVALID' });
-      sheet.getRange(rowIndex, COL.상태).setValue(value);
+      sheet.getRange(rowIndex, WIDGET_COL.상태).setValue(value);
       return jsonResponse({ ok: true, action, rowIndex, value });
     }
 
     if (action === 'setShare') {
       const v = Boolean(value);
-      sheet.getRange(rowIndex, COL.공유).setValue(v);
+      sheet.getRange(rowIndex, WIDGET_COL.공유).setValue(v);
 
       // GAS의 onEdit 트리거는 스크립트의 setValue로는 발동되지 않음.
       // 사용자가 체크박스를 직접 클릭한 것과 동일한 효과를 내기 위해
@@ -305,7 +307,7 @@ function doPost(e) {
       if (v === true && typeof moveRowOnCheck === 'function') {
         try {
           moveRowOnCheck({
-            range: sheet.getRange(rowIndex, COL.공유),
+            range: sheet.getRange(rowIndex, WIDGET_COL.공유),
             value: 'TRUE',
             source: SpreadsheetApp.getActiveSpreadsheet()
           });
