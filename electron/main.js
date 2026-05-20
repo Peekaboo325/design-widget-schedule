@@ -47,8 +47,8 @@ const GAS_BASE =
 
 const API_TIMEOUT_MS = 12000
 
-// 위젯 크기 프리셋 (마우스 드래그 시 가장 가까운 프리셋으로 스냅)
-// M은 사용 패턴상 의미 약해 폐기 — S(카운트만) / L(전체) 두 단계만 유지
+// 위젯 크기 프리셋 — S(카운트만) / L(전체) 두 단계.
+// 드래그 리사이즈는 제공하지 않고 헤더 사이즈 토글 버튼으로만 전환
 const SIZE_PRESETS = {
   S: { width: 240, height: 220 },
   L: { width: 360, height: 560 }
@@ -102,13 +102,9 @@ function createWindow() {
   const winOpts = {
     width: sizePreset.width,
     height: sizePreset.height,
-    minWidth: 220,
-    minHeight: 200,
-    maxWidth: 480,
-    maxHeight: 700,
     frame: false,
     transparent: true,
-    resizable: true,
+    resizable: false,
     alwaysOnTop: initial.alwaysOnTop,
     hasShadow: false,
     skipTaskbar: true, // 작업표시줄·Alt+Tab에서 숨김 (트레이 전용)
@@ -139,26 +135,6 @@ function createWindow() {
     }
   })
 
-  // 드래그 리사이즈 → 가장 가까운 프리셋으로 스냅 (300ms debounce)
-  let snapTimer = null
-  mainWindow.on('resize', () => {
-    if (snapTimer) clearTimeout(snapTimer)
-    snapTimer = setTimeout(() => {
-      if (!mainWindow || mainWindow.isDestroyed()) return
-      const [w, h] = mainWindow.getSize()
-      const key = findNearestPreset(w, h)
-      const preset = SIZE_PRESETS[key]
-      // 이미 정확한 프리셋이면 스킵 (setSize 자체가 트리거하는 무한 루프 방지)
-      if (w !== preset.width || h !== preset.height) {
-        mainWindow.setSize(preset.width, preset.height, true)
-      }
-      if (store.get('size') !== key) {
-        store.set('size', key)
-        mainWindow.webContents.send('size-changed', key)
-      }
-    }, 300)
-  })
-
   mainWindow.once('ready-to-show', () => {
     mainWindow.show()
   })
@@ -168,21 +144,6 @@ function createWindow() {
   } else {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'))
   }
-}
-
-// 현재 사이즈에 가장 가까운 프리셋 키 반환 (드래그 스냅용)
-function findNearestPreset(w, h) {
-  let nearest = 'L'
-  let minDist = Infinity
-  for (const key of Object.keys(SIZE_PRESETS)) {
-    const p = SIZE_PRESETS[key]
-    const dist = Math.abs(w - p.width) + Math.abs(h - p.height)
-    if (dist < minDist) {
-      minDist = dist
-      nearest = key
-    }
-  }
-  return nearest
 }
 
 // 위젯의 현재 위치가 어떤 디스플레이의 작업영역에 걸쳐 있는지
@@ -400,14 +361,15 @@ ipcMain.handle('window:set-opacity', (_event, value) => {
   return clamped
 })
 
-// 크기 전환 (S/M/L 프리셋)
-// resizable: true 가 기본이라 별도 트릭 없이 setSize 호출
-// 이후 resize 이벤트의 스냅 로직이 같은 프리셋으로 안정화
+// 크기 전환 (S/L 프리셋) — 사용자가 헤더 사이즈 토글로 호출
+// resizable:false 라 일시적으로 풀어준 뒤 setSize → 다시 락
 ipcMain.handle('window:set-size', (_event, sizeKey) => {
   if (!mainWindow) return null
   const preset = SIZE_PRESETS[sizeKey]
   if (!preset) return store.get('size')
+  mainWindow.setResizable(true)
   mainWindow.setSize(preset.width, preset.height, true)
+  mainWindow.setResizable(false)
   store.set('size', sizeKey)
   return sizeKey
 })

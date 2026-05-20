@@ -37,14 +37,6 @@ export default function useSettings() {
     }
   }, [])
 
-  // 드래그 스냅으로 사이즈 변경 시 settings.size 동기화
-  useEffect(() => {
-    const off = window.widgetAPI?.onSizeChanged?.((key) => {
-      setSettings((s) => ({ ...s, size: key }))
-    })
-    return () => off?.()
-  }, [])
-
   const setAlwaysOnTop = useCallback(async (value) => {
     const next = await window.widgetAPI?.setAlwaysOnTop(value)
     setSettings((s) => ({ ...s, alwaysOnTop: next ?? value }))
