@@ -48,7 +48,7 @@
 
 .caretOpen {
   transform: rotate(180deg);
-  color: var(--widget-accent);
+  color: var(--widget-accent-strong);
 }
 
 /* 팝오버 메뉴 — 다크/라이트 모두 대응 */

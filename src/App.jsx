@@ -305,13 +305,9 @@ export default function App() {
   const refreshing = scheduleLoading
   const needsMemberPick = ready && !activeMember
   const showTabs = settings.size === 'L' && !needsMemberPick
-  // 헤더 보조정보(멤버명·마지막 갱신)는 푸터 대신 헤더 두 번째 줄에 표시
+  // 헤더 보조정보(멤버명·최근 갱신) — 스케줄/디자인 체크 둘 다 동일 헤더 유지
   const showHeaderMeta =
-    !needsMemberPick &&
-    activeTab === 'schedule' &&
-    lastUpdated &&
-    !scheduleError &&
-    !settingsOpen
+    !needsMemberPick && lastUpdated && !scheduleError && !settingsOpen
 
   const headerPx = `${HEADER_H[settings.size] ?? HEADER_H.L}px`
 
@@ -340,7 +336,7 @@ export default function App() {
           {showHeaderMeta && (
             <span className={styles.headerMeta}>
               <span title={activeMember}>{shortName(activeMember)}</span>
-              {' · 마지막 갱신 '}
+              {' · 최근 갱신 '}
               {formatTime(lastUpdated)}
               {scheduleLoading ? ' · 갱신 중…' : ''}
             </span>
@@ -358,7 +354,7 @@ export default function App() {
               +{newCount}
             </button>
           )}
-          {activeTab === 'schedule' && !needsMemberPick && !settingsOpen && (
+          {!needsMemberPick && !settingsOpen && (
             <button
               type="button"
               className={`${styles.iconBtn} ${refreshing ? styles.iconBtnSpinning : ''}`}
@@ -410,7 +406,7 @@ export default function App() {
                 onClick={() => setActiveTab('schedule')}
               />
               <TabButton
-                label="셀프 체크"
+                label="디자인 체크"
                 active={activeTab === 'checklist'}
                 onClick={() => setActiveTab('checklist')}
               />

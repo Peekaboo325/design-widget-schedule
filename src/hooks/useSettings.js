@@ -121,17 +121,18 @@ export default function useSettings() {
 function applyTheme(hex, mode) {
   const root = document.documentElement
   const baseHue = hueFromHex(hex)
-  const { from, to, accent } = getThemeColors(baseHue)
+  const { from, to, accent, accentStrong, accentSoft } = getThemeColors(baseHue)
 
   // 헤더 그라데이션 두 색 — 어느 모드든 hue 평행이동 유지
   root.style.setProperty('--widget-header-from', from)
   root.style.setProperty('--widget-header-to', to)
+  // accent = 헤더 grad와 어울리는 옅은 톤 (헤더 위 점·헤더 텍스트 보조)
   root.style.setProperty('--widget-accent', accent)
-  root.style.setProperty('--widget-accent-strong', accent)
-  root.style.setProperty(
-    '--widget-accent-soft',
-    `color-mix(in oklab, ${accent} 14%, transparent)`
-  )
+  // accent-strong = 흰 배경 위 강조용 진한 톤 (chip 텍스트·dot·메트릭 카운트·아이콘)
+  // hue별 perceptual lightness 보정으로 옐로/시안에서도 가독성 확보
+  root.style.setProperty('--widget-accent-strong', accentStrong)
+  // accent-soft = 메트릭 카드/chip 배경용 흰에 가까운 옅은 hue
+  root.style.setProperty('--widget-accent-soft', accentSoft)
   // 헤더 그라데이션 위 텍스트는 항상 흰
   root.style.setProperty('--widget-on-header', '#ffffff')
 

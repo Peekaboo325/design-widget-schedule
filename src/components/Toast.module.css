@@ -32,7 +32,7 @@
 }
 
 .toastInfo {
-  border-left: 3px solid var(--widget-accent);
+  border-left: 3px solid var(--widget-accent-strong);
 }
 
 .toastError {
@@ -48,8 +48,8 @@
 
 .action {
   flex-shrink: 0;
-  background: var(--widget-accent);
-  color: var(--widget-on-accent);
+  background: var(--widget-accent-strong);
+  color: #ffffff;
   border: none;
   border-radius: var(--widget-pill);
   padding: 4px 12px;

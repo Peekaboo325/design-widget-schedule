@@ -58,15 +58,37 @@ function shiftHue(hex, deltaH) {
 }
 
 // 사용자 hue(0~360)를 받아 그라데이션 + 액센트 컬러 셋 반환
-// baseHue=347이 디폴트(=DEFAULT_TO의 hue). 그 값에서의 평행이동량 계산.
+// - from / to: 헤더 그라데이션 (옅은 톤, 현재 디폴트 핑크 두 색의 hue 평행이동)
+// - accent: 그라데이션과 어울리는 옅은 톤 (헤더 위 점 등)
+// - accentStrong: 흰 배경 위 강조용 진한 톤 (chip 텍스트·dot·메트릭 카운트 등).
+//   hue별 perceptual lightness 보정 — 옐로/시안 영역에서 L 더 낮춰 가독성 확보
+// - accentSoft: 흰에 가까운 옅은 hue 톤 (메트릭 카드/chip 배경)
 export function getThemeColors(baseHue) {
   const defaultHue = hexToHsl(DEFAULT_TO).h
   const delta = baseHue - defaultHue
   return {
     from: shiftHue(DEFAULT_FROM, delta),
     to: shiftHue(DEFAULT_TO, delta),
-    accent: shiftHue(DEFAULT_TO, delta)
+    accent: shiftHue(DEFAULT_TO, delta),
+    accentStrong: hslToHex(baseHue, 0.8, getReadableL(baseHue)),
+    accentSoft: hslToHex(baseHue, 0.85, 0.94)
   }
+}
+
+// hue별 perceptual lightness — 옐로(60)/시안(180) 근처는 사람 눈에 더 밝게 보여
+// L을 더 낮춰야 흰 배경 위 텍스트 가독성이 같은 수준으로 유지됨
+function getReadableL(hue) {
+  const yellowDist = circularDist(hue, 60)
+  const cyanDist = circularDist(hue, 180)
+  const minDist = Math.min(yellowDist, cyanDist)
+  // minDist=0(완전 옐로/시안)이면 -12%, 60도 이상 떨어지면 보정 없음
+  const adjust = Math.max(0, (60 - minDist) / 60) * 0.12
+  return 0.45 - adjust
+}
+
+function circularDist(a, b) {
+  const d = Math.abs(a - b) % 360
+  return Math.min(d, 360 - d)
 }
 
 // HEX → hue (슬라이더 위치 복원용)

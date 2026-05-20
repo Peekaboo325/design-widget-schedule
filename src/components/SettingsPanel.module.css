@@ -56,8 +56,8 @@
 }
 
 .toggleOn {
-  background: var(--widget-accent);
-  border-color: var(--widget-accent);
+  background: var(--widget-accent-strong);
+  border-color: var(--widget-accent-strong);
 }
 
 .toggleKnob {
@@ -97,8 +97,8 @@
 }
 
 .segmentActive {
-  background: var(--widget-accent);
-  color: var(--widget-on-accent);
+  background: var(--widget-accent-strong);
+  color: #ffffff;
 }
 
 /* 슬라이더 */
@@ -117,7 +117,7 @@
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: var(--widget-accent);
+  background: var(--widget-accent-strong);
   border: none;
   cursor: pointer;
 }

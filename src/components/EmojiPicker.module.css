@@ -55,8 +55,8 @@
 }
 
 .emojiActive {
-  background: color-mix(in oklab, var(--widget-accent) 22%, transparent);
-  outline: 1.5px solid var(--widget-accent);
+  background: var(--widget-accent-soft);
+  outline: 1.5px solid var(--widget-accent-strong);
 }
 
 .customRow {
@@ -81,12 +81,12 @@
 }
 
 .customInput:focus {
-  border-color: var(--widget-accent);
+  border-color: var(--widget-accent-strong);
 }
 
 .customApply {
-  background: var(--widget-accent);
-  color: var(--widget-on-accent);
+  background: var(--widget-accent-strong);
+  color: #ffffff;
   border: none;
   border-radius: 50%;
   width: 24px;
