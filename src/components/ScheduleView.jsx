@@ -41,6 +41,14 @@ export function ScheduleSkeleton({ size }) {
   )
 }
 
+// 수량 합산 — 사용자에게 '건' = 수량 단위 (행 수 아님)
+function sumQty(items) {
+  return (items ?? []).reduce(
+    (acc, it) => acc + (Number(it?.['수량']) || 1),
+    0
+  )
+}
+
 export default function ScheduleView({
   size,
   data,
@@ -48,18 +56,20 @@ export default function ScheduleView({
   onStatusClick,
   onPendingClick
 }) {
-  const { schedule, pending, summary } = data
+  const { schedule, pending } = data
+  const totalQty = sumQty(schedule)
+  const pendingQty = sumQty(pending)
 
   if (size === 'L') {
     return (
       <div className={styles.containerL}>
-        <MetricCard count={schedule.length} />
+        <MetricCard count={totalQty} />
         <CardList
           schedule={schedule}
           newKeys={newKeys}
           onStatusClick={onStatusClick}
         />
-        <PendingFooter pending={pending} onClick={onPendingClick} />
+        <PendingFooter count={pendingQty} onClick={onPendingClick} />
       </div>
     )
   }
@@ -69,9 +79,9 @@ export default function ScheduleView({
     <div className={styles.containerS}>
       <div className={styles.bigMetric}>
         <span className={styles.bigLabel}>잔여 스케줄</span>
-        <span className={styles.bigValue}>{summary.total}</span>
+        <span className={styles.bigValue}>{totalQty}</span>
       </div>
-      <PendingBadge count={summary.pending} />
+      <PendingBadge count={pendingQty} />
     </div>
   )
 }
@@ -147,9 +157,9 @@ function CardList({ schedule, newKeys, onStatusClick }) {
   )
 }
 
-// L 공유 대기 풋터 — 사람 아이콘 + 라벨 + 카운트 알약 + 화살표
-function PendingFooter({ pending, onClick }) {
-  const empty = pending.length === 0
+// L 공유 대기 풋터 — 메일 아이콘 + 라벨 + 카운트 알약 + 화살표
+function PendingFooter({ count, onClick }) {
+  const empty = count === 0
   return (
     <button
       type="button"
@@ -162,7 +172,7 @@ function PendingFooter({ pending, onClick }) {
         <MailIcon />
       </span>
       <span className={styles.pendingFooterLabel}>공유 대기</span>
-      <span className={styles.pendingFooterCount}>{pending.length}건</span>
+      <span className={styles.pendingFooterCount}>{count}건</span>
       {!empty && <span className={styles.pendingFooterArrow}>›</span>}
     </button>
   )

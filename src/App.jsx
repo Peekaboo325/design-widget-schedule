@@ -191,7 +191,7 @@ export default function App() {
                 setToast({
                   key: Date.now(),
                   tone: 'error',
-                  message: `취소 실패: ${err.message ?? err}`
+                  message: '취소 실패. 다시 시도해주세요.'
                 })
               }
             }
@@ -203,7 +203,7 @@ export default function App() {
         setToast({
           key: Date.now(),
           tone: 'error',
-          message: `변경 실패: ${err.message ?? err}`
+          message: '변경 실패. 잠시 후 다시 시도해주세요.'
         })
       }
     },
@@ -256,7 +256,7 @@ export default function App() {
                 setToast({
                   key: Date.now(),
                   tone: 'error',
-                  message: `취소 실패: ${err.message ?? err}`
+                  message: '취소 실패. 다시 시도해주세요.'
                 })
               }
             }
@@ -267,7 +267,7 @@ export default function App() {
         setToast({
           key: Date.now(),
           tone: 'error',
-          message: `공유 처리 실패: ${err.message ?? err}`
+          message: '공유 처리 실패. 다시 시도해주세요.'
         })
       }
     },

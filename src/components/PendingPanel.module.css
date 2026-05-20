@@ -146,5 +146,6 @@
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   color: var(--widget-muted);
-  min-width: 0;
+  width: 32px;
+  flex-shrink: 0;
 }

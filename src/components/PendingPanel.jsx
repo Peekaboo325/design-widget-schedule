@@ -13,6 +13,11 @@ export default function PendingPanel({ pending, onCheck, onBack }) {
     return () => document.removeEventListener('keydown', handleKey)
   }, [onBack])
 
+  const totalQty = pending.reduce(
+    (acc, it) => acc + (Number(it?.['수량']) || 1),
+    0
+  )
+
   return (
     <div className={styles.panel} role="dialog" aria-label="공유 대기">
       <div className={styles.head}>
@@ -25,7 +30,7 @@ export default function PendingPanel({ pending, onCheck, onBack }) {
           <BackIcon />
         </button>
         <span className={styles.title}>
-          공유 대기 <span className={styles.count}>{pending.length}건</span>
+          공유 대기 <span className={styles.count}>{totalQty}건</span>
         </span>
       </div>
 

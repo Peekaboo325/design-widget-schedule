@@ -213,15 +213,16 @@
   white-space: nowrap;
 }
 
-/* 수량은 대부분 1이라 노이즈. 1이면 숨김(빈 텍스트), 2 이상만 'n건' 표시.
-   색도 muted로 약화 */
+/* 수량은 대부분 1이라 노이즈. 1이면 빈 텍스트, 2 이상만 'n건' 표시.
+   행마다 폭이 달라지지 않도록 fixed width로 컬럼 위치 고정 */
 .rowQty {
   text-align: right;
   font-size: 11px;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   color: var(--widget-muted);
-  min-width: 0;
+  width: 32px;
+  flex-shrink: 0;
 }
 
 /* 상태 chip */
