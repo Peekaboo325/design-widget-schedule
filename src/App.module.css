@@ -13,7 +13,8 @@
   color: var(--widget-fg);
 }
 
-/* 헤더 카드 — 위젯 상단 영역. 그라데이션 + 위쪽만 라운드(외곽 라운드와 일치) */
+/* 헤더 카드 — 위젯 상단 영역. 그라데이션
+   본문 카드가 위로 살짝 끌어올려져서 헤더 위에 떠 보이게 함 (layered) */
 .headerCard {
   position: relative;
   flex-shrink: 0;
@@ -30,16 +31,23 @@
   -webkit-app-region: drag;
   gap: 12px;
   box-sizing: border-box;
+  z-index: 1;
 }
 
-/* 본문 카드 — 헤더 아래 채움 */
+/* 본문 카드 — 헤더 위로 살짝 끌어올림(negative margin) + 상단 라운드 + 위쪽 그림자
+   → 본문이 헤더보다 위 레이어로 떠 있는 인상 */
 .bodyCard {
+  position: relative;
+  z-index: 2;
   flex: 1;
   display: flex;
   flex-direction: column;
   min-height: 0;
   background: var(--widget-card-bg);
   box-sizing: border-box;
+  margin-top: -14px;
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 -6px 16px -4px rgba(26, 26, 31, 0.14);
 }
 
 /* 아바타 슬롯 — 헤더 안 flex item, no-drag */
