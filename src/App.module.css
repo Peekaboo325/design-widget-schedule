@@ -232,7 +232,8 @@
   height: 14px;
 }
 
-/* 새 스케줄 알림 뱃지 (+N) — 흰 알약 + 진한 액센트 텍스트 */
+/* 새 스케줄 알림 뱃지 (+N) — 흰 알약 + 진한 액센트 텍스트
+   강한 펄스: scale로 살짝 커지면서 액센트 ring이 바깥으로 퍼지며 사라짐 */
 .newBadge {
   background: var(--widget-surface);
   color: var(--widget-accent-strong);
@@ -244,8 +245,7 @@
   cursor: pointer;
   line-height: 1;
   letter-spacing: -0.2px;
-  animation: badgePulse 1.2s ease-in-out infinite;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.10);
+  animation: badgePulse 1.6s ease-out infinite;
 }
 
 .newBadge:hover {
@@ -254,12 +254,20 @@
 }
 
 @keyframes badgePulse {
-  0%,
-  100% {
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.10);
+  0% {
+    box-shadow: 0 2px 6px rgba(14, 14, 16, 0.14),
+      0 0 0 0 color-mix(in oklab, var(--widget-accent-strong) 60%, transparent);
+    transform: scale(1);
   }
-  50% {
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  60% {
+    box-shadow: 0 2px 6px rgba(14, 14, 16, 0.14),
+      0 0 0 12px color-mix(in oklab, var(--widget-accent-strong) 0%, transparent);
+    transform: scale(1.06);
+  }
+  100% {
+    box-shadow: 0 2px 6px rgba(14, 14, 16, 0.14),
+      0 0 0 0 transparent;
+    transform: scale(1);
   }
 }
 

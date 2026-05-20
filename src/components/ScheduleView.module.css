@@ -160,27 +160,36 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
 }
 
-/* 행 좌측 dot — 액센트. NEW일 때 펄스 */
+/* 행 좌측 dot — NEW일 때만 시각적으로 표시. 평소엔 자리만 차지(투명).
+   레이아웃 정렬 일관성을 위해 grid 컬럼 자체는 유지 */
 .rowDot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--widget-accent-strong);
+  background: transparent;
   flex-shrink: 0;
 }
 
 .rowDotNew {
-  animation: dotPulse 1.3s ease-in-out infinite;
+  background: var(--widget-accent-strong);
+  animation: dotPulse 1.6s ease-out infinite;
 }
 
+/* 펄스 — scale로 커지면서 ring이 바깥으로 퍼져 나가 사라짐. ease-out으로 유려하게 */
 @keyframes dotPulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 var(--widget-accent-soft);
+  0% {
+    box-shadow: 0 0 0 0
+      color-mix(in oklab, var(--widget-accent-strong) 55%, transparent);
+    transform: scale(1);
   }
-  50% {
-    box-shadow: 0 0 0 5px
-      color-mix(in oklab, var(--widget-accent-strong) 22%, transparent);
+  70% {
+    box-shadow: 0 0 0 9px
+      color-mix(in oklab, var(--widget-accent-strong) 0%, transparent);
+    transform: scale(1.15);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+    transform: scale(1);
   }
 }
 
@@ -194,22 +203,25 @@
   white-space: nowrap;
 }
 
+/* 비고(메타XX)가 수량보다 위계상 위 — 본문 색 + 600 굵기 */
 .rowNote {
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--widget-muted);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--widget-fg);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* 수량은 대부분 1이라 노이즈. 1이면 숨김(빈 텍스트), 2 이상만 'n건' 표시.
+   색도 muted로 약화 */
 .rowQty {
   text-align: right;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
-  color: var(--widget-fg);
-  min-width: 14px;
+  color: var(--widget-muted);
+  min-width: 0;
 }
 
 /* 상태 chip */

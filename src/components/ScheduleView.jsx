@@ -129,7 +129,9 @@ function CardList({ schedule, newKeys, onStatusClick }) {
             <span className={styles.rowNote} title={item['비고']}>
               {item['비고']}
             </span>
-            <span className={styles.rowQty}>{item['수량']}</span>
+            <span className={styles.rowQty}>
+              {Number(item['수량']) > 1 ? `${item['수량']}건` : ''}
+            </span>
             <button
               type="button"
               className={`${styles.chip} ${STATUS_STYLE[item['상태']] ?? ''}`}
