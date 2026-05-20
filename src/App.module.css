@@ -368,9 +368,12 @@
   word-break: keep-all;
 }
 
-/* S 사이즈 — 컴팩트, 패딩 균등 */
+/* S 사이즈 — 진짜 컴팩트 (가로 240×96).
+   .widget 흰 배경 대신 그라데이션 카드(CompactWidget) 자체가 풀크기 차지.
+   widget의 background는 투명 처리 (compactCard가 자체 그라데이션) */
 .widget[data-size='S'] {
-  border-radius: 20px;
+  border-radius: 18px;
+  background: transparent;
 }
 
 .widget[data-size='S'] .headerCard {

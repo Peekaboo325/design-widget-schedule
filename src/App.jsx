@@ -11,6 +11,7 @@ import useSchedule from './hooks/useSchedule.js'
 import useSeenSchedule from './hooks/useSeenSchedule.js'
 import Toast from './components/Toast.jsx'
 import PendingPanel from './components/PendingPanel.jsx'
+import CompactWidget from './components/CompactWidget.jsx'
 import Avatar from './components/Avatar.jsx'
 import EmojiPicker from './components/EmojiPicker.jsx'
 import { shortName, nextStatus } from './lib/format.js'
@@ -384,6 +385,28 @@ export default function App() {
     !needsMemberPick && lastUpdated && !scheduleError
 
   const headerPx = `${HEADER_H[settings.size] ?? HEADER_H.L}px`
+
+  // S 모드 — 진짜 컴팩트 한 줄 카드. 나머지 UI 전부 생략 (확대로 L 가서 조작)
+  if (settings.size === 'S') {
+    const totalQty = (scheduleData?.schedule ?? []).reduce(
+      (acc, it) => acc + (Number(it?.['수량']) || 1),
+      0
+    )
+    return (
+      <div
+        className={styles.widget}
+        data-size="S"
+        data-platform={window.widgetAPI?.platform ?? ''}
+      >
+        <CompactWidget
+          totalQty={totalQty}
+          lastUpdated={lastUpdated}
+          hasData={!!scheduleData}
+          onExpand={() => setSize('L')}
+        />
+      </div>
+    )
+  }
 
   return (
     <div

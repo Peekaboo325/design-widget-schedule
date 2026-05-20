@@ -94,7 +94,8 @@ const API_TIMEOUT_MS = 12000
 // 위젯 크기 프리셋 — S(카운트만) / L(전체) 두 단계.
 // 드래그 리사이즈는 제공하지 않고 헤더 사이즈 토글 버튼으로만 전환
 const SIZE_PRESETS = {
-  S: { width: 240, height: 220 },
+  // S는 진짜 컴팩트 — 가로형 단일 카드 (잔여 숫자 + 갱신 시간 + 확대만)
+  S: { width: 240, height: 96 },
   L: { width: 360, height: 560 }
 }
 

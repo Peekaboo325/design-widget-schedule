@@ -1,0 +1,79 @@
+/* S 컴팩트 — 전체 그라데이션 카드, 가로형 한 줄 */
+.card {
+  height: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: linear-gradient(
+    135deg,
+    var(--widget-header-from) 0%,
+    var(--widget-header-to) 100%
+  );
+  color: var(--widget-on-header);
+  -webkit-app-region: drag;
+  box-sizing: border-box;
+}
+
+/* 큰 숫자 — 강조 메인 */
+.count {
+  font-size: 42px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.textBlock {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.time {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: -0.1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: color-mix(in oklab, var(--widget-on-header) 70%, transparent);
+}
+
+/* 확대 버튼 — 우측 minimal */
+.expand {
+  background: transparent;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--widget-on-header);
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  transition: background 0.12s ease, transform 0.08s ease;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.expand:hover {
+  background: color-mix(in oklab, var(--widget-on-header) 14%, transparent);
+}
+
+.expand:active {
+  transform: scale(0.92);
+}
