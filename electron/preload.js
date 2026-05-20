@@ -3,6 +3,9 @@ import { contextBridge, ipcRenderer } from 'electron'
 // 렌더러에서 사용할 위젯 제어 API
 // 모든 호출은 main 프로세스의 ipcMain.handle 핸들러로 라우팅
 const api = {
+  // OS 식별 — CSS에서 platform별 폰트 weight 보정 등에 사용
+  platform: process.platform,
+
   // 설정 일괄 조회 (초기 마운트 시 사용)
   getSettings: () => ipcRenderer.invoke('settings:get-all'),
 

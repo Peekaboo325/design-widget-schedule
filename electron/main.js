@@ -44,10 +44,15 @@ stamp(`resourcesPath=${process.resourcesPath}`)
 
 // macOS Sequoia(15.x)에서 unsigned 앱의 ready 이벤트 hang 회피
 // keychain/GPU 권한 dialog 화면 밖 대기로 app.whenReady가 resolve 안 되는 케이스가 있음
+// Windows는 GPU 가속 살려야 폰트·렌더링 품질 ↑
 try {
-  app.commandLine.appendSwitch('use-mock-keychain')
-  app.commandLine.appendSwitch('disable-gpu-sandbox')
-  app.disableHardwareAcceleration()
+  if (process.platform === 'darwin') {
+    app.commandLine.appendSwitch('use-mock-keychain')
+    app.commandLine.appendSwitch('disable-gpu-sandbox')
+    app.disableHardwareAcceleration()
+  }
+  // Windows의 폰트 hinting을 꺼서 맥처럼 부드러운 렌더링 (sharp픽셀 톤 → smooth 곡선)
+  app.commandLine.appendSwitch('font-render-hinting', 'none')
   stamp('command line switches applied')
 } catch (err) {
   logCrash('command line switch failed', err)

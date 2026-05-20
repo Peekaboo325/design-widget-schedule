@@ -344,6 +344,7 @@ export default function App() {
     <div
       className={styles.widget}
       data-size={settings.size}
+      data-platform={window.widgetAPI?.platform ?? ''}
       style={{ '--header-h': headerPx }}
     >
       <div className={styles.headerCard} style={{ height: headerPx }}>

@@ -395,3 +395,12 @@
 .widget[data-size='S'] .headerActions {
   gap: 6px;
 }
+
+/* Windows 폰트 보정 — ClearType이 굵기를 더 야위게 그려서 강조 텍스트의 시각 무게가 약함.
+   주요 강조 위치만 한 단계씩 살짝 올려 맥 톤에 가깝게 */
+.widget[data-platform='win32'] .date {
+  font-weight: 850;
+}
+.widget[data-platform='win32'] .headerMeta {
+  font-weight: 600;
+}

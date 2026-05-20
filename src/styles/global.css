@@ -102,6 +102,14 @@ button {
   background: transparent;
 }
 
+/* Windows 폰트 보정 — body 전체에 살짝 두꺼움. ClearType의 야윈 톤 보정.
+   CSS 모듈 안 클래스에 일괄 적용하기 어려워 글로벌에서 selector로 처리.
+   강조 weight(700/800/900)는 살짝 위로 매핑 */
+[data-platform='win32'] {
+  /* SUIT 폰트의 variable weight라 가능. ClearType 환경에서 시각 무게 보정 */
+  text-rendering: geometricPrecision;
+}
+
 /* 스켈레톤 — 데이터 로딩 중 placeholder. shimmer 그라데이션 애니메이션 */
 .skeleton {
   position: relative;
