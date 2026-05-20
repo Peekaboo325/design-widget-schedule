@@ -28,12 +28,18 @@ IMC 3본부 디자인팀 팀원용 바탕화면 위젯 (Electron + React + Vite)
 - 커밋 메시지는 **한국어**, 무엇을·왜 바꿨는지가 드러나게 작성.
   - 예: `2단계: 투명도 슬라이더와 항상 위 고정 토글 추가`
   - 예: `버그 수정: preload 경로 불일치로 인한 IPC 누락 해결`
-- 푸시 대상은 현재 작업 브랜치 (기본: `claude/start-stage-one-RHl4J`).
 - 푸시 실패 시 원인 보고 후 재시도 (강제 푸시 금지).
-- **작업 브랜치 푸시 후 매번 `main`에도 fast-forward 머지하여 푸시.**
-  - 다른 컴퓨터에서 clone/pull 받을 때 항상 최신 상태가 되도록.
+
+### 브랜치 정책 (중요)
+- **작업 브랜치 이름은 매 세션마다 시스템이 새로 지정함** (예: `claude/review-widget-handoff-Dw3yV`).
+  사용자가 외울 필요 없음. 세션 시작 시 안내되는 이름을 그대로 사용.
+- Claude 측: 지정된 작업 브랜치에 커밋·푸시. 그 후 **항상 `main`에도 fast-forward 머지하여 푸시**.
   - 흐름: 작업 브랜치 커밋·푸시 → `git checkout main` → `git merge --ff-only <작업브랜치>` → `git push origin main` → 다시 작업 브랜치로 체크아웃.
-  - fast-forward 불가 시(예외 케이스) 사용자에게 보고 후 결정.
+  - fast-forward 불가 시 사용자에게 보고 후 결정 (강제 푸시 금지).
+- **사용자 측 (로컬): 항상 `main` 브랜치에서 작업하고 `main`에서 pull 받을 것.**
+  - 모든 변경이 main에도 들어가므로 main만 보면 항상 최신.
+  - 옛 작업 브랜치(예: `claude/start-stage-one-RHl4J`)는 로컬에 남아 있어도 무시. 정리하고 싶으면 `git branch -D <이름>` + `git remote prune origin`.
+  - 다른 컴퓨터에서 새로 받을 때도 main 기준.
 
 ## 커뮤니케이션
 - 한국어로 대화.
@@ -55,6 +61,8 @@ IMC 3본부 디자인팀 팀원용 바탕화면 위젯 (Electron + React + Vite)
   - dependencies가 늘어났을 가능성 있음 (electron-vite는 main 의존성을 번들하지 않고 런타임 `node_modules`에서 찾음).
   - 빠뜨리면 dev 실행 시 `ERR_MODULE_NOT_FOUND` 발생.
 - dependencies가 추가/변경되는 작업 단위에서는 응답에 **"`npm install` 필요"** 라고 명시할 것.
+- **dev 서버 재시작이 필요한 경우**: CSS / Electron 메인 프로세스 변경이 반영 안 보이면 Vite HMR 캐시 가능성. `Ctrl+C` 후 `npm run dev` 다시 + 위젯 창에서 `Ctrl+Shift+R` 강제 새로고침.
+- **pull 받았는데 변경이 안 보이면** 가장 먼저 확인: `git log -3 --oneline` + `git status`로 현재 브랜치가 `main`인지, 최상단 커밋이 기대한 커밋인지 점검.
 
 ## 데이터 소스
 - GAS Web App: `schedule-widget-api.gs`
@@ -68,10 +76,12 @@ design-widget-schedule/
 ├── CLAUDE.md
 ├── SPEC.md
 ├── CHECKLIST.md
+├── HANDOFF.md
 ├── electron/          # Electron 메인 프로세스
 ├── src/               # React 렌더러
 │   ├── components/    # UI 컴포넌트
 │   ├── hooks/         # 커스텀 훅 (API 호출 등)
+│   ├── lib/           # 유틸 (api, format, emoji)
 │   ├── styles/        # 스타일
 │   └── App.jsx
 ├── package.json
