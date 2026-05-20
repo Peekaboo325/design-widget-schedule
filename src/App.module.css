@@ -320,6 +320,27 @@
   border-bottom-color: var(--widget-accent-strong);
 }
 
+/* 탭 옆 작은 카운트 알약 — 백업 대기 건수 압박용 😡 */
+.tabBadge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  color: var(--widget-accent-strong);
+  background: var(--widget-accent-soft);
+  border-radius: var(--widget-pill);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+  vertical-align: 1px;
+}
+
+.tabActive .tabBadge {
+  color: #ffffff;
+  background: var(--widget-accent-strong);
+}
+
 .body {
   flex: 1;
   padding: 16px 16px 8px;

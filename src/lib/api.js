@@ -46,6 +46,11 @@ export async function setRowShare(rowIndex, shared, expect) {
   return postApi({ action: 'setShare', rowIndex, value: Boolean(shared), expect })
 }
 
+// 행 백업 토글 (💚완료 시트 M열): TRUE/FALSE
+export async function setRowBackup(rowIndex, backed, expect) {
+  return postApi({ action: 'setBackup', rowIndex, value: Boolean(backed), expect })
+}
+
 // 팀원 목록 조회
 // 응답: { members: string[] }
 export async function fetchMembers() {
@@ -67,7 +72,12 @@ export async function fetchSchedule(memberName) {
   return {
     schedule: data.schedule,
     pending: data.pending,
+    backup: Array.isArray(data.backup) ? data.backup : [],
     summary:
-      data.summary ?? { total: data.schedule.length, pending: data.pending.length }
+      data.summary ?? {
+        total: data.schedule.length,
+        pending: data.pending.length,
+        backup: Array.isArray(data.backup) ? data.backup.length : 0
+      }
   }
 }

@@ -1,0 +1,192 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  gap: 10px;
+}
+
+/* 메트릭 카드 — 잔여 스케줄과 동일 톤. 압박감 살짝 더 */
+.metricCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: var(--widget-accent-soft);
+  border-radius: 16px;
+  flex-shrink: 0;
+}
+
+.metricLabel {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--widget-fg);
+  letter-spacing: -0.2px;
+}
+
+.metricCount {
+  font-size: 30px;
+  font-weight: 900;
+  color: var(--widget-accent-strong);
+  letter-spacing: -1.2px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.metricUnit {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+/* 그룹화 토글 (마감일순 / 광고주순) */
+.toolbar {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 0 2px;
+}
+
+.toolBtn {
+  background: var(--widget-overlay);
+  border: 1px solid var(--widget-card-border);
+  color: var(--widget-muted);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: var(--widget-pill);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.toolBtn:hover {
+  color: var(--widget-fg);
+}
+
+.toolBtnActive {
+  background: var(--widget-accent-soft);
+  color: var(--widget-accent-strong);
+  border-color: transparent;
+}
+
+/* 그룹 + 행 카드 */
+.cardList {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  padding: 2px 2px 48px;
+}
+
+.listEmpty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--widget-muted);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.groupHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--widget-accent-strong);
+  letter-spacing: -0.2px;
+  padding: 2px 4px;
+}
+
+.groupHeaderMuted {
+  color: var(--widget-muted);
+  font-weight: 700;
+}
+
+.groupCount {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--widget-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.rowCard {
+  display: grid;
+  grid-template-columns: minmax(60px, 1.2fr) minmax(60px, 1.6fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--widget-surface);
+  border: 1px solid var(--widget-card-border);
+  border-radius: 12px;
+  transition: border-color 0.12s ease;
+}
+
+.rowClient {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--widget-fg);
+  letter-spacing: -0.3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowNote {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--widget-fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowQty {
+  text-align: right;
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--widget-muted);
+  width: 32px;
+  flex-shrink: 0;
+}
+
+/* 완료 버튼 — chip 톤 통일 (옅은 액센트 + 진한 액센트 텍스트) */
+.doneBtn {
+  background: var(--widget-accent-soft);
+  color: var(--widget-accent-strong);
+  border: none;
+  border-radius: var(--widget-pill);
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  cursor: pointer;
+  transition: filter 0.12s ease, transform 0.08s ease;
+  font-family: inherit;
+}
+
+.doneBtn:hover {
+  filter: brightness(0.95);
+}
+
+.doneBtn:active {
+  transform: scale(0.94);
+}

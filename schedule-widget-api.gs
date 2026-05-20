@@ -14,10 +14,11 @@
 // ============================================================
 
 const SCHEDULE_SHEET_NAME = '💛신규·유지보수';
+const COMPLETED_SHEET_NAME = '💚완료';
 const DATA_START_ROW = 10;
 const MEMBERS = ['부수빈', '이소빈', '조희주', '강진이', '김수현', '서아라'];
 
-// 컬럼 인덱스 (1-based)
+// 컬럼 인덱스 (1-based) — 신규·유지보수 시트
 const COL = {
   광고주: 5,   // E
   작업자: 6,   // F
@@ -25,6 +26,16 @@ const COL = {
   비고: 10,    // J
   상태: 11,    // K
   공유: 12,    // L
+};
+
+// 컬럼 인덱스 (1-based) — 완료 시트 (백업 추적용)
+const DONE_COL = {
+  광고주: 5,   // E
+  작업자: 6,   // F
+  수량: 9,     // I
+  비고: 10,    // J
+  백업: 13,    // M
+  마감일: 15,  // O (날짜 그룹화에 사용)
 };
 
 // 마감일 추출용
@@ -142,14 +153,63 @@ function getSchedule(member) {
     }
   });
 
+  // 완료 시트에서 백업 안 한 행 fetch
+  const backup = getBackupRows(member);
+
   return {
     schedule,
     pending,
+    backup,
     summary: {
       total: schedule.length,
       pending: pending.length,
+      backup: backup.length,
     },
   };
+}
+
+// 💚완료 시트에서 본인 작업 중 백업 미체크인 행 반환
+// 각 행: { rowIndex, 광고주, 비고, 수량, 마감일: 'YYYY-MM-DD' | null }
+function getBackupRows(member) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(COMPLETED_SHEET_NAME);
+  if (!sheet) return [];
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < DATA_START_ROW) return [];
+
+  const dataRowCount = lastRow - DATA_START_ROW + 1;
+  // 광고주(E) ~ 마감일(O)까지 한 번에 읽음
+  const range = sheet.getRange(
+    DATA_START_ROW,
+    1,
+    dataRowCount,
+    DONE_COL.마감일
+  );
+  const rows = range.getValues();
+
+  const tz = Session.getScriptTimeZone();
+  const result = [];
+
+  rows.forEach((row, i) => {
+    const 작업자 = String(row[DONE_COL.작업자 - 1] || '').trim();
+    if (작업자 !== member) return;
+
+    const 백업 = row[DONE_COL.백업 - 1];
+    if (백업 === true) return; // 이미 백업한 행은 제외
+
+    const rowIndex = DATA_START_ROW + i;
+    const 광고주 = String(row[DONE_COL.광고주 - 1] || '');
+    const 비고 = String(row[DONE_COL.비고 - 1] || '');
+    const 수량 = row[DONE_COL.수량 - 1] || 0;
+    const rawDue = row[DONE_COL.마감일 - 1];
+    const 마감일 = rawDue instanceof Date
+      ? Utilities.formatDate(rawDue, tz, 'yyyy-MM-dd')
+      : null;
+
+    result.push({ rowIndex, 광고주, 비고, 수량, 마감일 });
+  });
+
+  return result;
 }
 
 // ============================================================
@@ -186,6 +246,27 @@ function doPost(e) {
 
     if (!Number.isInteger(rowIndex) || rowIndex < DATA_START_ROW) {
       return jsonResponse({ error: 'invalid rowIndex', code: 'INVALID' });
+    }
+
+    // setBackup은 💚완료 시트 대상. 별도 흐름으로 분기.
+    if (action === 'setBackup') {
+      const doneSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(COMPLETED_SHEET_NAME);
+      if (!doneSheet) return jsonResponse({ error: 'completed sheet not found', code: 'INVALID' });
+      if (rowIndex > doneSheet.getLastRow()) return jsonResponse({ error: 'rowIndex out of range', code: 'STALE' });
+
+      if (expect && (expect['광고주'] != null || expect['비고'] != null)) {
+        const c = String(doneSheet.getRange(rowIndex, DONE_COL.광고주).getValue() || '').trim();
+        const n = String(doneSheet.getRange(rowIndex, DONE_COL.비고).getValue() || '').trim();
+        if (c !== String(expect['광고주'] || '').trim() || n !== String(expect['비고'] || '').trim()) {
+          return jsonResponse({
+            error: '시트가 변경되었습니다. 새로고침 후 다시 시도해주세요.',
+            code: 'STALE',
+          });
+        }
+      }
+
+      doneSheet.getRange(rowIndex, DONE_COL.백업).setValue(Boolean(value));
+      return jsonResponse({ ok: true, action, rowIndex, value: Boolean(value) });
     }
 
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SCHEDULE_SHEET_NAME);

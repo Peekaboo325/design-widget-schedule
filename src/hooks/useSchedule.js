@@ -65,6 +65,7 @@ export default function useSchedule(memberName) {
         window.widgetAPI?.setCachedSchedule?.(memberName, {
           schedule: result.schedule,
           pending: result.pending,
+          backup: result.backup ?? [],
           summary: result.summary,
           lastUpdated: updatedAt.getTime()
         })

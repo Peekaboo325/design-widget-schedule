@@ -3,6 +3,7 @@ import styles from './App.module.css'
 import SettingsPanel from './components/SettingsPanel.jsx'
 import ScheduleView, { ScheduleSkeleton } from './components/ScheduleView.jsx'
 import ChecklistView from './components/ChecklistView.jsx'
+import BackupView from './components/BackupView.jsx'
 import MemberPicker from './components/MemberPicker.jsx'
 import useSettings from './hooks/useSettings.js'
 import useMembers from './hooks/useMembers.js'
@@ -14,7 +15,7 @@ import Avatar from './components/Avatar.jsx'
 import EmojiPicker from './components/EmojiPicker.jsx'
 import { shortName, nextStatus } from './lib/format.js'
 import { resolveMemberEmoji } from './lib/emoji.js'
-import { setRowStatus, setRowShare } from './lib/api.js'
+import { setRowStatus, setRowShare, setRowBackup } from './lib/api.js'
 import { codeFromGas, codeFromNetworkError, toastForCode } from './lib/errors.js'
 
 // API 에러를 사용자 친화 토스트로 변환 (E01~E99 + 친화 메시지)
@@ -292,6 +293,50 @@ export default function App() {
     [mutateSchedule, refresh]
   )
 
+  // 백업 완료 처리 — 💚완료 시트 M열 TRUE + 낙관적으로 backup에서 제거 + Undo
+  const handleBackupCheck = useCallback(
+    async (item) => {
+      if (!item || !item.rowIndex) return
+      const rowIndex = item.rowIndex
+
+      mutateSchedule((prev) => {
+        const updatedBackup = (prev.backup ?? []).filter(
+          (b) => b.rowIndex !== rowIndex
+        )
+        return {
+          ...prev,
+          backup: updatedBackup,
+          summary: { ...prev.summary, backup: updatedBackup.length }
+        }
+      })
+
+      const expect = { 광고주: item['광고주'], 비고: item['비고'] }
+      try {
+        await setRowBackup(rowIndex, true, expect)
+        setToast({
+          key: Date.now(),
+          message: `${item['광고주']} 백업 처리됨`,
+          tone: 'info',
+          action: {
+            label: '취소',
+            onClick: async () => {
+              try {
+                await setRowBackup(rowIndex, false, expect)
+                refresh()
+              } catch (err) {
+                setToast(buildErrorToast(err, '취소 실패.'))
+              }
+            }
+          }
+        })
+      } catch (err) {
+        refresh()
+        setToast(buildErrorToast(err, '백업 처리 실패.'))
+      }
+    },
+    [mutateSchedule, refresh]
+  )
+
   // 트레이 '새로고침' 메뉴 → 즉시 재조회
   useEffect(() => {
     const off = window.widgetAPI?.onTrayRefresh?.(() => refresh())
@@ -452,6 +497,12 @@ export default function App() {
                 onClick={() => setActiveTab('schedule')}
               />
               <TabButton
+                label="백업 관리"
+                active={activeTab === 'backup'}
+                onClick={() => setActiveTab('backup')}
+                badge={scheduleData?.backup?.length ?? 0}
+              />
+              <TabButton
                 label="디자인 체크"
                 active={activeTab === 'checklist'}
                 onClick={() => setActiveTab('checklist')}
@@ -472,6 +523,11 @@ export default function App() {
                 checked={checked}
                 onToggle={toggleChecked}
                 onResetAll={resetChecked}
+              />
+            ) : activeTab === 'backup' ? (
+              <BackupView
+                backup={scheduleData?.backup ?? []}
+                onBackupCheck={handleBackupCheck}
               />
             ) : pendingViewOpen && settings.size === 'L' ? (
               <PendingPanel
@@ -595,7 +651,7 @@ function RefreshIcon() {
   )
 }
 
-function TabButton({ label, active, onClick }) {
+function TabButton({ label, active, onClick, badge }) {
   return (
     <button
       type="button"
@@ -603,6 +659,7 @@ function TabButton({ label, active, onClick }) {
       onClick={onClick}
     >
       {label}
+      {badge > 0 && <span className={styles.tabBadge}>{badge}</span>}
     </button>
   )
 }
