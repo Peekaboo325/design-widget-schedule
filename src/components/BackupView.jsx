@@ -75,7 +75,9 @@ export default function BackupView({ backup, onBackupCheck }) {
           <p className={styles.empty}>백업 대기 항목 없음</p>
         </div>
       ) : (
-        <div className={styles.cardList}>
+        <div
+          className={`${styles.cardList} ${groupMode === 'client' ? styles.byClient : ''}`}
+        >
           {groups.map(([key, items]) => (
             <div key={key} className={styles.group}>
               <div
@@ -86,9 +88,11 @@ export default function BackupView({ backup, onBackupCheck }) {
               </div>
               {items.map((item, i) => (
                 <div key={`${key}-${i}`} className={styles.rowCard}>
-                  <span className={styles.rowClient} title={item['광고주']}>
-                    {item['광고주']}
-                  </span>
+                  {groupMode !== 'client' && (
+                    <span className={styles.rowClient} title={item['광고주']}>
+                      {item['광고주']}
+                    </span>
+                  )}
                   <span className={styles.rowNote} title={item['비고']}>
                     {item['비고']}
                   </span>

@@ -521,9 +521,16 @@ function friendlyNetworkError(err) {
 // GAS API POST — 시트 쓰기 (상태/공유 변경)
 // body: { action: 'setStatus'|'setShare', rowIndex, value }
 // 응답: { ok: true, data } | { ok: false, error }
+// 허용된 POST 액션 — 렌더러가 임의 action 보내 GAS에 도달하지 못하게 main에서 차단.
+// 사내 도구라 위협은 낮지만 견고함 ↑
+const ALLOWED_POST_ACTIONS = new Set(['setStatus', 'setShare', 'setBackup'])
+
 ipcMain.handle('api:post', async (_event, body) => {
   if (!body || typeof body !== 'object') {
-    return { ok: false, error: 'invalid body' }
+    return { ok: false, error: 'invalid body', code: 'INVALID' }
+  }
+  if (!ALLOWED_POST_ACTIONS.has(body.action)) {
+    return { ok: false, error: 'invalid action', code: 'INVALID' }
   }
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), API_TIMEOUT_MS)

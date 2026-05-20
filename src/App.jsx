@@ -503,7 +503,7 @@ export default function App() {
                 badge={scheduleData?.backup?.length ?? 0}
               />
               <TabButton
-                label="디자인 체크"
+                label="체크리스트"
                 active={activeTab === 'checklist'}
                 onClick={() => setActiveTab('checklist')}
               />

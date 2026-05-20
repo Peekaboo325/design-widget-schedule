@@ -139,6 +139,12 @@
   transition: border-color 0.12s ease;
 }
 
+/* 광고주순 모드 — 광고주명은 그룹 헤더에 이미 있어서 카드에선 생략.
+   grid 컬럼도 비고/수량/완료 3개로 단축 */
+.byClient .rowCard {
+  grid-template-columns: minmax(60px, 1fr) auto auto;
+}
+
 .rowClient {
   font-size: 14px;
   font-weight: 800;
