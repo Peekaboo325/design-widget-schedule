@@ -225,7 +225,8 @@
   white-space: nowrap;
 }
 
-/* 비고(메타XX)가 수량보다 위계상 위 — 본문 색 + 600 굵기 */
+/* 비고(메타XX)가 수량보다 위계상 위 — 본문 색 + 600 굵기
+   button으로 쓰일 때는 reset (CardList의 노트 메모 클릭 가능 케이스) */
 .rowNote {
   font-size: 13px;
   font-weight: 600;
@@ -233,6 +234,25 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  text-align: left;
+}
+
+/* 노트(=원본 메일 제목) 있는 비고 — 클릭 시 클립보드 복사
+   시각 시그널은 hover 시 underline + cursor pointer */
+.rowNoteClickable {
+  cursor: pointer;
+  transition: color 0.12s ease;
+}
+
+.rowNoteClickable:hover {
+  color: var(--widget-accent-strong);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
 }
 
 /* 수량은 대부분 1이라 노이즈. 1이면 빈 텍스트, 2 이상만 'n건' 표시.

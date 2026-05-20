@@ -54,7 +54,8 @@ export default function ScheduleView({
   data,
   newKeys,
   onStatusClick,
-  onPendingClick
+  onPendingClick,
+  onCopyNote
 }) {
   const { schedule, pending } = data
   const totalQty = sumQty(schedule)
@@ -68,6 +69,7 @@ export default function ScheduleView({
           schedule={schedule}
           newKeys={newKeys}
           onStatusClick={onStatusClick}
+          onCopyNote={onCopyNote}
         />
         <PendingFooter count={pendingQty} onClick={onPendingClick} />
       </div>
@@ -139,7 +141,7 @@ function formatDueHeader(key) {
 // L 행 카드 리스트 — 마감일 그룹별로 묶음
 // NEW dot은 grid 컬럼이 아니라 카드 위 absolute로 떠 있음 →
 // NEW 발생/소멸 시 다른 행 정렬에 영향 없음 (개별 레이아웃만 변경)
-function CardList({ schedule, newKeys, onStatusClick }) {
+function CardList({ schedule, newKeys, onStatusClick, onCopyNote }) {
   if (schedule.length === 0) {
     return (
       <div className={styles.listEmpty}>
@@ -167,9 +169,20 @@ function CardList({ schedule, newKeys, onStatusClick }) {
                 <span className={styles.rowClient} title={item['광고주']}>
                   {item['광고주']}
                 </span>
-                <span className={styles.rowNote} title={item['비고']}>
-                  {item['비고']}
-                </span>
+                {item.noteText ? (
+                  <button
+                    type="button"
+                    className={`${styles.rowNote} ${styles.rowNoteClickable}`}
+                    onClick={() => onCopyNote?.(item.noteText)}
+                    title={`클릭해서 메일 제목 복사:\n${item.noteText}`}
+                  >
+                    {item['비고']}
+                  </button>
+                ) : (
+                  <span className={styles.rowNote} title={item['비고']}>
+                    {item['비고']}
+                  </span>
+                )}
                 <span className={styles.rowQty}>
                   {Number(item['수량']) > 1 ? `${item['수량']}건` : ''}
                 </span>

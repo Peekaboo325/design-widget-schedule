@@ -215,6 +215,25 @@ export default function App() {
   const handlePendingClick = useCallback(() => setPendingViewOpen(true), [])
   const closePendingView = useCallback(() => setPendingViewOpen(false), [])
 
+  // 비고 셀 메모(=원본 메일 제목) 클립보드 복사
+  const handleCopyNote = useCallback(async (noteText) => {
+    if (!noteText) return
+    try {
+      await navigator.clipboard.writeText(noteText)
+      setToast({
+        key: Date.now(),
+        tone: 'info',
+        message: '메일 제목 복사됨'
+      })
+    } catch (err) {
+      setToast({
+        key: Date.now(),
+        tone: 'error',
+        message: '복사 실패'
+      })
+    }
+  }, [])
+
   // 공유 대기가 0건이 되면 자동으로 패널 닫음 (마지막 항목 처리 후)
   useEffect(() => {
     if (pendingViewOpen && (scheduleData?.pending?.length ?? 0) === 0) {
@@ -455,6 +474,7 @@ export default function App() {
               <PendingPanel
                 pending={scheduleData?.pending ?? []}
                 onCheck={handleShareCheck}
+                onCopyNote={handleCopyNote}
                 onBack={closePendingView}
               />
             ) : (
@@ -469,6 +489,7 @@ export default function App() {
                 newKeys={newKeys}
                 onStatusClick={handleStatusClick}
                 onPendingClick={handlePendingClick}
+                onCopyNote={handleCopyNote}
               />
             )}
           </main>
@@ -594,7 +615,8 @@ function Body({
   scheduleError,
   newKeys,
   onStatusClick,
-  onPendingClick
+  onPendingClick,
+  onCopyNote
 }) {
   if (membersError) {
     return (
@@ -627,6 +649,7 @@ function Body({
       newKeys={newKeys}
       onStatusClick={onStatusClick}
       onPendingClick={onPendingClick}
+      onCopyNote={onCopyNote}
     />
   )
 }

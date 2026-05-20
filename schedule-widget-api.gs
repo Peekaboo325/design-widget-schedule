@@ -88,6 +88,13 @@ function getSchedule(member) {
       .getBackgrounds();
   }
 
+  // 비고(J열) 셀 메모 일괄 조회 — 메모 = 원본 메일 제목
+  // 위젯에서 비고 클릭 시 메일 제목 복사용
+  const noteMemos = sheet
+    .getRange(DATA_START_ROW, COL.비고, dataRowCount, 1)
+    .getNotes()
+    .map((row) => row[0] || '');
+
   const tz = Session.getScriptTimeZone();
   function findDueForRow(rowIdxInBlock) {
     const bgRow = bgMatrix[rowIdxInBlock] || [];
@@ -126,11 +133,12 @@ function getSchedule(member) {
     const 상태 = String(row[COL.상태 - 1] || '').trim();
     const 공유 = row[COL.공유 - 1];
     const due = findDueForRow(i); // 'YYYY-MM-DD' or null
+    const noteText = noteMemos[i] || null; // 비고 셀 메모(=메일 제목), 없으면 null
 
     if (상태 === '완료' && 공유 !== true) {
-      pending.push({ rowIndex, 광고주, 비고, 수량 });
+      pending.push({ rowIndex, 광고주, 비고, 수량, noteText });
     } else if (상태 !== '완료') {
-      schedule.push({ rowIndex, 광고주, 비고, 수량, 상태, due });
+      schedule.push({ rowIndex, 광고주, 비고, 수량, 상태, due, noteText });
     }
   });
 
