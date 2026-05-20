@@ -17,9 +17,17 @@ import Store from 'electron-store'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-// 패키지 환경 크래시 진단용 — 홈 폴더에 자동 로그
-// 위젯이 dock에서 튀고 안 뜨는 등의 silent crash 발생 시 ~/widget-debug.log에 기록
+// 패키지 환경 크래시·hang 진단용 — 홈 폴더에 자동 로그
+// 단계별로 stamp 호출하여 어디서 멈추는지 추적
 const DEBUG_LOG = path.join(os.homedir(), 'widget-debug.log')
+function stamp(label) {
+  try {
+    fs.appendFileSync(
+      DEBUG_LOG,
+      `[${new Date().toISOString()}] ${label}\n`
+    )
+  } catch (_) {}
+}
 function logCrash(prefix, err) {
   try {
     const line = `[${new Date().toISOString()}] ${prefix}\n${err?.stack || err}\n\n`
@@ -28,6 +36,11 @@ function logCrash(prefix, err) {
 }
 process.on('uncaughtException', (err) => logCrash('uncaughtException', err))
 process.on('unhandledRejection', (err) => logCrash('unhandledRejection', err))
+
+stamp('=== main process start ===')
+stamp(`isPackaged=${app.isPackaged} platform=${process.platform} version=${process.version}`)
+stamp(`__dirname=${__dirname}`)
+stamp(`resourcesPath=${process.resourcesPath}`)
 
 // 트레이/창 아이콘 — OS별로 다른 파일
 // Windows: .ico (작업표시줄 자연스러움)
@@ -77,6 +90,7 @@ function migrateSize(stored) {
 }
 
 // 영구 저장: 설정값 + 데이터 캐시 (다음 실행 시 즉시 복원)
+stamp('about to new Store')
 const store = new Store({
   defaults: {
     alwaysOnTop: true,
@@ -108,6 +122,7 @@ let tray = null
 let isQuitting = false
 
 function createWindow() {
+  stamp('createWindow() called')
   const migratedSize = migrateSize(store.get('size'))
   if (migratedSize !== store.get('size')) store.set('size', migratedSize)
   const initial = {
@@ -143,7 +158,9 @@ function createWindow() {
     winOpts.icon = iconImage
   }
 
+  stamp('about to new BrowserWindow')
   mainWindow = new BrowserWindow(winOpts)
+  stamp('BrowserWindow created')
 
   // 일반 close 시도(Alt+F4 등)는 hide로 대체 — 트레이 '종료'에서만 실제 닫힘
   mainWindow.on('close', (e) => {
@@ -154,13 +171,17 @@ function createWindow() {
   })
 
   mainWindow.once('ready-to-show', () => {
+    stamp('ready-to-show — calling show()')
     mainWindow.show()
   })
 
   if (process.env['ELECTRON_RENDERER_URL']) {
+    stamp(`loadURL dev=${process.env['ELECTRON_RENDERER_URL']}`)
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'))
+    const indexPath = path.join(__dirname, '../renderer/index.html')
+    stamp(`loadFile=${indexPath} exists=${fs.existsSync(indexPath)}`)
+    mainWindow.loadFile(indexPath)
   }
 }
 
@@ -580,16 +601,22 @@ if (!gotSingleInstanceLock) {
     }
   })
 
+  stamp('about to app.whenReady')
   app.whenReady().then(() => {
+    stamp('app.whenReady resolved')
     // 저장된 자동 실행 설정을 OS에 적용 (앱 시작 때마다 동기화)
     applyLaunchOnBoot(store.get('launchOnBoot'))
+    stamp('applyLaunchOnBoot done')
 
     createWindow()
+    stamp('createWindow returned')
     createTray()
+    stamp('createTray returned')
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow()
     })
+    stamp('all init done')
   })
 }
 
