@@ -5,10 +5,6 @@
   display: flex;
   flex-direction: column;
   background: transparent;
-  /* 위젯 외곽 그림자 — 카드 outline 따라 (mask 깎은 모양 그대로) */
-  /* drop-shadow를 두 겹 레이어드: 멀리 퍼지는 부드러움 + 가까운 면 분리 */
-  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.1))
-    drop-shadow(0 1px 3px rgba(0, 0, 0, 0.06));
 }
 
 /* 헤더 카드 — 좌측만 차지 (우측은 컷아웃 = 위젯 투명 영역) */
