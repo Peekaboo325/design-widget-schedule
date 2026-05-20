@@ -42,6 +42,13 @@ const api = {
   // OS 알림 (새 스케줄)
   notify: (payload) => ipcRenderer.invoke('notify', payload),
 
+  // 첫 실행 시 깜빡임 방지용 캐시 (멤버 목록 + 활성 멤버 스케줄)
+  getCachedMembers: () => ipcRenderer.invoke('cache:get-members'),
+  setCachedMembers: (members) => ipcRenderer.invoke('cache:set-members', members),
+  getCachedSchedule: (member) => ipcRenderer.invoke('cache:get-schedule', member),
+  setCachedSchedule: (member, data) =>
+    ipcRenderer.invoke('cache:set-schedule', member, data),
+
   // 트레이 새로고침 메뉴 → 렌더러 콜백
   onTrayRefresh: (cb) => {
     const handler = () => cb()

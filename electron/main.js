@@ -64,7 +64,7 @@ function migrateSize(stored) {
   return 'L'
 }
 
-// 영구 저장: 설정값 (다음 실행 시 복원)
+// 영구 저장: 설정값 + 데이터 캐시 (다음 실행 시 즉시 복원)
 const store = new Store({
   defaults: {
     alwaysOnTop: true,
@@ -74,7 +74,10 @@ const store = new Store({
     activeMember: null,
     mode: 'dark',
     launchOnBoot: false,
-    memberEmoji: {} // { '부수빈': '🐰', ... }
+    memberEmoji: {}, // { '부수빈': '🐰', ... }
+    // 첫 실행 시 깜빡임 방지용 캐시 — fetch 동안 stale 데이터로 즉시 렌더
+    cachedMembers: [],
+    cachedScheduleByMember: {}, // { '부수빈': { schedule, pending, summary, lastUpdated } }
   }
 })
 
@@ -277,6 +280,24 @@ ipcMain.handle('settings:get-all', () => ({
   launchOnBoot: store.get('launchOnBoot'),
   memberEmoji: store.get('memberEmoji') ?? {}
 }))
+
+// 첫 실행 시 깜빡임 방지용 캐시 read/write
+ipcMain.handle('cache:get-members', () => store.get('cachedMembers') ?? [])
+ipcMain.handle('cache:set-members', (_event, members) => {
+  if (!Array.isArray(members)) return
+  store.set('cachedMembers', members)
+})
+ipcMain.handle('cache:get-schedule', (_event, member) => {
+  if (typeof member !== 'string' || !member) return null
+  const all = store.get('cachedScheduleByMember') ?? {}
+  return all[member] ?? null
+})
+ipcMain.handle('cache:set-schedule', (_event, member, data) => {
+  if (typeof member !== 'string' || !member || !data) return
+  const all = store.get('cachedScheduleByMember') ?? {}
+  all[member] = data
+  store.set('cachedScheduleByMember', all)
+})
 
 // 멤버별 프로필 이모지 저장
 ipcMain.handle('settings:set-member-emoji', (_event, member, emoji) => {

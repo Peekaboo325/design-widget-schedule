@@ -14,6 +14,8 @@ const BASE_RETRY_DELAY_MS = 2000
 // - 수동 refresh 노출 (헤더 ↻ 버튼용)
 // - fetch 실패 시 지수 백오프 자동 재시도 (조용히)
 // - 모두 실패해야 error 노출
+// - 첫 마운트 시 캐시(electron-store)에서 즉시 표시 → 깜빡임 방지
+//   백그라운드 fetch 성공하면 fresh로 덮어쓰고 캐시 갱신
 export default function useSchedule(memberName) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -53,11 +55,19 @@ export default function useSchedule(memberName) {
       try {
         const result = await fetchSchedule(memberName, { signal: controller.signal })
         if (controller.signal.aborted) return
+        const updatedAt = new Date()
         setData(result)
-        setLastUpdated(new Date())
+        setLastUpdated(updatedAt)
         setError(null)
         setLoading(false)
         inflightRef.current = null
+        // 캐시 저장 — 다음 실행/멤버 전환 시 즉시 복원
+        window.widgetAPI?.setCachedSchedule?.(memberName, {
+          schedule: result.schedule,
+          pending: result.pending,
+          summary: result.summary,
+          lastUpdated: updatedAt.getTime()
+        })
       } catch (err) {
         if (controller.signal.aborted || err.name === 'AbortError') return
         if (attempt >= MAX_RETRIES) {
@@ -85,12 +95,28 @@ export default function useSchedule(memberName) {
     attemptLoad(0)
   }, [cancelPending, attemptLoad])
 
-  // memberName 변경/마운트 시 즉시 1회 + 5분 interval
+  // memberName 변경/마운트 시:
+  // 1) 캐시에서 즉시 stale 로드 (첫 화면 깜빡임 방지)
+  // 2) fetch 시작 → 성공 시 fresh로 덮어씀
+  // 3) 5분 interval로 자동 갱신
   useEffect(() => {
+    if (!memberName) {
+      setData(null)
+      setLastUpdated(null)
+      return
+    }
+    let cancelled = false
+    window.widgetAPI?.getCachedSchedule?.(memberName).then((cached) => {
+      if (cancelled || !cached) return
+      // fetch가 이미 끝나서 data가 들어왔으면 stale 캐시로 덮어쓰지 않음
+      setData((prev) => prev ?? cached)
+      setLastUpdated((prev) => prev ?? new Date(cached.lastUpdated))
+    })
+
     load()
-    if (!memberName) return
     const id = setInterval(load, AUTO_REFRESH_MS)
     return () => {
+      cancelled = true
       clearInterval(id)
       cancelPending()
     }
