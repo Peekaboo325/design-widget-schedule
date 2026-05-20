@@ -8,6 +8,7 @@ const DEFAULTS = {
   size: 'L',
   activeMember: null,
   launchOnBoot: false,
+  notificationsEnabled: true,
   memberEmoji: {} // { '부수빈': '🐰', ... }
 }
 
@@ -67,6 +68,11 @@ export default function useSettings() {
     setSettings((s) => ({ ...s, launchOnBoot: saved ?? value }))
   }, [])
 
+  const setNotificationsEnabled = useCallback(async (value) => {
+    const saved = await window.widgetAPI?.setNotificationsEnabled(value)
+    setSettings((s) => ({ ...s, notificationsEnabled: saved ?? value }))
+  }, [])
+
   // 멤버별 프로필 이모지
   const setMemberEmoji = useCallback(async (member, emoji) => {
     if (!member) return
@@ -86,6 +92,7 @@ export default function useSettings() {
     setThemeColor,
     setActiveMember,
     setLaunchOnBoot,
+    setNotificationsEnabled,
     setMemberEmoji
   }
 }

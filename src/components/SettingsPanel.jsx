@@ -15,7 +15,8 @@ export default function SettingsPanel({
   onToggleAlwaysOnTop,
   onChangeOpacity,
   onChangeThemeColor,
-  onChangeLaunchOnBoot
+  onChangeLaunchOnBoot,
+  onChangeNotifications
 }) {
   // 멤버 옵션: value는 풀네임(저장/식별용), label은 성씨 뗀 단축 이름
   const memberOptions = (members ?? []).map((name) => ({
@@ -57,6 +58,19 @@ export default function SettingsPanel({
           aria-checked={settings.launchOnBoot}
           className={`${styles.toggle} ${settings.launchOnBoot ? styles.toggleOn : ''}`}
           onClick={() => onChangeLaunchOnBoot(!settings.launchOnBoot)}
+        >
+          <span className={styles.toggleKnob} />
+        </button>
+      </Row>
+
+      {/* 새 스케줄 알림 — 회의 중 거슬릴 때 OFF */}
+      <Row label="새 스케줄 알림">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={settings.notificationsEnabled}
+          className={`${styles.toggle} ${settings.notificationsEnabled ? styles.toggleOn : ''}`}
+          onClick={() => onChangeNotifications(!settings.notificationsEnabled)}
         >
           <span className={styles.toggleKnob} />
         </button>

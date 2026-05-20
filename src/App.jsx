@@ -54,6 +54,7 @@ export default function App() {
     setThemeColor,
     setActiveMember,
     setLaunchOnBoot,
+    setNotificationsEnabled,
     setMemberEmoji
   } = useSettings()
 
@@ -311,6 +312,8 @@ export default function App() {
     prevNewKeysRef.current = newKeys
 
     if (fresh.length === 0) return
+    // 알림 OFF면 OS 토스트 안 띄움 (위젯 내 NEW 펄스는 그대로 동작)
+    if (!settings.notificationsEnabled) return
     const items = (scheduleData?.schedule ?? []).filter((it) =>
       fresh.includes(`${it['광고주']}|${it['비고']}`)
     )
@@ -323,7 +326,7 @@ export default function App() {
       title: `디자인 위젯 · 새 스케줄 ${fresh.length}건`,
       body: preview + more
     })
-  }, [newKeys, scheduleData])
+  }, [newKeys, scheduleData, settings.notificationsEnabled])
 
   const refreshing = scheduleLoading
   // 멤버 픽업 화면 표시 조건:
@@ -436,6 +439,7 @@ export default function App() {
               onChangeOpacity={setOpacity}
               onChangeThemeColor={setThemeColor}
               onChangeLaunchOnBoot={setLaunchOnBoot}
+              onChangeNotifications={setNotificationsEnabled}
             />
           </div>
         </div>

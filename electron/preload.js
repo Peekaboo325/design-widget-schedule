@@ -25,6 +25,10 @@ const api = {
   setLaunchOnBoot: (value) =>
     ipcRenderer.invoke('settings:set-launch-on-boot', value),
 
+  // 새 스케줄 OS 알림 on/off
+  setNotificationsEnabled: (value) =>
+    ipcRenderer.invoke('settings:set-notifications-enabled', value),
+
   // 멤버별 프로필 이모지
   setMemberEmoji: (member, emoji) =>
     ipcRenderer.invoke('settings:set-member-emoji', member, emoji),

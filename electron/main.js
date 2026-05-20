@@ -70,6 +70,7 @@ const store = new Store({
     size: 'L',
     activeMember: null,
     launchOnBoot: false,
+    notificationsEnabled: true,
     memberEmoji: {}, // { '부수빈': '🐰', ... }
     // 첫 실행 시 깜빡임 방지용 캐시 — fetch 동안 stale 데이터로 즉시 렌더
     cachedMembers: [],
@@ -273,6 +274,7 @@ ipcMain.handle('settings:get-all', () => ({
   size: store.get('size'),
   activeMember: store.get('activeMember'),
   launchOnBoot: store.get('launchOnBoot'),
+  notificationsEnabled: store.get('notificationsEnabled') ?? true,
   memberEmoji: store.get('memberEmoji') ?? {}
 }))
 
@@ -329,6 +331,13 @@ ipcMain.handle('settings:set-launch-on-boot', (_event, value) => {
   const enabled = Boolean(value)
   store.set('launchOnBoot', enabled)
   applyLaunchOnBoot(enabled)
+  return enabled
+})
+
+// 새 스케줄 OS 알림 on/off (회의 중 거슬릴 때 등)
+ipcMain.handle('settings:set-notifications-enabled', (_event, value) => {
+  const enabled = Boolean(value)
+  store.set('notificationsEnabled', enabled)
   return enabled
 })
 
