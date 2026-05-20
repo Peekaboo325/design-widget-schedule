@@ -1,6 +1,7 @@
 /* 위젯 루트 — 단순 둥근 카드 (폴더 탭 폐기)
    외곽 border-radius + overflow:hidden으로 둥근 모서리 적용
-   배경은 본문 카드 색. 상단 영역만 헤더 그라데이션이 덮음. */
+   배경은 본문 카드 색. 상단 영역만 헤더 그라데이션이 덮음.
+   흰 배경 위에서도 경계 보이도록 shadow + 매우 옅은 1px border. */
 .widget {
   position: relative;
   width: 100%;
@@ -11,6 +12,8 @@
   flex-direction: column;
   overflow: hidden;
   color: var(--widget-fg);
+  box-shadow: 0 10px 28px rgba(14, 14, 16, 0.10),
+    0 2px 6px rgba(14, 14, 16, 0.06), 0 0 0 1px rgba(14, 14, 16, 0.03);
 }
 
 /* 헤더 카드 — 위젯 상단 영역. 그라데이션
@@ -142,11 +145,11 @@
 }
 
 /* 새로고침 FAB — 본문 우하단 플로팅. 헤더 액션 정돈하고 빈 지면 활용
-   L에선 공유 대기 풋터 옆(같은 베이스라인)에 떠 있고, S에선 우하단 코너 */
+   L에선 공유 대기 풋터 바로 위, S에선 우하단 코너 */
 .refreshFab {
   position: absolute;
   right: 14px;
-  bottom: 10px;
+  bottom: 60px;
   z-index: 5;
   background: var(--widget-surface);
   border: none;
@@ -179,7 +182,7 @@
   cursor: default;
 }
 
-/* S 사이즈: 본문 컴팩트하므로 FAB도 작고 가까이 */
+/* S 사이즈: 본문 컴팩트하므로 FAB도 작고 우하단 코너에 가까이 */
 .widget[data-size='S'] .refreshFab {
   width: 36px;
   height: 36px;

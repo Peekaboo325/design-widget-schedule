@@ -123,7 +123,8 @@
   letter-spacing: -0.5px;
 }
 
-/* 행 카드 리스트 */
+/* 행 카드 리스트 — 우하단 FAB이 마지막 카드 위에 떠 있으므로
+   스크롤 시 가려지지 않게 padding-bottom으로 자리 보호 */
 .cardList {
   flex: 1 1 0;
   min-height: 0;
@@ -131,7 +132,7 @@
   flex-direction: column;
   gap: 6px;
   overflow-y: auto;
-  padding: 2px 2px;
+  padding: 2px 2px 48px;
 }
 
 .listEmpty {
@@ -253,12 +254,12 @@
   color: var(--widget-muted);
 }
 
-/* L 공유 대기 풋터 — 우측에 새로고침 FAB 자리 padding으로 비워둠 */
+/* L 공유 대기 풋터 */
 .pendingFooter {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 56px 6px 6px;
+  padding: 12px 6px 6px;
   border: none;
   border-top: 1px solid var(--widget-row-border);
   background: transparent;
