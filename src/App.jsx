@@ -16,6 +16,11 @@ import { shortName, nextStatus } from './lib/format.js'
 import { resolveMemberEmoji } from './lib/emoji.js'
 import { setRowStatus, setRowShare } from './lib/api.js'
 import { scheduleKey } from './components/ScheduleView.jsx'
+import {
+  getShapeParams,
+  buildOuterPath,
+  buildHeaderPath
+} from './lib/widgetShape.js'
 
 // 위젯 셸: 헤더(드래그·설정·새로고침) + 설정 패널 + 본문(탭 전환)
 // 5단계: L 사이즈에서 점검 체크리스트 탭 활성화.
@@ -308,9 +313,34 @@ export default function App() {
     lastUpdated &&
     !scheduleError
 
+  // 위젯 사이즈별 외곽/헤더 path 계산 — clip-path 인라인 주입용
+  const shapeParams = useMemo(() => getShapeParams(settings.size), [settings.size])
+  const outerClip = useMemo(
+    () => `path('${buildOuterPath(shapeParams)}')`,
+    [shapeParams]
+  )
+  const headerClip = useMemo(
+    () => `path('${buildHeaderPath(shapeParams)}')`,
+    [shapeParams]
+  )
+  const headerPx = `${shapeParams.headerH}px`
+
   return (
     <div className={styles.widget} data-size={settings.size}>
-      <div className={styles.headerCard}>
+      {/* 위젯 외곽 형상 + 본문 카드 색 (헤더 카드는 이 위에 별도로 덮임) */}
+      <div
+        className={styles.shapeLayer}
+        style={{ clipPath: outerClip, WebkitClipPath: outerClip }}
+        aria-hidden="true"
+      />
+      <div
+        className={styles.headerCard}
+        style={{
+          height: headerPx,
+          clipPath: headerClip,
+          WebkitClipPath: headerClip
+        }}
+      >
         {activeMember && (
           <div className={styles.avatarSlot}>
             <Avatar
@@ -369,7 +399,11 @@ export default function App() {
 
       {/* 설정 펼친 상태에서는 본문/탭/footer 숨김 — 본문 가림·잘림 방지 */}
       {settingsOpen && ready ? (
-        <div ref={settingsPanelRef} className={styles.bodyCard}>
+        <div
+          ref={settingsPanelRef}
+          className={styles.bodyCard}
+          style={{ paddingTop: headerPx }}
+        >
           <div className={styles.settingsArea}>
             <SettingsPanel
               size={settings.size}
@@ -386,7 +420,7 @@ export default function App() {
           </div>
         </div>
       ) : (
-        <div className={styles.bodyCard}>
+        <div className={styles.bodyCard} style={{ paddingTop: headerPx }}>
           {showTabs && (
             <nav className={styles.tabs}>
               <TabButton

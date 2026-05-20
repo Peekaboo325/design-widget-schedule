@@ -1,50 +1,59 @@
+/* 위젯 루트
+   - clip-path는 별도 .shapeLayer에서 처리 (root에 걸면 우상단 노치 영역의 아이콘들도 같이 잘리므로 분리)
+   - 자체는 transparent. 모양은 자식 레이어들이 그림. */
 .widget {
   position: relative;
   width: 100%;
   height: 100vh;
-  display: flex;
-  flex-direction: column;
   background: transparent;
 }
 
-/* 헤더 카드 — 좌측만 차지 (우측은 컷아웃 = 위젯 투명 영역) */
-.headerCard {
-  display: flex;
-  align-items: center;
-  margin-right: 150px;
-  padding: 12px 14px;
-  background: var(--widget-header-bg);
-  color: var(--widget-on-header);
-  border-radius: var(--widget-radius) var(--widget-radius) 0 0;
-  -webkit-app-region: drag;
-  gap: 10px;
-  min-width: 0;
-  flex-shrink: 0;
+/* 위젯 외곽 형상 레이어
+   - 본문 카드 색을 깔고 외곽 path로 clip → 위젯 전체 실루엣 + 본문 카드 영역
+   - 헤더 카드는 이 위에 별도 path로 덮어 그려짐 */
+.shapeLayer {
+  position: absolute;
+  inset: 0;
+  background: var(--widget-card-bg);
+  z-index: 0;
+  /* clip-path는 inline style로 주입 (사이즈별 path 문자열) */
 }
 
-/* 본문 카드 — 헤더 아래 + 전체 너비. 좌상단 0(헤더와 매끄럽게), 그 외 라운드.
-   추가로 mask로 좌상단 모서리를 inverse curve(안쪽으로 둥글게)로 깎아내어
-   헤더 카드 우측 컷아웃 영역과 자연스럽게 폴더 탭 모양을 형성. */
+/* 헤더 카드
+   - 위젯 전체 폭으로 깔되 header path로 clip → 좌상단 + inverse curve 형상
+   - 헤더 path 외부(= 우상단 노치)는 자동으로 잘려 본문 카드 색이 비침 */
+.headerCard {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* height, clip-path는 inline style로 주입 */
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  background: var(--widget-header-bg);
+  color: var(--widget-on-header);
+  -webkit-app-region: drag;
+  gap: 10px;
+  z-index: 2;
+  box-sizing: border-box;
+}
+
+/* 본문 콘텐츠 컨테이너
+   - 위젯 영역 전부 차지하되 padding-top으로 헤더 높이만큼 비워둠
+   - 배경 없음 (shapeLayer가 본문색 깔아줌). 외곽 clip은 부모(shapeLayer)에서 처리되지 않으므로
+     bodyCard의 자식 콘텐츠가 path 외부로 삐져나오면 보일 수 있어 overflow:hidden + 자체 clip은 불필요
+     (path 외부는 .shapeLayer 색이 없는 영역 = 투명. 본문 콘텐츠가 그 위로 겹치면 path 밖에서도 텍스트가 보임)
+   - 콘텐츠는 일반적으로 path 안쪽에 들어가므로 문제 없음. 단 padding 충분히 줌. */
 .bodyCard {
-  flex: 1;
+  position: absolute;
+  inset: 0;
+  /* padding-top은 inline style로 주입 (헤더 높이) */
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: var(--widget-card-bg);
-  border-radius: 0 var(--widget-radius) var(--widget-radius) var(--widget-radius);
-  overflow: hidden;
-  /* 좌상단 inverse curve — 반지름 안은 투명(OS 배경 비침), 그 외는 카드 색 유지 */
-  --notch-r: 14px;
-  -webkit-mask-image: radial-gradient(
-    circle var(--notch-r) at 0 0,
-    transparent 100%,
-    black 0
-  );
-  mask-image: radial-gradient(
-    circle var(--notch-r) at 0 0,
-    transparent 100%,
-    black 0
-  );
+  z-index: 1;
+  box-sizing: border-box;
 }
 
 .avatarSlot {
@@ -60,10 +69,10 @@
   white-space: nowrap;
 }
 
-/* 우측 액션 아이콘 — 헤더 카드 밖 transparent 영역 위에 absolute로 떠있음 */
+/* 우측 액션 아이콘 — 우상단 노치 영역(투명) 위에 absolute. clip 영향 안 받음 */
 .headerActions {
   position: absolute;
-  top: 6px;
+  top: 8px;
   right: 14px;
   display: flex;
   align-items: center;
@@ -72,7 +81,7 @@
   z-index: 3;
 }
 
-/* 원형 아이콘 버튼 — 흰 카드 배경 + 액센트 아이콘. 컷아웃 영역에 떠있음 */
+/* 원형 아이콘 버튼 — 흰 카드 배경 + 액센트 아이콘 */
 .iconBtn {
   background: var(--widget-card-bg);
   border: none;
@@ -117,7 +126,7 @@
   }
 }
 
-/* 새 스케줄 알림 뱃지 (+N) — 알약, 흰 카드 배경 + 액센트 텍스트 */
+/* 새 스케줄 알림 뱃지 (+N) */
 .newBadge {
   position: relative;
   background: var(--widget-card-bg);
@@ -160,7 +169,7 @@
   overflow-y: auto;
 }
 
-/* 탭 네비게이션 — bodyCard 안 상단 */
+/* 탭 네비게이션 */
 .tabs {
   display: flex;
   gap: 0;
@@ -226,21 +235,14 @@
   word-break: keep-all;
 }
 
-/* S 사이즈 — 240×220 안에 컴팩트하게 */
+/* S 사이즈 — 컴팩트하게 */
 .widget[data-size='S'] .headerCard {
-  margin-right: 110px;
-  padding: 10px 12px;
+  padding: 0 12px;
   gap: 8px;
-  border-radius: 18px 18px 0 0;
-}
-
-.widget[data-size='S'] .bodyCard {
-  border-radius: 0 18px 18px 18px;
-  --notch-r: 12px;
 }
 
 .widget[data-size='S'] .headerActions {
-  top: 6px;
+  top: 8px;
   right: 10px;
   gap: 6px;
 }
