@@ -485,19 +485,26 @@ ipcMain.handle('api:post', async (_event, body) => {
       redirect: 'follow',
       signal: controller.signal
     })
-    if (!res.ok) return { ok: false, error: `HTTP ${res.status}` }
+    if (!res.ok) return { ok: false, error: `HTTP ${res.status}`, code: 'HTTP' }
     const contentType = res.headers.get('content-type') ?? ''
     if (!contentType.toLowerCase().includes('application/json')) {
       return {
         ok: false,
-        error: `JSON 응답이 아님 (${contentType || 'unknown'})`
+        error: `JSON 응답이 아님 (${contentType || 'unknown'})`,
+        code: 'NOT_JSON'
       }
     }
     const data = await res.json()
-    if (data && data.error) return { ok: false, error: String(data.error) }
+    if (data && data.error) {
+      return {
+        ok: false,
+        error: String(data.error),
+        code: data.code || 'UNKNOWN'
+      }
+    }
     return { ok: true, data }
   } catch (err) {
-    return { ok: false, error: friendlyNetworkError(err) }
+    return { ok: false, error: friendlyNetworkError(err), code: 'NETWORK' }
   } finally {
     clearTimeout(timer)
   }
@@ -522,20 +529,21 @@ ipcMain.handle('api:get', async (_event, params) => {
       signal: controller.signal
     })
     if (!res.ok) {
-      return { ok: false, error: `HTTP ${res.status}` }
+      return { ok: false, error: `HTTP ${res.status}`, code: 'HTTP' }
     }
     // Apps Script가 인증 페이지로 튕기면 HTML이 옴 → 명확한 에러로 변환
     const contentType = res.headers.get('content-type') ?? ''
     if (!contentType.toLowerCase().includes('application/json')) {
       return {
         ok: false,
-        error: `JSON 응답이 아님 (${contentType || 'unknown'}). GAS 배포 권한 설정 확인 필요`
+        error: `JSON 응답이 아님 (${contentType || 'unknown'}). GAS 배포 권한 설정 확인 필요`,
+        code: 'NOT_JSON'
       }
     }
     const data = await res.json()
     return { ok: true, data }
   } catch (err) {
-    return { ok: false, error: friendlyNetworkError(err) }
+    return { ok: false, error: friendlyNetworkError(err), code: 'NETWORK' }
   } finally {
     clearTimeout(timer)
   }

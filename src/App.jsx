@@ -15,6 +15,18 @@ import EmojiPicker from './components/EmojiPicker.jsx'
 import { shortName, nextStatus } from './lib/format.js'
 import { resolveMemberEmoji } from './lib/emoji.js'
 import { setRowStatus, setRowShare } from './lib/api.js'
+import { codeFromGas, codeFromNetworkError, toastForCode } from './lib/errors.js'
+
+// API 에러를 사용자 친화 토스트로 변환 (E01~E99 + 친화 메시지)
+function buildErrorToast(err, prefix) {
+  const code = codeFromNetworkError(err) || codeFromGas(err?.code)
+  console.error(`[${code}] ${prefix ?? ''}`, err)
+  return {
+    key: Date.now(),
+    tone: 'error',
+    ...toastForCode(code, prefix)
+  }
+}
 import { scheduleKey } from './components/ScheduleView.jsx'
 
 // 사이즈별 헤더 높이 (CSS와 일치)
@@ -189,11 +201,7 @@ export default function App() {
                 markSeen(scheduleKey(item))
                 refresh()
               } catch (err) {
-                setToast({
-                  key: Date.now(),
-                  tone: 'error',
-                  message: '취소 실패. 다시 시도해주세요.'
-                })
+                setToast(buildErrorToast(err, '취소 실패.'))
               }
             }
           }
@@ -201,11 +209,7 @@ export default function App() {
       } catch (err) {
         // 실패 시 다시 fetch로 정확한 상태 복구
         refresh()
-        setToast({
-          key: Date.now(),
-          tone: 'error',
-          message: '변경 실패. 잠시 후 다시 시도해주세요.'
-        })
+        setToast(buildErrorToast(err, '변경 실패.'))
       }
     },
     [mutateSchedule, refresh, markSeen]
@@ -227,10 +231,12 @@ export default function App() {
         message: '메일 제목 복사됨'
       })
     } catch (err) {
+      console.error('[E05] clipboard 복사 실패', err)
       setToast({
         key: Date.now(),
         tone: 'error',
-        message: '복사 실패'
+        code: 'E05',
+        message: '복사에 실패했어요.'
       })
     }
   }, [])
@@ -273,22 +279,14 @@ export default function App() {
                 await setRowShare(rowIndex, false, expect)
                 refresh()
               } catch (err) {
-                setToast({
-                  key: Date.now(),
-                  tone: 'error',
-                  message: '취소 실패. 다시 시도해주세요.'
-                })
+                setToast(buildErrorToast(err, '취소 실패.'))
               }
             }
           }
         })
       } catch (err) {
         refresh()
-        setToast({
-          key: Date.now(),
-          tone: 'error',
-          message: '공유 처리 실패. 다시 시도해주세요.'
-        })
+        setToast(buildErrorToast(err, '공유 처리 실패.'))
       }
     },
     [mutateSchedule, refresh]

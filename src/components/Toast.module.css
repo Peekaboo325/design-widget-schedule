@@ -48,6 +48,20 @@
   -webkit-box-orient: vertical;
 }
 
+/* 에러 코드 — 우측에 작게. 팀원이 이 코드만 알려주면 진단 가능 */
+.code {
+  flex-shrink: 0;
+  align-self: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--widget-muted);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5px;
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: var(--widget-overlay-strong);
+}
+
 .action {
   flex-shrink: 0;
   align-self: center;

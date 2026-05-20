@@ -1,14 +1,23 @@
 // GAS Web App 호출은 main 프로세스에서 수행 (CSP/CORS 우회).
 // 렌더러는 preload가 노출한 window.widgetAPI로 IPC만 호출.
+//
+// 에러는 Error 객체에 .code 부여 (NETWORK / BUSY / STALE / INVALID / HTTP / NOT_JSON / UNKNOWN)
+// → 상위에서 lib/errors.js의 codeFromGas로 E01~E99 변환
+
+function makeError(message, code) {
+  const err = new Error(message || 'API 호출 실패')
+  err.code = code || 'UNKNOWN'
+  return err
+}
 
 async function callApi(params) {
   const ipc = window.widgetAPI?.apiGet
   if (!ipc) {
-    throw new Error('widgetAPI 미주입 (Electron 환경에서만 실행 가능)')
+    throw makeError('widgetAPI 미주입 (Electron 환경에서만 실행 가능)', 'UNKNOWN')
   }
   const res = await ipc(params)
   if (!res?.ok) {
-    throw new Error(res?.error || 'API 호출 실패')
+    throw makeError(res?.error, res?.code)
   }
   return res.data
 }
@@ -17,11 +26,11 @@ async function callApi(params) {
 async function postApi(body) {
   const ipc = window.widgetAPI?.apiPost
   if (!ipc) {
-    throw new Error('widgetAPI 미주입 (Electron 환경에서만 실행 가능)')
+    throw makeError('widgetAPI 미주입 (Electron 환경에서만 실행 가능)', 'UNKNOWN')
   }
   const res = await ipc(body)
   if (!res?.ok) {
-    throw new Error(res?.error || '시트 쓰기 실패')
+    throw makeError(res?.error, res?.code)
   }
   return res.data
 }
@@ -42,7 +51,7 @@ export async function setRowShare(rowIndex, shared, expect) {
 export async function fetchMembers() {
   const data = await callApi({ type: 'members' })
   if (!data || !Array.isArray(data.members)) {
-    throw new Error('Invalid members response')
+    throw makeError('Invalid members response', 'INVALID')
   }
   return data.members
 }
@@ -50,14 +59,15 @@ export async function fetchMembers() {
 // 특정 팀원의 스케줄/공유대기 조회
 // 응답: { schedule: [...], pending: [...], summary: { total, pending } }
 export async function fetchSchedule(memberName) {
-  if (!memberName) throw new Error('memberName required')
+  if (!memberName) throw makeError('memberName required', 'INVALID')
   const data = await callApi({ type: 'schedule', member: memberName })
   if (!data || !Array.isArray(data.schedule) || !Array.isArray(data.pending)) {
-    throw new Error('Invalid schedule response')
+    throw makeError('Invalid schedule response', 'INVALID')
   }
   return {
     schedule: data.schedule,
     pending: data.pending,
-    summary: data.summary ?? { total: data.schedule.length, pending: data.pending.length }
+    summary:
+      data.summary ?? { total: data.schedule.length, pending: data.pending.length }
   }
 }
