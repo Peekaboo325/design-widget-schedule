@@ -253,12 +253,12 @@
   color: var(--widget-muted);
 }
 
-/* L 공유 대기 풋터 */
+/* L 공유 대기 풋터 — 우측에 새로고침 FAB 자리 padding으로 비워둠 */
 .pendingFooter {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 6px 6px;
+  padding: 12px 56px 6px 6px;
   border: none;
   border-top: 1px solid var(--widget-row-border);
   background: transparent;

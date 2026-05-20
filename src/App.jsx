@@ -354,19 +354,6 @@ export default function App() {
               +{newCount}
             </button>
           )}
-          {/* 새로고침 — S 사이즈는 빠듯하므로 숨김(자동 폴링으로 충분).
-              설정창에서도 의미 약해 숨김 */}
-          {!needsMemberPick && !settingsOpen && settings.size === 'L' && (
-            <button
-              type="button"
-              className={`${styles.iconBtn} ${refreshing ? styles.iconBtnSpinning : ''}`}
-              aria-label="새로고침"
-              disabled={!activeMember || refreshing}
-              onClick={() => refresh()}
-            >
-              <RefreshIcon />
-            </button>
-          )}
           {/* 사이즈 토글 — 한 클릭으로 S↔L 전환 */}
           <button
             type="button"
@@ -375,7 +362,7 @@ export default function App() {
             title={settings.size === 'L' ? '작게' : '크게'}
             onClick={() => setSize(settings.size === 'L' ? 'S' : 'L')}
           >
-            {settings.size === 'L' ? <MinimizeIcon /> : <MaximizeIcon />}
+            {settings.size === 'L' ? <RestoreIcon /> : <SquareIcon />}
           </button>
           <button
             ref={settingsBtnRef}
@@ -454,6 +441,19 @@ export default function App() {
               />
             )}
           </main>
+          {/* 새로고침 — 본문 우하단 플로팅. 헤더 욱여넣기 대신 빈 본문 지면 활용
+              스케줄/디자인 체크 두 탭 모두에서 동일 위치 */}
+          {!needsMemberPick && (
+            <button
+              type="button"
+              className={`${styles.refreshFab} ${refreshing ? styles.iconBtnSpinning : ''}`}
+              aria-label="새로고침"
+              disabled={!activeMember || refreshing}
+              onClick={() => refresh()}
+            >
+              <RefreshIcon />
+            </button>
+          )}
         </div>
       )}
       {pendingOpen &&
@@ -492,46 +492,41 @@ function GearIcon() {
   )
 }
 
-// 사이즈 키움 — 대각선 바깥쪽 화살표 두 개
-function MaximizeIcon() {
+// 사이즈 키움 — 단일 사각형 (윈도우 최대화 표준 아이콘)
+function SquareIcon() {
   return (
     <svg
-      width="16"
-      height="16"
+      width="14"
+      height="14"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="2.2"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <polyline points="15 3 21 3 21 9" />
-      <polyline points="9 21 3 21 3 15" />
-      <line x1="21" y1="3" x2="14" y2="10" />
-      <line x1="3" y1="21" x2="10" y2="14" />
+      <rect x="3" y="3" width="18" height="18" rx="1.5" />
     </svg>
   )
 }
 
-// 사이즈 줄임 — 대각선 안쪽 화살표 두 개
-function MinimizeIcon() {
+// 사이즈 줄임 — 두 사각형 겹침 (윈도우 창 복원 표준 아이콘)
+function RestoreIcon() {
   return (
     <svg
-      width="16"
-      height="16"
+      width="14"
+      height="14"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="2.2"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <polyline points="4 14 10 14 10 20" />
-      <polyline points="20 10 14 10 14 4" />
-      <line x1="14" y1="10" x2="21" y2="3" />
-      <line x1="3" y1="21" x2="10" y2="14" />
+      <rect x="8" y="3" width="13" height="13" rx="1.5" />
+      <path d="M16 16v3.5A1.5 1.5 0 0 1 14.5 21h-11A1.5 1.5 0 0 1 2 19.5v-11A1.5 1.5 0 0 1 3.5 7H8" />
     </svg>
   )
 }

@@ -131,7 +131,7 @@ function PendingFooter({ pending, onClick }) {
       title={empty ? undefined : '클릭하면 목록 펼침'}
     >
       <span className={styles.pendingFooterIcon}>
-        <UsersIcon />
+        <MailIcon />
       </span>
       <span className={styles.pendingFooterLabel}>공유 대기</span>
       <span className={styles.pendingFooterCount}>{pending.length}건</span>
@@ -161,7 +161,8 @@ function CalendarIcon() {
   )
 }
 
-function UsersIcon() {
+// 공유 대기 = 메일 발송 대기. 봉투 아이콘이 의미상 직관적
+function MailIcon() {
   return (
     <svg
       width="16"
@@ -174,10 +175,8 @@ function UsersIcon() {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="M3 7l9 6 9-6" />
     </svg>
   )
 }

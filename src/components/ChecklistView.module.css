@@ -45,7 +45,7 @@
 
 .sections {
   list-style: none;
-  padding: 0;
+  padding: 0 0 56px;
   margin: 0;
   overflow-y: auto;
   min-height: 0;

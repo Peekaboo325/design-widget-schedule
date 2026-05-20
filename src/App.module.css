@@ -141,6 +141,52 @@
   }
 }
 
+/* 새로고침 FAB — 본문 우하단 플로팅. 헤더 액션 정돈하고 빈 지면 활용
+   L에선 공유 대기 풋터 옆(같은 베이스라인)에 떠 있고, S에선 우하단 코너 */
+.refreshFab {
+  position: absolute;
+  right: 14px;
+  bottom: 10px;
+  z-index: 5;
+  background: var(--widget-surface);
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--widget-accent-strong);
+  flex-shrink: 0;
+  transition: filter 0.12s ease, transform 0.08s ease, box-shadow 0.12s ease;
+  box-shadow: 0 4px 12px rgba(14, 14, 16, 0.18),
+    0 2px 4px rgba(14, 14, 16, 0.08);
+}
+
+.refreshFab:hover:not(:disabled) {
+  filter: brightness(0.97);
+  box-shadow: 0 6px 14px rgba(14, 14, 16, 0.22),
+    0 2px 4px rgba(14, 14, 16, 0.10);
+}
+
+.refreshFab:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.refreshFab:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* S 사이즈: 본문 컴팩트하므로 FAB도 작고 가까이 */
+.widget[data-size='S'] .refreshFab {
+  width: 36px;
+  height: 36px;
+  right: 12px;
+  bottom: 12px;
+}
+
 /* 새 스케줄 알림 뱃지 (+N) — 흰 알약 + 진한 액센트 텍스트 */
 .newBadge {
   background: var(--widget-surface);
