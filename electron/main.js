@@ -471,12 +471,19 @@ ipcMain.handle('window:set-size', (_event, sizeKey) => {
 // - Linux: 미지원 (조용히 false)
 ipcMain.handle('show-emoji-panel', () => {
   if (process.platform === 'darwin' && typeof app.showEmojiPanel === 'function') {
+    // mainWindow + webContents 명시적 focus → frameless 위젯에서도
+    // 이모지 패널이 현재 input을 인식하도록
+    try {
+      mainWindow?.focus()
+      mainWindow?.webContents?.focus()
+    } catch (_) {}
     app.showEmojiPanel()
     return true
   }
   if (process.platform === 'win32') {
     // 위젯 input이 포커스를 유지하도록 강제. 키 이벤트는 foreground window가 받음
     mainWindow?.focus()
+    mainWindow?.webContents?.focus()
     const ps = [
       'Add-Type -TypeDefinition \'using System.Runtime.InteropServices; public class K { [DllImport("user32.dll")] public static extern void keybd_event(byte v, byte s, uint f, uint e); }\'',
       '[K]::keybd_event(0x5B,0,0,0)', // LWin down

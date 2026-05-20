@@ -21,6 +21,15 @@ function formatDueHeader(key) {
   return `${m}월 ${d}일(${weekdays[date.getDay()]})`
 }
 
+// 광고주순 모드에서 카드 안에 표시할 짧은 마감일 — YYMMDD (디자이너 파일명 패턴)
+// 예: '2026-05-20' → '260520'
+function formatDueShort(iso) {
+  if (!iso) return ''
+  const [y, m, d] = iso.split('-').map(Number)
+  if (!y || !m || !d) return ''
+  return `${String(y).slice(-2)}${String(m).padStart(2, '0')}${String(d).padStart(2, '0')}`
+}
+
 // 그룹 정렬 — 마감일: 빠른 날짜 먼저 / 광고주: 가나다순 (둘 다 '미정'은 맨 뒤)
 function groupBy(items, mode) {
   const map = new Map()
@@ -88,7 +97,11 @@ export default function BackupView({ backup, onBackupCheck }) {
               </div>
               {items.map((item, i) => (
                 <div key={`${key}-${i}`} className={styles.rowCard}>
-                  {groupMode !== 'client' && (
+                  {groupMode === 'client' ? (
+                    <span className={styles.rowDueShort}>
+                      {formatDueShort(item['마감일'])}
+                    </span>
+                  ) : (
                     <span className={styles.rowClient} title={item['광고주']}>
                       {item['광고주']}
                     </span>

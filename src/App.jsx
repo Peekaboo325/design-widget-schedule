@@ -85,8 +85,15 @@ export default function App() {
       if (settingsPanelRef.current?.contains(e.target)) return
       setSettingsOpen(false)
     }
+    function handleKey(e) {
+      if (e.key === 'Escape') setSettingsOpen(false)
+    }
     document.addEventListener('mousedown', handle)
-    return () => document.removeEventListener('mousedown', handle)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handle)
+      document.removeEventListener('keydown', handleKey)
+    }
   }, [settingsOpen])
 
   // L이 아닐 때 체크리스트 탭에 머물러 있으면 강제 복귀
@@ -493,11 +500,14 @@ export default function App() {
         />
       )}
 
-      {/* 설정 펼친 상태에서는 본문/탭 숨김 — 본문 가림·잘림 방지 */}
+      {/* 설정 펼친 상태에서는 본문/탭 숨김 — 본문 가림·잘림 방지
+          ref는 SettingsPanel root에 부착(forwardRef) → 설정 컨트롤 외 영역
+          (bodyCard 빈 여백 등) 클릭하면 외부로 판정해 닫힘 */}
       {settingsOpen && ready ? (
-        <div ref={settingsPanelRef} className={styles.bodyCard}>
+        <div className={styles.bodyCard}>
           <div className={styles.settingsArea}>
             <SettingsPanel
+              ref={settingsPanelRef}
               size={settings.size}
               settings={settings}
               members={members}

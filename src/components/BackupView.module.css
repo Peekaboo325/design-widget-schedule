@@ -139,10 +139,19 @@
   transition: border-color 0.12s ease;
 }
 
-/* 광고주순 모드 — 광고주명은 그룹 헤더에 이미 있어서 카드에선 생략.
-   grid 컬럼도 비고/수량/완료 3개로 단축 */
+/* 광고주순 모드 — 광고주명은 그룹 헤더에 이미 있음.
+   대신 카드 좌측에 YYMMDD 짧은 마감일 표시 (디자이너 파일명 패턴) */
 .byClient .rowCard {
-  grid-template-columns: minmax(60px, 1fr) auto auto;
+  grid-template-columns: auto minmax(60px, 1fr) auto auto;
+}
+
+.rowDueShort {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--widget-muted);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.3px;
+  white-space: nowrap;
 }
 
 .rowClient {

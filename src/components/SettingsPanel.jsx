@@ -1,3 +1,4 @@
+import { forwardRef } from 'react'
 import styles from './SettingsPanel.module.css'
 import Dropdown from './Dropdown.jsx'
 import { shortName } from '../lib/format.js'
@@ -7,7 +8,9 @@ import { hexFromHue, hueFromHex } from '../lib/color.js'
 const PRESET_HUES = [346, 30, 90, 150, 210, 270]
 const COLOR_PRESETS = PRESET_HUES.map((h) => hexFromHue(h))
 
-export default function SettingsPanel({
+// ref는 panel root에 부착 — App.jsx에서 외부 클릭 감지 시
+// 'panel 영역 안이면 무시 / 바깥이면 닫기' 판정용
+const SettingsPanel = forwardRef(function SettingsPanel({
   size,
   settings,
   members,
@@ -17,14 +20,17 @@ export default function SettingsPanel({
   onChangeThemeColor,
   onChangeLaunchOnBoot,
   onChangeNotifications
-}) {
+}, ref) {
   // 멤버 옵션: value는 풀네임(저장/식별용), label은 성씨 뗀 단축 이름
   const memberOptions = (members ?? []).map((name) => ({
     value: name,
     label: shortName(name)
   }))
   return (
-    <div className={`${styles.panel} ${size === 'S' ? styles.panelCompact : ''}`}>
+    <div
+      ref={ref}
+      className={`${styles.panel} ${size === 'S' ? styles.panelCompact : ''}`}
+    >
       {/* 사용자 선택 */}
       {memberOptions.length > 0 && (
         <Row label="사용자">
@@ -124,7 +130,9 @@ export default function SettingsPanel({
       </Row>
     </div>
   )
-}
+})
+
+export default SettingsPanel
 
 function Row({ label, vertical = false, children }) {
   return (
