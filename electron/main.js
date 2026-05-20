@@ -234,7 +234,7 @@ function createTray() {
       }
     },
     {
-      label: '위젯 위치 초기화',
+      label: '위치 초기화',
       click: () => resetWindowPosition()
     },
     { type: 'separator' },

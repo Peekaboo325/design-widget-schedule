@@ -12,9 +12,9 @@
   flex-direction: column;
   overflow: hidden;
   color: var(--widget-fg);
-  /* 그림자 대신 옅은 border — 흰 배경 위에서도 외곽 명확. 잘림 없음 */
+  /* widget 자체엔 border 없음 — 헤더는 그라데이션이라 외곽이 시각적으로 명확.
+     본문 흰 영역에만 bodyCard에서 별도 border 그림 */
   box-sizing: border-box;
-  border: 1px solid rgba(14, 14, 16, 0.10);
 }
 
 /* 헤더 카드 — 위젯 상단 영역. 그라데이션
@@ -40,7 +40,9 @@
 }
 
 /* 본문 카드 — 헤더 위로 살짝 끌어올림(negative margin) + 상단 라운드 + 위쪽 그림자
-   → 본문이 헤더보다 위 레이어로 떠 있는 인상 */
+   → 본문이 헤더보다 위 레이어로 떠 있는 인상
+   흰 본문 영역에만 옅은 border (좌·우·하단 — 상단은 헤더와 만나므로 없음).
+   하단 라운드는 위젯 외곽 라운드와 일치시켜 border 곡선 매끄럽게 */
 .bodyCard {
   position: relative;
   z-index: 2;
@@ -51,7 +53,9 @@
   background: var(--widget-card-bg);
   box-sizing: border-box;
   margin-top: -14px;
-  border-radius: 18px 18px 0 0;
+  border-radius: 18px 18px var(--widget-radius) var(--widget-radius);
+  border: 1px solid rgba(14, 14, 16, 0.10);
+  border-top: 0;
   box-shadow: 0 -6px 16px -4px rgba(26, 26, 31, 0.14);
 }
 
