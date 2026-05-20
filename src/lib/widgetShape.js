@@ -12,9 +12,9 @@
 // 원본 SVG path 비율 (r:직선:invR ≈ 30:55:35)을 살리기 위해 headerH를 충분히 크게 잡음
 // → 우측 변의 직선부가 사라져 inverse curve 형상이 뭉개지는 것을 방지
 const PRESETS = {
-  S: { w: 240, h: 220, r: 16, invR: 18, headerH: 56, notchW: 110 },
-  M: { w: 300, h: 380, r: 22, invR: 26, headerH: 72, notchW: 130 },
-  L: { w: 360, h: 560, r: 22, invR: 26, headerH: 72, notchW: 130 }
+  S: { w: 240, h: 220, r: 16, invR: 18, headerH: 64, notchW: 110 },
+  M: { w: 300, h: 380, r: 22, invR: 26, headerH: 84, notchW: 130 },
+  L: { w: 360, h: 560, r: 22, invR: 26, headerH: 84, notchW: 130 }
 }
 
 export function getShapeParams(size) {

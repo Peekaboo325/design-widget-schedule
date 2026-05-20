@@ -307,11 +307,13 @@ export default function App() {
   const refreshing = scheduleLoading
   const needsMemberPick = ready && !activeMember
   const showTabs = settings.size === 'L' && !needsMemberPick
-  const showFooter =
+  // 헤더 보조정보(멤버명·마지막 갱신)는 푸터 대신 헤더 두 번째 줄에 표시
+  const showHeaderMeta =
     !needsMemberPick &&
     activeTab === 'schedule' &&
     lastUpdated &&
-    !scheduleError
+    !scheduleError &&
+    !settingsOpen
 
   // 위젯 사이즈별 외곽/헤더 path 계산 — clip-path 인라인 주입용
   const shapeParams = useMemo(() => getShapeParams(settings.size), [settings.size])
@@ -326,7 +328,11 @@ export default function App() {
   const headerPx = `${shapeParams.headerH}px`
 
   return (
-    <div className={styles.widget} data-size={settings.size}>
+    <div
+      className={styles.widget}
+      data-size={settings.size}
+      style={{ '--header-h': headerPx }}
+    >
       {/* 위젯 외곽 형상 + 본문 카드 색 (헤더 카드는 이 위에 별도로 덮임) */}
       <div
         className={styles.shapeLayer}
@@ -358,7 +364,17 @@ export default function App() {
             )}
           </div>
         )}
-        <span className={styles.date}>{todayLabel}</span>
+        <div className={styles.headerText}>
+          <span className={styles.date}>{todayLabel}</span>
+          {showHeaderMeta && (
+            <span className={styles.headerMeta}>
+              <span title={activeMember}>{shortName(activeMember)}</span>
+              {' · 마지막 갱신 '}
+              {formatTime(lastUpdated)}
+              {scheduleLoading ? ' · 갱신 중…' : ''}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className={styles.headerActions}>
@@ -397,7 +413,7 @@ export default function App() {
         </button>
       </div>
 
-      {/* 설정 펼친 상태에서는 본문/탭/footer 숨김 — 본문 가림·잘림 방지 */}
+      {/* 설정 펼친 상태에서는 본문/탭 숨김 — 본문 가림·잘림 방지 */}
       {settingsOpen && ready ? (
         <div
           ref={settingsPanelRef}
@@ -465,16 +481,6 @@ export default function App() {
               />
             )}
           </main>
-          {showFooter && (
-            <footer className={styles.footer}>
-              {activeMember && (
-                <span title={activeMember}>{shortName(activeMember)}</span>
-              )}
-              {activeMember && ' · '}
-              마지막 갱신 {formatTime(lastUpdated)}
-              {scheduleLoading ? ' · 갱신 중…' : ''}
-            </footer>
-          )}
         </div>
       )}
       {pendingOpen &&
@@ -497,8 +503,8 @@ export default function App() {
 function GearIcon() {
   return (
     <svg
-      width="14"
-      height="14"
+      width="16"
+      height="16"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -516,8 +522,8 @@ function GearIcon() {
 function RefreshIcon() {
   return (
     <svg
-      width="14"
-      height="14"
+      width="16"
+      height="16"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

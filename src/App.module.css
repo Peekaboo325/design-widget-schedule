@@ -61,18 +61,42 @@
   -webkit-app-region: no-drag;
 }
 
+/* 헤더 텍스트 스택 — 큰 위계(날짜) + 작은 위계(멤버·갱신시간) 2줄 */
+.headerText {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
 .date {
   font-size: 18px;
   font-weight: 800;
   letter-spacing: -0.4px;
   color: var(--widget-on-header);
   white-space: nowrap;
+  line-height: 1.15;
 }
 
-/* 우측 액션 아이콘 — 우상단 노치 영역(투명) 위에 absolute. clip 영향 안 받음 */
+/* 보조 정보 — 멤버명 · 마지막 갱신 시간 */
+.headerMeta {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: -0.1px;
+  color: color-mix(in oklab, var(--widget-on-header) 65%, transparent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+/* 우측 액션 아이콘 — 우상단 노치 영역(투명) 위에 absolute. clip 영향 안 받음
+   top은 헤더 vertical center에 맞춤 (CSS var로 헤더 높이 주입받음) */
 .headerActions {
   position: absolute;
-  top: 8px;
+  top: calc((var(--header-h) - 40px) / 2);
   right: 14px;
   display: flex;
   align-items: center;
@@ -81,13 +105,13 @@
   z-index: 3;
 }
 
-/* 원형 아이콘 버튼 — 흰 카드 배경 + 액센트 아이콘 */
+/* 원형 아이콘 버튼 — 흰 카드 배경 + 액센트 아이콘. 아바타 크기와 통일 */
 .iconBtn {
   background: var(--widget-card-bg);
   border: none;
   border-radius: 50%;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -214,14 +238,6 @@
   min-height: 0;
 }
 
-.footer {
-  padding: 4px 16px 12px;
-  font-size: 11px;
-  color: var(--widget-muted);
-  text-align: left;
-  flex-shrink: 0;
-}
-
 .muted {
   margin: 0;
   font-size: 13px;
@@ -235,14 +251,14 @@
   word-break: keep-all;
 }
 
-/* S 사이즈 — 컴팩트하게 */
+/* S 사이즈 — 컴팩트하게 (아바타 32 → 아이콘 32 통일) */
 .widget[data-size='S'] .headerCard {
   padding: 0 12px;
   gap: 8px;
 }
 
 .widget[data-size='S'] .headerActions {
-  top: 8px;
+  top: calc((var(--header-h) - 32px) / 2);
   right: 10px;
   gap: 6px;
 }
@@ -257,16 +273,15 @@
   letter-spacing: -0.2px;
 }
 
+.widget[data-size='S'] .headerMeta {
+  font-size: 10px;
+}
+
 .widget[data-size='S'] .body {
   padding: 10px 12px;
 }
 
 .widget[data-size='S'] .newBadge {
   padding: 5px 10px;
-  font-size: 10px;
-}
-
-.widget[data-size='S'] .footer {
-  padding: 4px 12px 6px;
   font-size: 10px;
 }
