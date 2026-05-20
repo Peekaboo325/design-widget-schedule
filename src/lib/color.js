@@ -58,37 +58,56 @@ function shiftHue(hex, deltaH) {
 }
 
 // 사용자 hue(0~360)를 받아 그라데이션 + 액센트 컬러 셋 반환
-// - from / to: 헤더 그라데이션 (옅은 톤, 현재 디폴트 핑크 두 색의 hue 평행이동)
-// - accent: 그라데이션과 어울리는 옅은 톤 (헤더 위 점 등)
-// - accentStrong: 흰 배경 위 강조용 진한 톤 (chip 텍스트·dot·메트릭 카운트 등).
-//   hue별 perceptual lightness 보정 — 옐로/시안 영역에서 L 더 낮춰 가독성 확보
+// - from / to: 헤더 그라데이션 (hue 평행이동 + perceptual L 보정으로 모든 hue에서 비슷한 시각 무게감)
+// - onHeader: 헤더 위 텍스트 색 (hue별 자동 흑/백 — 옐로/시안 영역은 검정으로)
+// - accent: 그라데이션과 어울리는 옅은 톤
+// - accentStrong: 흰 배경 위 강조용 진한 톤 (hue별 가독성 보정)
 // - accentSoft: 흰에 가까운 옅은 hue 톤 (메트릭 카드/chip 배경)
 export function getThemeColors(baseHue) {
   const defaultHue = hexToHsl(DEFAULT_TO).h
   const delta = baseHue - defaultHue
+  const fromHsl = hexToHsl(DEFAULT_FROM)
+  const toHsl = hexToHsl(DEFAULT_TO)
+  const fromHue = (((fromHsl.h + delta) % 360) + 360) % 360
+  const toHue = (((toHsl.h + delta) % 360) + 360) % 360
+  const from = hslToHex(fromHue, fromHsl.s, adjustL(fromHue, fromHsl.l, 0.12))
+  const to = hslToHex(toHue, toHsl.s, adjustL(toHue, toHsl.l, 0.12))
   return {
-    from: shiftHue(DEFAULT_FROM, delta),
-    to: shiftHue(DEFAULT_TO, delta),
+    from,
+    to,
+    // 헤더 위 텍스트는 to의 실제 luminance로 흑/백 자동 결정
+    onHeader: relLuminance(to) > 0.5 ? '#1a1a1f' : '#ffffff',
     accent: shiftHue(DEFAULT_TO, delta),
-    accentStrong: hslToHex(baseHue, 0.8, getReadableL(baseHue)),
+    accentStrong: hslToHex(baseHue, 0.8, adjustL(baseHue, 0.48, 0.10)),
     accentSoft: hslToHex(baseHue, 0.85, 0.94)
   }
 }
 
-// hue별 perceptual lightness — 옐로(60)/시안(180) 근처는 사람 눈에 더 밝게 보여
-// L을 더 낮춰야 흰 배경 위 텍스트 가독성이 같은 수준으로 유지됨
-function getReadableL(hue) {
+// hue별 perceptual lightness 보정 — 옐로(60°)/시안(180°) 근처는 사람 눈에 더 밝게 보임
+// → 같은 시각 무게감을 위해 L을 그만큼 낮춤 (최대 maxAdjust)
+function adjustL(hue, baseL, maxAdjust) {
   const yellowDist = circularDist(hue, 60)
   const cyanDist = circularDist(hue, 180)
   const minDist = Math.min(yellowDist, cyanDist)
-  // minDist=0(완전 옐로/시안)이면 -12%, 60도 이상 떨어지면 보정 없음
-  const adjust = Math.max(0, (60 - minDist) / 60) * 0.12
-  return 0.45 - adjust
+  // minDist=0이면 최대 보정, 60도 이상 떨어지면 보정 없음
+  const adjust = Math.max(0, (60 - minDist) / 60) * maxAdjust
+  return Math.max(0, baseL - adjust)
 }
 
 function circularDist(a, b) {
   const d = Math.abs(a - b) % 360
   return Math.min(d, 360 - d)
+}
+
+// WCAG relative luminance — 0~1 (0=검정, 1=흰)
+function relLuminance(hex) {
+  const c = hex.replace('#', '')
+  const r = parseInt(c.slice(0, 2), 16) / 255
+  const g = parseInt(c.slice(2, 4), 16) / 255
+  const b = parseInt(c.slice(4, 6), 16) / 255
+  const toLin = (v) =>
+    v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)
+  return 0.2126 * toLin(r) + 0.7152 * toLin(g) + 0.0722 * toLin(b)
 }
 
 // HEX → hue (슬라이더 위치 복원용)
