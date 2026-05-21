@@ -92,11 +92,30 @@ const GAS_BASE =
 const API_TIMEOUT_MS = 12000
 
 // 위젯 크기 프리셋 — S(카운트만) / L(전체) 두 단계.
-// 드래그 리사이즈는 제공하지 않고 헤더 사이즈 토글 버튼으로만 전환
+// L의 width/height는 최소값(기본값)으로 동작. 사용자가 가장자리 드래그로 늘리면
+// customSize에 저장되어 다음 실행 / S→L 전환 시 복원
 const SIZE_PRESETS = {
   // S는 진짜 컴팩트 — 가로형 단일 카드 (잔여 숫자 + 갱신 시간 + 확대만)
   S: { width: 240, height: 96 },
-  L: { width: 360, height: 560 }
+  L: { width: 400, height: 620 }
+}
+
+// L 모드에서 사용자 리사이즈 결과를 customSize로 저장.
+// preset 최소값 이상이고 정상 숫자인 경우에만 채택
+function pickInitialSize(sizeKey) {
+  const preset = SIZE_PRESETS[sizeKey] ?? SIZE_PRESETS.L
+  if (sizeKey !== 'L') return preset
+  const custom = store.get('customSize')
+  if (
+    custom &&
+    Number.isFinite(custom.width) &&
+    Number.isFinite(custom.height) &&
+    custom.width >= preset.width &&
+    custom.height >= preset.height
+  ) {
+    return { width: custom.width, height: custom.height }
+  }
+  return preset
 }
 
 // 마이그레이션: 기존에 size: 'M' 저장된 사용자는 'L'로 정정
@@ -121,6 +140,8 @@ const store = new Store({
     // 첫 실행 시 깜빡임 방지용 캐시 — fetch 동안 stale 데이터로 즉시 렌더
     cachedMembers: [],
     cachedScheduleByMember: {}, // { '부수빈': { schedule, pending, summary, lastUpdated } }
+    // L 모드에서 사용자가 드래그로 늘린 사이즈 — 다음 실행 시 복원용
+    customSize: null
   }
 })
 
@@ -148,13 +169,19 @@ function createWindow() {
     size: migratedSize
   }
   const sizePreset = SIZE_PRESETS[initial.size] ?? SIZE_PRESETS.L
+  // L 모드면 customSize 복원, S 모드면 preset 그대로
+  const initialSize = pickInitialSize(initial.size)
 
   const winOpts = {
-    width: sizePreset.width,
-    height: sizePreset.height,
+    width: initialSize.width,
+    height: initialSize.height,
+    // L 모드에서만 가장자리 드래그 리사이즈 허용. S는 고정 (단일 카드라 늘릴 필요 X)
+    resizable: initial.size === 'L',
+    // L 모드의 최소값 = preset 기본값 (축소 불가, 확대만)
+    minWidth: initial.size === 'L' ? sizePreset.width : undefined,
+    minHeight: initial.size === 'L' ? sizePreset.height : undefined,
     frame: false,
     transparent: true,
-    resizable: false,
     alwaysOnTop: initial.alwaysOnTop,
     hasShadow: false,
     skipTaskbar: true, // 작업표시줄·Alt+Tab에서 숨김 (트레이 전용)
@@ -185,6 +212,20 @@ function createWindow() {
       e.preventDefault()
       mainWindow.hide()
     }
+  })
+
+  // L 모드에서 사용자가 가장자리 드래그로 사이즈 변경 시 customSize 저장.
+  // resize 이벤트는 픽셀마다 발생하므로 debounce로 마지막 사이즈만 기록
+  let resizeSaveTimer = null
+  mainWindow.on('resize', () => {
+    if (store.get('size') !== 'L') return
+    if (!mainWindow || mainWindow.isDestroyed()) return
+    clearTimeout(resizeSaveTimer)
+    resizeSaveTimer = setTimeout(() => {
+      if (!mainWindow || mainWindow.isDestroyed()) return
+      const [w, h] = mainWindow.getSize()
+      store.set('customSize', { width: w, height: h })
+    }, 250)
   })
 
   mainWindow.once('ready-to-show', () => {
@@ -452,15 +493,28 @@ ipcMain.handle('window:set-opacity', (_event, value) => {
 })
 
 // 크기 전환 (S/L 프리셋) — 사용자가 헤더 사이즈 토글로 호출
-// resizable:false 라 일시적으로 풀어준 뒤 setSize → 다시 락
+// L → S: 고정 사이즈로. S 모드에서는 리사이즈 락
+// S → L: customSize 있으면 복원, 없으면 preset. 가장자리 드래그 허용
 ipcMain.handle('window:set-size', (_event, sizeKey) => {
   if (!mainWindow) return null
   const preset = SIZE_PRESETS[sizeKey]
   if (!preset) return store.get('size')
-  mainWindow.setResizable(true)
-  mainWindow.setSize(preset.width, preset.height, true)
-  mainWindow.setResizable(false)
+
   store.set('size', sizeKey)
+
+  if (sizeKey === 'S') {
+    // S는 고정. 최소값 제약 풀고(없어도 무관) 정확한 preset 사이즈로 축소
+    mainWindow.setResizable(true)
+    mainWindow.setMinimumSize(preset.width, preset.height)
+    mainWindow.setSize(preset.width, preset.height, true)
+    mainWindow.setResizable(false)
+  } else {
+    // L: customSize 우선, 없으면 preset. 최소값 = preset (이하로 축소 불가)
+    const target = pickInitialSize('L')
+    mainWindow.setResizable(true)
+    mainWindow.setMinimumSize(preset.width, preset.height)
+    mainWindow.setSize(target.width, target.height, true)
+  }
   return sizeKey
 })
 
