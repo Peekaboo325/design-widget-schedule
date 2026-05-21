@@ -106,7 +106,9 @@
   height: 10px;
 }
 
-/* 헤더 텍스트 스택 — 큰 위계(날짜) + 작은 위계(멤버·갱신시간) */
+/* 헤더 텍스트 스택 — 큰 위계(날짜) + 작은 위계(멤버·갱신시간)
+   no-drag로 React 더블클릭 이벤트 잡힘 보장 (drag region 위에선 OS가 가로챔).
+   더블클릭 시 S 모드 전환 */
 .headerText {
   display: flex;
   flex-direction: column;
@@ -114,6 +116,8 @@
   gap: 3px;
   min-width: 0;
   flex: 1 1 auto;
+  -webkit-app-region: no-drag;
+  cursor: pointer;
 }
 
 /* 헤더 텍스트 weight는 CSS 변수로 — useSettings.applyTheme에서

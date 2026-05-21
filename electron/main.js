@@ -95,8 +95,8 @@ const API_TIMEOUT_MS = 12000
 // L의 width/height는 최소값(기본값)으로 동작. 사용자가 가장자리 드래그로 늘리면
 // customSize에 저장되어 다음 실행 / S→L 전환 시 복원
 const SIZE_PRESETS = {
-  // S는 진짜 컴팩트 — 가로형 단일 카드 (잔여 숫자 + 갱신 시간 + 확대만)
-  S: { width: 240, height: 96 },
+  // S는 진짜 컴팩트 — 가로형 단일 카드 (잔여 숫자 + 갱신 시간). 더블클릭으로 L 확대
+  S: { width: 200, height: 80 },
   L: { width: 400, height: 620 }
 }
 
