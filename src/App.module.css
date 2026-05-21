@@ -6,10 +6,7 @@
   position: relative;
   width: 100%;
   height: 100%;
-  /* 순백 → 매우 옅은 회색. 외부 흰 배경과 미세 톤 차이로 위젯 외곽 식별.
-     border/shadow가 paint invalidate 버그로 사라지는 케이스 우회 (배경색은
-     paint 영역 안쪽이라 영향 없음) */
-  background: #fafafa;
+  background: var(--widget-card-bg);
   border-radius: var(--widget-radius);
   display: flex;
   flex-direction: column;
@@ -53,9 +50,9 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  /* 좌→우 미미한 그라데이션 — 외부 흰 배경과 명확한 톤 차이.
-     본문 안 흰 카드(메트릭/행)와도 톤 대비 → elevation 표현. */
-  background: linear-gradient(90deg, #fafafa 0%, #f3f4f6 100%);
+  /* 좌→우 미미한 그라데이션 — 좌측은 흰 그대로, 우측만 살짝 회색.
+     외부 흰 배경 위에서도 위젯 우측 가장자리로 갈수록 톤 구분 */
+  background: linear-gradient(90deg, #ffffff 0%, #fafafa 100%);
   box-sizing: border-box;
   margin-top: -14px;
   border-radius: 18px 18px var(--widget-radius) var(--widget-radius);
