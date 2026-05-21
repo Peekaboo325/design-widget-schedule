@@ -78,6 +78,10 @@ nsis:
   shortcutName: 디자인팀 스케줄 위젯
   installerIcon: resources/design-widget-schedule.ico
   uninstallerIcon: resources/design-widget-schedule.ico
+  # 인스톨러 UI 한국어 강제 — 'Next/Install' 영어로 나오는 거 회피
+  installerLanguages:
+    - ko_KR
+  language: '1042'               # Windows LCID for Korean
 
 # ── 자동 업데이트는 일단 끄기 (추후 GitHub Releases로 연결 가능) ──
 publish: null
