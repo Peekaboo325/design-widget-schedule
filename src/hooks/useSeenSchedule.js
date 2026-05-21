@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { scheduleKey } from '../components/ScheduleView.jsx'
 
+// 신 키 형식 판별: 'rN' (rowIndex 기반) 또는 '광고주|비고|due'(3 segment fallback)
+// 구 형식('광고주|비고' 2 segment)은 false 반환 → 자동 마이그레이션 트리거
+function isNewFormatKey(k) {
+  if (typeof k !== 'string') return false
+  if (/^r\d+$/.test(k)) return true
+  // due 포함 fallback 키는 segment 3개 ("a|b|c"). 구 형식은 2개 ("a|b")
+  return k.split('|').length >= 3
+}
+
 // 새 스케줄 알림 — persistent (electron-store에 멤버별 seen keys 저장)
 // - 위젯 종료해도 멤버별 '본 키' 기억 → 컴퓨터 끄고 켰을 때 그 사이 추가된
 //   새 일정이 NEW로 잡힘 (출근하면 알림 보기 쉬움)
@@ -27,10 +36,12 @@ export default function useSeenSchedule(activeMember, scheduleItems) {
     window.widgetAPI?.getSeenKeys?.(activeMember).then((stored) => {
       if (cancelled) return
       hydratedRef.current = activeMember
-      if (Array.isArray(stored)) {
+      // 신 키 형식(rowIndex 기반 'rN')과 호환되는 데이터만 복원.
+      // 구 형식('광고주|비고')은 무시하여 첫 fetch를 새 기준선으로 마이그레이션
+      // (구→신 전환 시 NEW 폭주 회피. 일시적으로 NEW 0건 → 다음 새 일정부터 정상)
+      if (Array.isArray(stored) && stored.every(isNewFormatKey)) {
         setSeenKeys(new Set(stored))
       } else {
-        // 첫 사용 — null 유지 → 다음 effect에서 첫 fetch 결과를 기준선으로
         setSeenKeys(null)
       }
     })
