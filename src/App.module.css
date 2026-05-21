@@ -48,13 +48,13 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  /* 중앙 흰색, 좌·우·하단 가장자리로 갈수록 #fafafa로 미미하게 변화.
-     ellipse at top center — 헤더 경계가 시작점이라 본문 상단 가운데가 가장 흰색.
-     본문 안 흰 카드와 톤 대비로 elevation 자연스럽게 표현 */
+  /* 중앙 흰색, 좌·우·하단 가장자리로 갈수록 미미한 톤 변화.
+     타원을 본문 카드 안으로 조이고 (70%×90%) 시작점을 35%로 빠르게 →
+     #fafafa가 카드 안 가장자리에 도달. 색은 #f5f6f8로 살짝만 진하게 (여전히 미미) */
   background: radial-gradient(
-    ellipse 110% 130% at 50% 0%,
-    #ffffff 55%,
-    #fafafa 100%
+    ellipse 70% 90% at 50% 10%,
+    #ffffff 35%,
+    #f5f6f8 100%
   );
   box-sizing: border-box;
   margin-top: -14px;
