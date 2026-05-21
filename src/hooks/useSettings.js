@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
-import { getThemeColors, hueFromHex, DEFAULT_TO } from '../lib/color.js'
+import {
+  getThemeColors,
+  getBlackThemeColors,
+  hueFromHex,
+  isBlackTheme,
+  DEFAULT_TO
+} from '../lib/color.js'
 
 const DEFAULTS = {
   alwaysOnTop: true,
@@ -103,9 +109,13 @@ export default function useSettings() {
 //   - 강조 텍스트는 액센트(strong) 컬러, hue별 perceptual L 보정으로 가독성 일정
 function applyTheme(hex) {
   const root = document.documentElement
+  // 블랙 테마는 hue 시스템 밖 — 정확 일치 시 별도 컬러 셋 사용
   const baseHue = hueFromHex(hex)
-  const { from, to, onHeader, accent, accentStrong, accentSoft } =
-    getThemeColors(baseHue)
+  const { from, to, onHeader, accent, accentStrong, accentSoft } = isBlackTheme(
+    hex
+  )
+    ? getBlackThemeColors()
+    : getThemeColors(baseHue)
 
   root.style.setProperty('--widget-header-from', from)
   root.style.setProperty('--widget-header-to', to)

@@ -8,6 +8,26 @@
 export const DEFAULT_FROM = '#f39ebb' // 연한 영역
 export const DEFAULT_TO = '#ff86a2' // 진한 영역 (=액센트 베이스)
 
+// 블랙 테마 프리셋 — hue 시스템 밖의 특수값. 정확 일치 시 블랙 모드로 분기.
+// 완전 블랙(#000)이 아니라 본문 fg(#1a1a1f)와 통일된 톤
+export const BLACK_THEME_HEX = '#1a1a1f'
+
+export function isBlackTheme(hex) {
+  return typeof hex === 'string' && hex.toLowerCase() === BLACK_THEME_HEX
+}
+
+// 블랙 테마 컬러 셋 — 헤더는 짙은 그라데이션, 본문 강조는 검정 텍스트
+export function getBlackThemeColors() {
+  return {
+    from: '#2a2a32',
+    to: '#1a1a1f',
+    onHeader: '#ffffff',
+    accent: '#2a2a32',
+    accentStrong: '#1a1a1f', // 흰 배경 위 강조 텍스트 (큰 숫자 등)
+    accentSoft: '#eeeef1' // 메트릭 카드 / chip 배경
+  }
+}
+
 // HEX ↔ HSL
 function hexToHsl(hex) {
   const c = hex.replace('#', '')

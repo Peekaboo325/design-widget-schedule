@@ -173,7 +173,8 @@
   grid-template-columns: minmax(60px, 1.2fr) minmax(60px, 1.6fr) auto auto;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
+  /* left padding 키워서 NEW dot 전용 공간 확보 (모든 행 일관) */
+  padding: 12px 14px 12px 22px;
   background: var(--widget-surface);
   border: 1px solid var(--widget-card-border);
   border-radius: 12px;
@@ -188,30 +189,36 @@
    카드 좌측 padding 안쪽에 자리잡음. NEW 아닌 행은 렌더되지 않아 깔끔 */
 .rowDot {
   position: absolute;
-  left: 5px;
+  left: 8px;
   top: 50%;
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--widget-accent-strong);
   transform: translateY(-50%);
-  animation: dotPulse 1.6s ease-out infinite;
+  animation: dotPulse 1.5s ease-out infinite;
   pointer-events: none;
 }
 
-/* 펄스 — ring expand로 유려하게. transform은 translateY 고정이라 키프레임에서 변경 X.
-   대신 box-shadow ring 확장 + opacity 변화로 충분히 강한 시각 효과 */
+/* 펄스 — ring expand. ring radius 키워 시각 무게 ↑, 진폭 명확하게.
+   prefers-reduced-motion 환경에서는 정지 dot으로 fallback */
 @keyframes dotPulse {
   0% {
     box-shadow: 0 0 0 0
-      color-mix(in oklab, var(--widget-accent-strong) 60%, transparent);
+      color-mix(in oklab, var(--widget-accent-strong) 70%, transparent);
   }
   70% {
-    box-shadow: 0 0 0 9px
+    box-shadow: 0 0 0 14px
       color-mix(in oklab, var(--widget-accent-strong) 0%, transparent);
   }
   100% {
     box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rowDot {
+    animation: none;
   }
 }
 

@@ -2,11 +2,12 @@ import { forwardRef } from 'react'
 import styles from './SettingsPanel.module.css'
 import Dropdown from './Dropdown.jsx'
 import { shortName } from '../lib/format.js'
-import { hexFromHue, hueFromHex } from '../lib/color.js'
+import { hexFromHue, hueFromHex, BLACK_THEME_HEX } from '../lib/color.js'
 
-// 프리셋 hue 6개 (60도 간격, 디폴트 핑크 346 시작 기준)
+// 프리셋 hue 6개 (60도 간격, 디폴트 핑크 346 시작 기준) + 블랙
+// 블랙은 hue 시스템 밖이라 슬라이더로 도달 불가, 프리셋 클릭으로만 진입
 const PRESET_HUES = [346, 30, 90, 150, 210, 270]
-const COLOR_PRESETS = PRESET_HUES.map((h) => hexFromHue(h))
+const COLOR_PRESETS = [...PRESET_HUES.map((h) => hexFromHue(h)), BLACK_THEME_HEX]
 
 // ref는 panel root에 부착 — App.jsx에서 외부 클릭 감지 시
 // 'panel 영역 안이면 무시 / 바깥이면 닫기' 판정용

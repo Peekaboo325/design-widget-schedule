@@ -179,5 +179,6 @@
 
 .swatchActive {
   border-color: var(--widget-fg);
-  box-shadow: 0 0 0 1px var(--widget-surface);
+  /* inset 흰 ring으로 swatch 색과 무관하게 활성 표시 명확 (블랙도 잘 보임) */
+  box-shadow: inset 0 0 0 2px var(--widget-surface);
 }
