@@ -10,6 +10,12 @@ appId: com.peekaboo325.design-widget-schedule
 productName: 디자인팀 스케줄 위젯
 copyright: © Peekaboo325
 
+# 빌드 시점에 package.json의 description을 productName과 동일하게 override
+# → Windows 시작 프로그램 목록 등에서 표시되는 이름이 productName과 통일됨
+# (package.json description은 그대로 npm 메타데이터로 유지)
+extraMetadata:
+  description: 디자인팀 스케줄 위젯
+
 # 빌드 결과물 위치
 directories:
   output: dist
