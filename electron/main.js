@@ -228,6 +228,16 @@ function createWindow() {
     }, 250)
   })
 
+  // transparent + frameless 창의 리사이즈 후 paint 영역이 invalidate 안 되어
+  // 본문 카드(.bodyCard)의 1px border가 가장자리에서 사라지는 Chromium 이슈 회피.
+  // 'resized'는 리사이즈가 끝났을 때만 발생 (Windows/macOS) → 한 번만 강제 갱신
+  mainWindow.on('resized', () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return
+    try {
+      mainWindow.webContents.invalidate()
+    } catch (_) {}
+  })
+
   mainWindow.once('ready-to-show', () => {
     stamp('ready-to-show — calling show()')
     mainWindow.show()

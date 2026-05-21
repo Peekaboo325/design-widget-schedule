@@ -185,7 +185,7 @@ function CardList({ schedule, newKeys, onStatusClick, onCopyNote, onMarkSeen }) 
                     type="button"
                     className={`${styles.rowNote} ${styles.rowNoteClickable}`}
                     onClick={() => onCopyNote?.(item.noteText)}
-                    title={`클릭해서 메일 제목 복사:\n${item.noteText}`}
+                    title={item['비고']}
                   >
                     {item['비고']}
                   </button>
