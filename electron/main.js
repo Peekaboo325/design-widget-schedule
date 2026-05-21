@@ -218,24 +218,21 @@ function createWindow() {
   // resize 이벤트는 픽셀마다 발생하므로 debounce로 마지막 사이즈만 기록
   let resizeSaveTimer = null
   mainWindow.on('resize', () => {
-    if (store.get('size') !== 'L') return
     if (!mainWindow || mainWindow.isDestroyed()) return
+    // transparent + frameless 창의 리사이즈 중 .bodyCard 가장자리 border가
+    // invalidate 안 되는 Chromium 이슈 회피. invalidate는 dirty rect 마킹만 하고
+    // 실제 paint는 다음 frame에서 한 번만 — 매 픽셀 호출해도 부하 무시 수준
+    try {
+      mainWindow.webContents.invalidate()
+    } catch (_) {}
+
+    if (store.get('size') !== 'L') return
     clearTimeout(resizeSaveTimer)
     resizeSaveTimer = setTimeout(() => {
       if (!mainWindow || mainWindow.isDestroyed()) return
       const [w, h] = mainWindow.getSize()
       store.set('customSize', { width: w, height: h })
     }, 250)
-  })
-
-  // transparent + frameless 창의 리사이즈 후 paint 영역이 invalidate 안 되어
-  // 본문 카드(.bodyCard)의 1px border가 가장자리에서 사라지는 Chromium 이슈 회피.
-  // 'resized'는 리사이즈가 끝났을 때만 발생 (Windows/macOS) → 한 번만 강제 갱신
-  mainWindow.on('resized', () => {
-    if (!mainWindow || mainWindow.isDestroyed()) return
-    try {
-      mainWindow.webContents.invalidate()
-    } catch (_) {}
   })
 
   mainWindow.once('ready-to-show', () => {
