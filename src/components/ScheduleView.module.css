@@ -191,7 +191,8 @@
 }
 
 /* NEW dot — 카드 위 absolute. grid에 영향 X (다른 행 정렬 유지).
-   화사한 accent 톤 + ring 크게 확산하여 시각 인지 ↑ */
+   본체 dot은 정적으로 안정. 펄스 ring은 ::after pseudo로 분리.
+   transform/opacity만 변화 → compositor-only 가속 (box-shadow 페인트 비용 회피) */
 .rowDot {
   position: absolute;
   left: 8px;
@@ -201,29 +202,28 @@
   border-radius: 50%;
   background: var(--widget-accent);
   transform: translateY(-50%);
-  animation: dotPulse 1.5s ease-out infinite;
   pointer-events: none;
 }
 
-/* 펄스 — ring 20px까지 크게 확장 + 시작 alpha 85%로 강한 진폭.
-   화사한 accent 색으로 인지성 ↑. prefers-reduced-motion 환경은 정지 */
-@keyframes dotPulse {
-  0% {
-    box-shadow: 0 0 0 0
-      color-mix(in oklab, var(--widget-accent) 85%, transparent);
-  }
-  70% {
-    box-shadow: 0 0 0 20px
-      color-mix(in oklab, var(--widget-accent) 0%, transparent);
-  }
-  100% {
-    box-shadow: 0 0 0 0 transparent;
-  }
+/* 펄스 ring — ::after로 dot 위에 겹쳐서 scale + opacity 애니메이션.
+   GPU compositor에서만 변화 → Windows transparent 창에서도 부드러움 */
+.rowDot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--widget-accent);
+  animation: dotPulse 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .rowDot {
-    animation: none;
+@keyframes dotPulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
   }
 }
 
