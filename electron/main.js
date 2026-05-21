@@ -14,6 +14,9 @@ import { execFile } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import Store from 'electron-store'
+import electronUpdater from 'electron-updater'
+
+const { autoUpdater } = electronUpdater
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -713,6 +716,34 @@ if (!gotSingleInstanceLock) {
     stamp('createWindow returned')
     createTray()
     stamp('createTray returned')
+
+    // 자동 업데이트 — packaged 앱에서만 동작 (dev 모드 무시)
+    // 시작 후 5초 (네트워크 안정화) → 1시간마다 새 버전 체크
+    // 발견 시 백그라운드 다운로드 → 위젯 종료 시 자동 설치
+    if (app.isPackaged) {
+      autoUpdater.autoDownload = true
+      autoUpdater.autoInstallOnAppQuit = true
+      autoUpdater.on('checking-for-update', () => stamp('updater: checking'))
+      autoUpdater.on('update-available', (info) =>
+        stamp(`updater: available ${info?.version}`)
+      )
+      autoUpdater.on('update-not-available', () => stamp('updater: up to date'))
+      autoUpdater.on('update-downloaded', (info) =>
+        stamp(`updater: downloaded ${info?.version} → install on quit`)
+      )
+      autoUpdater.on('error', (err) => logCrash('updater error', err))
+
+      setTimeout(() => {
+        autoUpdater.checkForUpdates().catch((err) =>
+          logCrash('checkForUpdates initial', err)
+        )
+      }, 5000)
+      setInterval(() => {
+        autoUpdater.checkForUpdates().catch((err) =>
+          logCrash('checkForUpdates interval', err)
+        )
+      }, 60 * 60 * 1000) // 1시간
+    }
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow()

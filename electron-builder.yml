@@ -92,5 +92,11 @@ nsis:
   # CHANGES.txt → CHANGES.rtf 자동 변환은 build:changes 스크립트가 수행
   license: CHANGES.rtf
 
-# ── 자동 업데이트는 일단 끄기 (추후 GitHub Releases로 연결 가능) ──
-publish: null
+# ── 자동 업데이트 — GitHub Releases (public 레포) ──
+# build:win 실행 시 GH_TOKEN 환경변수에 토큰 있으면 빌드 후 자동으로 Release 생성/업로드
+# 클라이언트(위젯)는 시작 후 / 주기적으로 이 레포의 latest Release 체크해서 자동 다운로드
+# 토큰 없이 빌드하면 dist에만 만들고 publish 스킵 (--publish=never 효과)
+publish:
+  provider: github
+  owner: Peekaboo325
+  repo: design-widget-releases

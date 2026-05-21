@@ -1,6 +1,6 @@
 {
   "name": "design-widget-schedule",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "IMC 3본부 디자인팀 팀원용 바탕화면 위젯",
   "main": "out/main/main.js",
   "author": "Peekaboo325",
@@ -17,7 +17,8 @@
     "build:all": "npm run build:changes && electron-vite build && electron-builder -mw --config electron-builder.yml"
   },
   "dependencies": {
-    "electron-store": "^10.1.0"
+    "electron-store": "^10.1.0",
+    "electron-updater": "^6.3.9"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
