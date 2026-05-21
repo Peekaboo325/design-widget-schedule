@@ -185,7 +185,9 @@ function createWindow() {
     alwaysOnTop: initial.alwaysOnTop,
     hasShadow: false,
     skipTaskbar: true, // 작업표시줄·Alt+Tab에서 숨김 (트레이 전용)
-    backgroundColor: '#00000000',
+    // alpha 1/255 = 거의 투명이지만 Chromium opaque 분기를 트리거 → transparent
+    // 창의 리사이즈 paint 누락(.bodyCard 가장자리 border 사라짐) Chromium 버그 회피
+    backgroundColor: '#00000001',
     opacity: initial.opacity,
     show: false,
     webPreferences: {

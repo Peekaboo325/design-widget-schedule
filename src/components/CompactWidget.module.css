@@ -1,10 +1,12 @@
 /* S 컴팩트 — 전체 그라데이션 카드, 가로형 한 줄.
-   200×80 사이즈에 맞춰 padding 축소. card 자체는 drag(이동 영역) */
+   200×80 사이즈에 맞춰 padding/요소 축소 */
 .card {
   height: 100%;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  padding: 10px 14px;
+  gap: 10px;
+  padding: 10px 12px;
   background: linear-gradient(
     135deg,
     var(--widget-header-from) 0%,
@@ -13,19 +15,6 @@
   color: var(--widget-on-header);
   -webkit-app-region: drag;
   box-sizing: border-box;
-}
-
-/* 텍스트/숫자 wrapper — no-drag로 React 이벤트(더블클릭) 잡힘 보장.
-   카드 거의 전체를 차지하여 사실상 "어디든 더블클릭" UX */
-.content {
-  flex: 1;
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  gap: 12px;
-  height: 100%;
-  -webkit-app-region: no-drag;
-  cursor: pointer;
 }
 
 /* 큰 숫자 — 강조 메인 */
@@ -62,4 +51,30 @@
   overflow: hidden;
   text-overflow: ellipsis;
   color: color-mix(in oklab, var(--widget-on-header) 70%, transparent);
+}
+
+/* 확대 버튼 — 우측 minimal. 컴팩트라 22×22로 작게 */
+.expand {
+  background: transparent;
+  border: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--widget-on-header);
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  transition: background 0.12s ease, transform 0.08s ease;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.expand:hover {
+  background: color-mix(in oklab, var(--widget-on-header) 14%, transparent);
+}
+
+.expand:active {
+  transform: scale(0.92);
 }

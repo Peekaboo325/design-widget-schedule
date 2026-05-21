@@ -423,13 +423,7 @@ export default function App() {
       style={{ '--header-h': headerPx }}
     >
       <div className={styles.headerCard} style={{ height: headerPx }}>
-        {/* 헤더 텍스트 — 더블클릭으로 S 모드 전환. no-drag로 이벤트 잡힘 보장.
-            (drag region 위에서는 마우스 이벤트가 OS로 가로채여 React 이벤트 X) */}
-        <div
-          className={styles.headerText}
-          onDoubleClick={() => setSize('S')}
-          title="더블클릭으로 작게"
-        >
+        <div className={styles.headerText}>
           <span className={styles.date}>{todayLabel}</span>
           {showHeaderMeta ? (
             <span className={styles.headerMeta}>
@@ -456,6 +450,16 @@ export default function App() {
               +{newCount}
             </button>
           )}
+          {/* 사이즈 축소 — L에서만 표시 (S는 CompactWidget의 자체 확대 버튼) */}
+          <button
+            type="button"
+            className={styles.iconBtn}
+            aria-label="작게"
+            title="작게"
+            onClick={() => setSize('S')}
+          >
+            <RestoreIcon />
+          </button>
           <button
             ref={settingsBtnRef}
             type="button"
@@ -618,6 +622,26 @@ function GearIcon() {
     >
       <circle cx="12" cy="12" r="3" />
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+  )
+}
+
+// 사이즈 줄임 — 두 사각형 겹침 (윈도우 창 복원 표준 아이콘)
+function RestoreIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="8" y="3" width="13" height="13" rx="1.5" />
+      <path d="M16 16v3.5A1.5 1.5 0 0 1 14.5 21h-11A1.5 1.5 0 0 1 2 19.5v-11A1.5 1.5 0 0 1 3.5 7H8" />
     </svg>
   )
 }
