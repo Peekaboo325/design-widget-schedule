@@ -13,8 +13,6 @@
   overflow: hidden;
   color: var(--widget-fg);
   box-sizing: border-box;
-  /* 추가 보장 — paint invalidate 영향 안 받는 환경에서는 inset ring 보임 */
-  box-shadow: inset 0 0 0 1px rgba(14, 14, 16, 0.08);
 }
 
 /* 헤더 카드 — 위젯 상단 영역. 그라데이션
@@ -50,14 +48,17 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  /* 좌→우 미미한 그라데이션 — 좌측은 흰 그대로, 우측만 살짝 회색.
-     외부 흰 배경 위에서도 위젯 우측 가장자리로 갈수록 톤 구분 */
-  background: linear-gradient(90deg, #ffffff 0%, #fafafa 100%);
+  /* 중앙 흰색, 좌·우·하단 가장자리로 갈수록 #fafafa로 미미하게 변화.
+     ellipse at top center — 헤더 경계가 시작점이라 본문 상단 가운데가 가장 흰색.
+     본문 안 흰 카드와 톤 대비로 elevation 자연스럽게 표현 */
+  background: radial-gradient(
+    ellipse 110% 130% at 50% 0%,
+    #ffffff 55%,
+    #fafafa 100%
+  );
   box-sizing: border-box;
   margin-top: -14px;
   border-radius: 18px 18px var(--widget-radius) var(--widget-radius);
-  border: 1px solid rgba(14, 14, 16, 0.10);
-  border-top: 0;
   box-shadow: 0 -6px 16px -4px rgba(26, 26, 31, 0.14);
 }
 
