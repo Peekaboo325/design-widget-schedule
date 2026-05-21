@@ -30,6 +30,7 @@ export default function EmojiPicker({ value, onChange, onClose }) {
     // 1 grapheme(이모지 1자)만 적용. surrogate pair는 Array.from으로 안전 분리
     onChange(Array.from(trimmed).slice(0, 1).join(''))
     onClose()
+    window.widgetAPI?.hideEmojiPanel?.()
   }
 
   return (
@@ -62,6 +63,7 @@ export default function EmojiPicker({ value, onChange, onClose }) {
             if (v) {
               onChange(v)
               onClose()
+              window.widgetAPI?.hideEmojiPanel?.()
             } else {
               setCustom('')
             }
