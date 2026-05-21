@@ -173,12 +173,17 @@
   grid-template-columns: minmax(60px, 1.2fr) minmax(60px, 1.6fr) auto auto;
   align-items: center;
   gap: 12px;
-  /* left padding 키워서 NEW dot 전용 공간 확보 (모든 행 일관) */
-  padding: 12px 14px 12px 22px;
+  padding: 12px 14px;
   background: var(--widget-surface);
   border: 1px solid var(--widget-card-border);
   border-radius: 12px;
   transition: border-color 0.12s ease;
+}
+
+/* NEW dot이 있는 카드만 left padding을 늘려 dot 전용 공간 확보.
+   일반 카드는 기존 padding 유지 (들여쓰기 영향 없음) */
+.rowCard:has(.rowDot) {
+  padding-left: 22px;
 }
 
 .rowCard:hover {
@@ -186,7 +191,7 @@
 }
 
 /* NEW dot — 카드 위 absolute. grid에 영향 X (다른 행 정렬 유지).
-   카드 좌측 padding 안쪽에 자리잡음. NEW 아닌 행은 렌더되지 않아 깔끔 */
+   화사한 accent 톤 + ring 크게 확산하여 시각 인지 ↑ */
 .rowDot {
   position: absolute;
   left: 8px;
@@ -194,22 +199,22 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--widget-accent-strong);
+  background: var(--widget-accent);
   transform: translateY(-50%);
   animation: dotPulse 1.5s ease-out infinite;
   pointer-events: none;
 }
 
-/* 펄스 — ring expand. ring radius 키워 시각 무게 ↑, 진폭 명확하게.
-   prefers-reduced-motion 환경에서는 정지 dot으로 fallback */
+/* 펄스 — ring 20px까지 크게 확장 + 시작 alpha 85%로 강한 진폭.
+   화사한 accent 색으로 인지성 ↑. prefers-reduced-motion 환경은 정지 */
 @keyframes dotPulse {
   0% {
     box-shadow: 0 0 0 0
-      color-mix(in oklab, var(--widget-accent-strong) 70%, transparent);
+      color-mix(in oklab, var(--widget-accent) 85%, transparent);
   }
   70% {
-    box-shadow: 0 0 0 14px
-      color-mix(in oklab, var(--widget-accent-strong) 0%, transparent);
+    box-shadow: 0 0 0 20px
+      color-mix(in oklab, var(--widget-accent) 0%, transparent);
   }
   100% {
     box-shadow: 0 0 0 0 transparent;
