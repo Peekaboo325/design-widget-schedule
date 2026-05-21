@@ -257,9 +257,68 @@ export default function App() {
     }
   }, [pendingViewOpen, scheduleData])
 
-  // 공유 체크 클릭 — L열 TRUE + 낙관적으로 pending에서 제거 + Undo
+  // 공유 체크 직렬 큐 — 우루루 클릭 시 E03(STALE) 회피.
+  // GAS가 행을 💚완료 시트로 이동시키며 신규 시트 rowIndex가 시프트되어
+  // 병렬 호출 시 expect 검증 실패 → 큐로 순차 처리 + STALE 시 1회 자동 재시도.
+  const shareQueueRef = useRef([])
+  const shareProcessingRef = useRef(false)
+  const processShareQueue = useCallback(async () => {
+    if (shareProcessingRef.current) return
+    shareProcessingRef.current = true
+    while (shareQueueRef.current.length > 0) {
+      const task = shareQueueRef.current.shift()
+      try {
+        await setRowShare(task.rowIndex, true, task.expect)
+        setToast({
+          key: Date.now(),
+          message: `${task.expect['광고주']} 공유 처리됨`,
+          tone: 'info',
+          action: {
+            label: '취소',
+            onClick: async () => {
+              try {
+                await setRowShare(task.rowIndex, false, task.expect)
+                refresh()
+              } catch (err) {
+                setToast(buildErrorToast(err, '취소 실패.'))
+              }
+            }
+          }
+        })
+      } catch (err) {
+        // STALE이면 시트 재fetch + 광고주·비고로 새 rowIndex 찾아 1회 재시도
+        if (err?.code === 'STALE') {
+          try {
+            const fresh = await refresh()
+            const nextItem = fresh?.pending?.find(
+              (p) =>
+                p['광고주'] === task.expect['광고주'] &&
+                p['비고'] === task.expect['비고']
+            )
+            if (nextItem?.rowIndex) {
+              await setRowShare(nextItem.rowIndex, true, task.expect)
+              setToast({
+                key: Date.now(),
+                message: `${task.expect['광고주']} 공유 처리됨`,
+                tone: 'info'
+              })
+              continue
+            }
+            // pending에서 사라짐 = 이미 다른 경로로 처리됨. 조용히 패스
+          } catch (retryErr) {
+            setToast(buildErrorToast(retryErr, '공유 처리 실패.'))
+          }
+        } else {
+          setToast(buildErrorToast(err, '공유 처리 실패.'))
+        }
+      }
+    }
+    shareProcessingRef.current = false
+  }, [refresh])
+
+  // 공유 체크 클릭 — 낙관적으로 pending 즉시 제거 + 큐에 추가 (백그라운드 직렬 처리)
   const handleShareCheck = useCallback(
-    async (item) => {
+    (item) => {
       if (!item || !item.rowIndex) return
       const rowIndex = item.rowIndex
 
@@ -274,31 +333,13 @@ export default function App() {
         }
       })
 
-      const expect = { 광고주: item['광고주'], 비고: item['비고'] }
-      try {
-        await setRowShare(rowIndex, true, expect)
-        setToast({
-          key: Date.now(),
-          message: `${item['광고주']} 공유 처리됨`,
-          tone: 'info',
-          action: {
-            label: '취소',
-            onClick: async () => {
-              try {
-                await setRowShare(rowIndex, false, expect)
-                refresh()
-              } catch (err) {
-                setToast(buildErrorToast(err, '취소 실패.'))
-              }
-            }
-          }
-        })
-      } catch (err) {
-        refresh()
-        setToast(buildErrorToast(err, '공유 처리 실패.'))
-      }
+      shareQueueRef.current.push({
+        rowIndex,
+        expect: { 광고주: item['광고주'], 비고: item['비고'] }
+      })
+      processShareQueue()
     },
-    [mutateSchedule, refresh]
+    [mutateSchedule, processShareQueue]
   )
 
   // 백업 완료 처리 — 💚완료 시트 M열 TRUE + 낙관적으로 backup에서 제거 + Undo

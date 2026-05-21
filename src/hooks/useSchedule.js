@@ -54,7 +54,7 @@ export default function useSchedule(memberName) {
 
       try {
         const result = await fetchSchedule(memberName, { signal: controller.signal })
-        if (controller.signal.aborted) return
+        if (controller.signal.aborted) return null
         const updatedAt = new Date()
         setData(result)
         setLastUpdated(updatedAt)
@@ -69,6 +69,8 @@ export default function useSchedule(memberName) {
           summary: result.summary,
           lastUpdated: updatedAt.getTime()
         })
+        // 큐의 STALE 자동 재시도 등에서 fresh data를 즉시 사용할 수 있도록 반환
+        return result
       } catch (err) {
         if (controller.signal.aborted || err.name === 'AbortError') return
         if (attempt >= MAX_RETRIES) {
@@ -90,10 +92,11 @@ export default function useSchedule(memberName) {
     [memberName]
   )
 
-  // 외부에서 호출하는 진입점 — 진행 중 요청/재시도 취소 후 처음부터
+  // 외부에서 호출하는 진입점 — 진행 중 요청/재시도 취소 후 처음부터.
+  // promise는 fresh result로 resolve (큐에서 await refresh() 후 즉시 사용 가능)
   const load = useCallback(() => {
     cancelPending()
-    attemptLoad(0)
+    return attemptLoad(0)
   }, [cancelPending, attemptLoad])
 
   // memberName 변경/마운트 시:
