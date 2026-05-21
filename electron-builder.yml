@@ -82,8 +82,9 @@ nsis:
   installerLanguages:
     - ko_KR
   language: '1042'               # Windows LCID for Korean
-  # 라이선스 페이지 자리에 패치노트 표시 — '동의함' 체크박스는 형식적으로 남음
-  license: CHANGES.txt
+  # 라이선스 페이지 자리에 패치노트 표시. RTF로 한국어 깨짐 방지.
+  # CHANGES.txt → CHANGES.rtf 자동 변환은 build:changes 스크립트가 수행
+  license: CHANGES.rtf
 
 # ── 자동 업데이트는 일단 끄기 (추후 GitHub Releases로 연결 가능) ──
 publish: null

@@ -7,3 +7,6 @@ dist/
 npm-debug.log*
 .env
 .env.local
+
+# 빌드 시점에 CHANGES.txt에서 자동 생성 (NSIS 인스톨러용 한국어 RTF)
+CHANGES.rtf
