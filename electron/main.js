@@ -327,6 +327,12 @@ function createTray() {
   tray.setToolTip('디자인 위젯')
 
   const contextMenu = Menu.buildFromTemplate([
+    // 현재 버전 표시 (클릭 불가, 정보용) — 사용자가 자기 버전 확인 가능
+    {
+      label: `버전 v${app.getVersion()}`,
+      enabled: false
+    },
+    { type: 'separator' },
     {
       label: '새로고침',
       click: () => {
