@@ -8,6 +8,7 @@ import MemberPicker from './components/MemberPicker.jsx'
 import useSettings from './hooks/useSettings.js'
 import useMembers from './hooks/useMembers.js'
 import useSchedule from './hooks/useSchedule.js'
+import useActionQueue from './hooks/useActionQueue.js'
 import useSeenSchedule from './hooks/useSeenSchedule.js'
 import Toast from './components/Toast.jsx'
 import PendingPanel from './components/PendingPanel.jsx'
@@ -145,9 +146,47 @@ export default function App() {
   const [toast, setToast] = useState(null)
   const dismissToast = useCallback(() => setToast(null), [])
 
-  // 상태 chip 클릭 — 다음 상태로 순환 + 낙관적 업데이트 + Undo
+  // 상태 chip 변경 — 직렬 큐 + STALE 자동 재시도
+  const statusQueue = useActionQueue({
+    executor: async (task) => {
+      await setRowStatus(task.rowIndex, task.next, task.expect)
+    },
+    findFreshRow: (fresh, task) =>
+      fresh?.schedule?.find(
+        (s) =>
+          s['광고주'] === task.expect['광고주'] &&
+          s['비고'] === task.expect['비고']
+      ),
+    refresh,
+    onSuccess: (task) => {
+      setToast({
+        key: Date.now(),
+        message: `${task.expect['광고주']} → ${task.next}`,
+        tone: 'info',
+        action: {
+          label: '취소',
+          onClick: async () => {
+            try {
+              await setRowStatus(task.rowIndex, task.prevStatus)
+              // refresh로 사라졌던 키가 재등장 → NEW로 잡히는 거 방지
+              markSeen(task.scheduleKeyValue)
+              refresh()
+            } catch (err) {
+              setToast(buildErrorToast(err, '취소 실패.'))
+            }
+          }
+        }
+      })
+    },
+    onError: (err) => {
+      refresh()
+      setToast(buildErrorToast(err, '변경 실패.'))
+    }
+  })
+
+  // 상태 chip 클릭 — 낙관적 업데이트 + 큐 enqueue
   const handleStatusClick = useCallback(
-    async (item) => {
+    (item) => {
       if (!item || !item.rowIndex) return
       const prevStatus = item['상태']
       const next = nextStatus(prevStatus)
@@ -190,38 +229,15 @@ export default function App() {
         }
       })
 
-      // 시트에 반영 — expect로 행 어긋남 검증
-      const expect = { 광고주: item['광고주'], 비고: item['비고'] }
-      try {
-        await setRowStatus(rowIndex, next, expect)
-        setToast({
-          key: Date.now(),
-          message: `${item['광고주']} → ${next}`,
-          tone: 'info',
-          action: {
-            label: '취소',
-            onClick: async () => {
-              try {
-                // 취소는 시트 현재 값과 일치 검증을 우회해도 안전 (방금 변경한 본인이라)
-                // 단 안전 위해 expect 유지하되, 검증 실패 시 자연 refresh로 정정
-                await setRowStatus(rowIndex, prevStatus)
-                // refresh로 다시 fetch되며 사라졌던 키가 재등장 → NEW로 잡힘
-                // 방지: 해당 키를 미리 기준선에 등록
-                markSeen(scheduleKey(item))
-                refresh()
-              } catch (err) {
-                setToast(buildErrorToast(err, '취소 실패.'))
-              }
-            }
-          }
-        })
-      } catch (err) {
-        // 실패 시 다시 fetch로 정확한 상태 복구
-        refresh()
-        setToast(buildErrorToast(err, '변경 실패.'))
-      }
+      statusQueue.enqueue({
+        rowIndex,
+        next,
+        prevStatus,
+        expect: { 광고주: item['광고주'], 비고: item['비고'] },
+        scheduleKeyValue: scheduleKey(item)
+      })
     },
-    [mutateSchedule, refresh, markSeen]
+    [mutateSchedule, statusQueue]
   )
 
   // 공유 대기 패널 — 우측에서 슬라이드 인. 풋터의 '>' 의미와 일치
@@ -257,66 +273,42 @@ export default function App() {
     }
   }, [pendingViewOpen, scheduleData])
 
-  // 공유 체크 직렬 큐 — 우루루 클릭 시 E03(STALE) 회피.
-  // GAS가 행을 💚완료 시트로 이동시키며 신규 시트 rowIndex가 시프트되어
-  // 병렬 호출 시 expect 검증 실패 → 큐로 순차 처리 + STALE 시 1회 자동 재시도.
-  const shareQueueRef = useRef([])
-  const shareProcessingRef = useRef(false)
-  const processShareQueue = useCallback(async () => {
-    if (shareProcessingRef.current) return
-    shareProcessingRef.current = true
-    while (shareQueueRef.current.length > 0) {
-      const task = shareQueueRef.current.shift()
-      try {
-        await setRowShare(task.rowIndex, true, task.expect)
-        setToast({
-          key: Date.now(),
-          message: `${task.expect['광고주']} 공유 처리됨`,
-          tone: 'info',
-          action: {
-            label: '취소',
-            onClick: async () => {
-              try {
-                await setRowShare(task.rowIndex, false, task.expect)
-                refresh()
-              } catch (err) {
-                setToast(buildErrorToast(err, '취소 실패.'))
-              }
+  // 공유 체크 — 직렬 큐 + STALE 자동 재시도
+  const shareQueue = useActionQueue({
+    executor: async (task) => {
+      await setRowShare(task.rowIndex, true, task.expect)
+    },
+    findFreshRow: (fresh, task) =>
+      fresh?.pending?.find(
+        (p) =>
+          p['광고주'] === task.expect['광고주'] &&
+          p['비고'] === task.expect['비고']
+      ),
+    refresh,
+    onSuccess: (task) => {
+      setToast({
+        key: Date.now(),
+        message: `${task.expect['광고주']} 공유 처리됨`,
+        tone: 'info',
+        action: {
+          label: '취소',
+          onClick: async () => {
+            try {
+              await setRowShare(task.rowIndex, false, task.expect)
+              refresh()
+            } catch (err) {
+              setToast(buildErrorToast(err, '취소 실패.'))
             }
           }
-        })
-      } catch (err) {
-        // STALE이면 시트 재fetch + 광고주·비고로 새 rowIndex 찾아 1회 재시도
-        if (err?.code === 'STALE') {
-          try {
-            const fresh = await refresh()
-            const nextItem = fresh?.pending?.find(
-              (p) =>
-                p['광고주'] === task.expect['광고주'] &&
-                p['비고'] === task.expect['비고']
-            )
-            if (nextItem?.rowIndex) {
-              await setRowShare(nextItem.rowIndex, true, task.expect)
-              setToast({
-                key: Date.now(),
-                message: `${task.expect['광고주']} 공유 처리됨`,
-                tone: 'info'
-              })
-              continue
-            }
-            // pending에서 사라짐 = 이미 다른 경로로 처리됨. 조용히 패스
-          } catch (retryErr) {
-            setToast(buildErrorToast(retryErr, '공유 처리 실패.'))
-          }
-        } else {
-          setToast(buildErrorToast(err, '공유 처리 실패.'))
         }
-      }
+      })
+    },
+    onError: (err) => {
+      setToast(buildErrorToast(err, '공유 처리 실패.'))
     }
-    shareProcessingRef.current = false
-  }, [refresh])
+  })
 
-  // 공유 체크 클릭 — 낙관적으로 pending 즉시 제거 + 큐에 추가 (백그라운드 직렬 처리)
+  // 공유 체크 클릭 — 낙관적 제거 + 큐 enqueue
   const handleShareCheck = useCallback(
     (item) => {
       if (!item || !item.rowIndex) return
@@ -333,18 +325,53 @@ export default function App() {
         }
       })
 
-      shareQueueRef.current.push({
+      shareQueue.enqueue({
         rowIndex,
         expect: { 광고주: item['광고주'], 비고: item['비고'] }
       })
-      processShareQueue()
     },
-    [mutateSchedule, processShareQueue]
+    [mutateSchedule, shareQueue]
   )
 
-  // 백업 완료 처리 — 💚완료 시트 M열 TRUE + 낙관적으로 backup에서 제거 + Undo
+  // 백업 처리 — 직렬 큐 + STALE 자동 재시도
+  // 💚완료 시트의 M열 토글이라 행 이동은 없지만 LockService BUSY/STALE 회피 + 일관성
+  const backupQueue = useActionQueue({
+    executor: async (task) => {
+      await setRowBackup(task.rowIndex, true, task.expect)
+    },
+    findFreshRow: (fresh, task) =>
+      fresh?.backup?.find(
+        (b) =>
+          b['광고주'] === task.expect['광고주'] &&
+          b['비고'] === task.expect['비고']
+      ),
+    refresh,
+    onSuccess: (task) => {
+      setToast({
+        key: Date.now(),
+        message: `${task.expect['광고주']} 백업 처리됨`,
+        tone: 'info',
+        action: {
+          label: '취소',
+          onClick: async () => {
+            try {
+              await setRowBackup(task.rowIndex, false, task.expect)
+              refresh()
+            } catch (err) {
+              setToast(buildErrorToast(err, '취소 실패.'))
+            }
+          }
+        }
+      })
+    },
+    onError: (err) => {
+      setToast(buildErrorToast(err, '백업 처리 실패.'))
+    }
+  })
+
+  // 백업 완료 클릭 — 낙관적 제거 + 큐 enqueue
   const handleBackupCheck = useCallback(
-    async (item) => {
+    (item) => {
       if (!item || !item.rowIndex) return
       const rowIndex = item.rowIndex
 
@@ -359,31 +386,12 @@ export default function App() {
         }
       })
 
-      const expect = { 광고주: item['광고주'], 비고: item['비고'] }
-      try {
-        await setRowBackup(rowIndex, true, expect)
-        setToast({
-          key: Date.now(),
-          message: `${item['광고주']} 백업 처리됨`,
-          tone: 'info',
-          action: {
-            label: '취소',
-            onClick: async () => {
-              try {
-                await setRowBackup(rowIndex, false, expect)
-                refresh()
-              } catch (err) {
-                setToast(buildErrorToast(err, '취소 실패.'))
-              }
-            }
-          }
-        })
-      } catch (err) {
-        refresh()
-        setToast(buildErrorToast(err, '백업 처리 실패.'))
-      }
+      backupQueue.enqueue({
+        rowIndex,
+        expect: { 광고주: item['광고주'], 비고: item['비고'] }
+      })
     },
-    [mutateSchedule, refresh]
+    [mutateSchedule, backupQueue]
   )
 
   // 트레이 '새로고침' 메뉴 → 즉시 재조회
