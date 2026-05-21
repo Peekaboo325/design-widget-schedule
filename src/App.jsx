@@ -582,6 +582,7 @@ export default function App() {
                 onStatusClick={handleStatusClick}
                 onPendingClick={handlePendingClick}
                 onCopyNote={handleCopyNote}
+                onMarkSeen={markSeen}
               />
             )}
           </main>
@@ -709,7 +710,8 @@ function Body({
   newKeys,
   onStatusClick,
   onPendingClick,
-  onCopyNote
+  onCopyNote,
+  onMarkSeen
 }) {
   if (membersError) {
     return (
@@ -743,6 +745,7 @@ function Body({
       onStatusClick={onStatusClick}
       onPendingClick={onPendingClick}
       onCopyNote={onCopyNote}
+      onMarkSeen={onMarkSeen}
     />
   )
 }

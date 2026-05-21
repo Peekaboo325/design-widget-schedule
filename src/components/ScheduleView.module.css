@@ -181,9 +181,11 @@
 }
 
 /* NEW dot이 있는 카드만 left padding을 늘려 dot 전용 공간 확보.
-   일반 카드는 기존 padding 유지 (들여쓰기 영향 없음) */
+   일반 카드는 기존 padding 유지 (들여쓰기 영향 없음).
+   클릭하면 markSeen 발동하므로 cursor pointer로 유도 */
 .rowCard:has(.rowDot) {
-  padding-left: 22px;
+  padding-left: 32px;
+  cursor: pointer;
 }
 
 .rowCard:hover {
@@ -195,7 +197,7 @@
    transform/opacity만 변화 → compositor-only 가속 (box-shadow 페인트 비용 회피) */
 .rowDot {
   position: absolute;
-  left: 8px;
+  left: 12px;
   top: 50%;
   width: 8px;
   height: 8px;
@@ -222,7 +224,7 @@
     opacity: 0.7;
   }
   100% {
-    transform: scale(4);
+    transform: scale(3.5);
     opacity: 0;
   }
 }

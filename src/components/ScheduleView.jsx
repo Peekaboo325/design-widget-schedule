@@ -55,7 +55,8 @@ export default function ScheduleView({
   newKeys,
   onStatusClick,
   onPendingClick,
-  onCopyNote
+  onCopyNote,
+  onMarkSeen
 }) {
   const { schedule, pending } = data
   const totalQty = sumQty(schedule)
@@ -70,6 +71,7 @@ export default function ScheduleView({
           newKeys={newKeys}
           onStatusClick={onStatusClick}
           onCopyNote={onCopyNote}
+          onMarkSeen={onMarkSeen}
         />
         <PendingFooter count={pendingQty} onClick={onPendingClick} />
       </div>
@@ -141,7 +143,7 @@ function formatDueHeader(key) {
 // L 행 카드 리스트 — 마감일 그룹별로 묶음
 // NEW dot은 grid 컬럼이 아니라 카드 위 absolute로 떠 있음 →
 // NEW 발생/소멸 시 다른 행 정렬에 영향 없음 (개별 레이아웃만 변경)
-function CardList({ schedule, newKeys, onStatusClick, onCopyNote }) {
+function CardList({ schedule, newKeys, onStatusClick, onCopyNote, onMarkSeen }) {
   if (schedule.length === 0) {
     return (
       <div className={styles.listEmpty}>
@@ -161,8 +163,17 @@ function CardList({ schedule, newKeys, onStatusClick, onCopyNote }) {
           </div>
           {items.map((item, i) => {
             const isNew = newKeys?.has(scheduleKey(item))
+            // NEW 카드는 어디든 클릭 시 seen 처리 (펄스 해제).
+            // 내부 버튼(상태/메모) 클릭도 bubble로 함께 발동 — Set 기반이라 idempotent
+            const handleCardClick = isNew
+              ? () => onMarkSeen?.(scheduleKey(item))
+              : undefined
             return (
-              <div key={`${dueKey}-${i}`} className={styles.rowCard}>
+              <div
+                key={`${dueKey}-${i}`}
+                className={styles.rowCard}
+                onClick={handleCardClick}
+              >
                 {isNew && (
                   <span className={styles.rowDot} aria-label="새 항목" />
                 )}
