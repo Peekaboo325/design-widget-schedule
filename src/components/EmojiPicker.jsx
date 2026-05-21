@@ -27,10 +27,11 @@ export default function EmojiPicker({ value, onChange, onClose }) {
   function applyCustom() {
     const trimmed = custom.trim()
     if (!trimmed) return
-    // 1 grapheme(이모지 1자)만 적용. surrogate pair는 Array.from으로 안전 분리
+    // 1 grapheme(이모지 1자)만 적용. surrogate pair는 Array.from으로 안전 분리.
+    // 자동 닫힘 X — 시스템 이모지 패널이 떠 있을 수 있고 코드로 닫기 어려우니
+    // picker도 함께 두어 사용자가 외부 클릭/ESC로 일관되게 닫도록
     onChange(Array.from(trimmed).slice(0, 1).join(''))
-    onClose()
-    window.widgetAPI?.hideEmojiPanel?.()
+    setCustom('')
   }
 
   return (
@@ -57,16 +58,13 @@ export default function EmojiPicker({ value, onChange, onClose }) {
           placeholder="이모지 더보기"
           value={custom}
           onChange={(e) => {
-            // 1 grapheme(이모지 1자)만 허용. 입력 즉시 적용 + picker 자동 닫힘
-            // (시스템 이모지 패널에서 하나 클릭 → input에 들어옴 → 즉시 close)
+            // 1 grapheme(이모지 1자)만 허용. 즉시 적용.
+            // 자동 닫힘 X — 시스템 이모지 패널이 떠 있을 수 있고 코드로 닫기 어려우니
+            // picker도 함께 두어 사용자가 외부 클릭/ESC로 일관되게 닫도록.
+            // input은 비워서 다음 이모지 선택도 받을 수 있게
             const v = Array.from(e.target.value).slice(0, 1).join('')
-            if (v) {
-              onChange(v)
-              onClose()
-              window.widgetAPI?.hideEmojiPanel?.()
-            } else {
-              setCustom('')
-            }
+            if (v) onChange(v)
+            setCustom('')
           }}
           onFocus={() => {
             // macOS면 시스템 이모지 패널을 자동으로 띄움 (Windows/Linux는 무시)

@@ -568,32 +568,6 @@ ipcMain.handle('show-emoji-panel', () => {
   return false
 })
 
-// 시스템 이모지 패널 닫기 — 이모지 선택 후 패널이 그대로 떠 있는 UX 해소
-// Windows: Win+. 키는 토글이라 다시 송출하면 닫힘. ESC는 mainWindow의 ESC 핸들러
-//          (설정 패널 닫기 등)까지 발동시키므로 회피.
-// macOS: Electron 33에 app.hideEmojiPanel API 미제공 → best-effort 없음
-ipcMain.handle('hide-emoji-panel', () => {
-  if (process.platform !== 'win32') return false
-  mainWindow?.focus()
-  mainWindow?.webContents?.focus()
-  const ps = [
-    'Add-Type -TypeDefinition \'using System.Runtime.InteropServices; public class K { [DllImport("user32.dll")] public static extern void keybd_event(byte v, byte s, uint f, uint e); }\'',
-    '[K]::keybd_event(0x5B,0,0,0)',
-    '[K]::keybd_event(0xBE,0,0,0)',
-    'Start-Sleep -Milliseconds 30',
-    '[K]::keybd_event(0xBE,0,2,0)',
-    '[K]::keybd_event(0x5B,0,2,0)'
-  ].join('; ')
-  execFile(
-    'powershell.exe',
-    ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-Command', ps],
-    { windowsHide: true },
-    (err) => {
-      if (err) console.warn('[emoji-panel-hide] PowerShell 실행 실패:', err.message)
-    }
-  )
-  return true
-})
 
 // 테마 컬러는 렌더러 측 CSS 변수로만 적용 → 저장만 담당
 ipcMain.handle('settings:set-theme-color', (_event, hex) => {

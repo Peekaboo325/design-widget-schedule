@@ -39,10 +39,6 @@ const api = {
   // macOS 시스템 이모지 패널 호출 (직접 입력 input focus 시)
   showEmojiPanel: () => ipcRenderer.invoke('show-emoji-panel'),
 
-  // 시스템 이모지 패널 닫기 (이모지 선택 후 패널 잔존 회피)
-  // Windows: Win+. 토글 재송출로 닫음. mac: API 미제공으로 best-effort 없음.
-  hideEmojiPanel: () => ipcRenderer.invoke('hide-emoji-panel'),
-
   // GAS API 프록시 호출 (CSP/CORS 우회용)
   apiGet: (params) => ipcRenderer.invoke('api:get', params),
   apiPost: (body) => ipcRenderer.invoke('api:post', body),
