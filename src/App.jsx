@@ -415,7 +415,7 @@ export default function App() {
     // 알림 OFF면 OS 토스트 안 띄움 (위젯 내 NEW 펄스는 그대로 동작)
     if (!settings.notificationsEnabled) return
     const items = (scheduleData?.schedule ?? []).filter((it) =>
-      fresh.includes(`${it['광고주']}|${it['비고']}`)
+      fresh.includes(scheduleKey(it))
     )
     const preview = items
       .slice(0, 3)

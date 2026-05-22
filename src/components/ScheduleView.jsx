@@ -1,12 +1,10 @@
 import styles from './ScheduleView.module.css'
 
-// 스케줄 항목의 안정적 unique 키 — rowIndex 기반
-// (광고주·비고 조합만으로는 동일 작업 반복 케이스에서 키 충돌 → NEW 누락 버그)
-// rowIndex는 시트 행 번호로 unique 보장. 행 삭제로 인한 변동은 시트 운영상 드물어 안전
+// 스케줄 항목의 안정적 unique 키 — 마감일 + 광고주 + 비고
+// 시트 운영상 같은 마감일·광고주·비고 조합은 중복되지 않음 (예: 5/22 하프클리닉 메타01)
+// → 다른 팀원의 공유 처리로 행이 시프트돼도 키 stable. rowIndex에 의존하지 않음.
 export function scheduleKey(item) {
-  if (item?.rowIndex != null) return `r${item.rowIndex}`
-  // fallback (rowIndex 없는 비정상 데이터) — 광고주+비고+due 조합으로 unique 시도
-  return `${item?.['광고주'] ?? ''}|${item?.['비고'] ?? ''}|${item?.due ?? ''}`
+  return `${item?.due ?? ''}|${item?.['광고주'] ?? ''}|${item?.['비고'] ?? ''}`
 }
 
 // 상태별 chip 스타일

@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { scheduleKey } from '../components/ScheduleView.jsx'
 
-// 신 키 형식 판별: 'rN' (rowIndex 기반) 또는 '광고주|비고|due'(3 segment fallback)
-// 구 형식('광고주|비고' 2 segment)은 false 반환 → 자동 마이그레이션 트리거
+// 신 키 형식: '마감일|광고주|비고' (3 segment)
+// 구 형식 'rN' (v0.2.1~v0.2.2 rowIndex 기반) 또는 '광고주|비고' (v0.2.0 2 segment)는
+// false → 자동 마이그레이션 (첫 fetch를 새 기준선으로)
 function isNewFormatKey(k) {
   if (typeof k !== 'string') return false
-  if (/^r\d+$/.test(k)) return true
-  // due 포함 fallback 키는 segment 3개 ("a|b|c"). 구 형식은 2개 ("a|b")
+  if (/^r\d+$/.test(k)) return false
   return k.split('|').length >= 3
 }
 
@@ -36,8 +36,8 @@ export default function useSeenSchedule(activeMember, scheduleItems) {
     window.widgetAPI?.getSeenKeys?.(activeMember).then((stored) => {
       if (cancelled) return
       hydratedRef.current = activeMember
-      // 신 키 형식(rowIndex 기반 'rN')과 호환되는 데이터만 복원.
-      // 구 형식('광고주|비고')은 무시하여 첫 fetch를 새 기준선으로 마이그레이션
+      // 신 키 형식('마감일|광고주|비고')과 호환되는 데이터만 복원.
+      // 구 형식('rN', '광고주|비고')은 무시하여 첫 fetch를 새 기준선으로 마이그레이션
       // (구→신 전환 시 NEW 폭주 회피. 일시적으로 NEW 0건 → 다음 새 일정부터 정상)
       if (Array.isArray(stored) && stored.every(isNewFormatKey)) {
         setSeenKeys(new Set(stored))
