@@ -18,6 +18,51 @@ import electronUpdater from 'electron-updater'
 
 const { autoUpdater } = electronUpdater
 
+// 자동 업데이트 즉시 적용용 — 진행 중인 POST가 있으면 설치 미루기 위한 카운터
+// (api:post 핸들러에서 ±, update-downloaded에서 idle 확인 후 quitAndInstall)
+let inflightPostCount = 0
+let lastPostFinishedAt = 0
+let quietInstallScheduled = false
+
+// 다운로드 완료 후 안전한 시점에 quitAndInstall 호출.
+// 안전 조건: 진행 중인 POST가 없고, 마지막 POST 종료 후 5초가 지났을 때.
+// 30초까지 기다려도 조건 불충족이면 autoInstallOnAppQuit 안전망에 위임.
+function scheduleQuietInstall() {
+  if (quietInstallScheduled) return // 중복 방지
+  quietInstallScheduled = true
+
+  const GRACE_MS = 3000           // 다운 완료 직후 마우스/UI 반응 정착 대기
+  const IDLE_AFTER_POST_MS = 5000 // 마지막 POST 종료 후 idle 요구 시간
+  const MAX_WAIT_MS = 30000       // 30초 초과 시 다음 종료에 위임
+  const POLL_INTERVAL_MS = 500
+
+  const startedAt = Date.now()
+  setTimeout(function poll() {
+    const now = Date.now()
+    const idle =
+      inflightPostCount === 0 &&
+      now - lastPostFinishedAt >= IDLE_AFTER_POST_MS
+    if (idle) {
+      stamp('updater: idle confirmed → quitAndInstall(silent, runAfter)')
+      isQuitting = true // close 핸들러가 hide로 가로채지 않게
+      try {
+        // (isSilent=true, isForceRunAfter=true)
+        // Windows NSIS 인스톨러를 백그라운드 silent로 돌리고 설치 후 위젯 자동 재실행
+        autoUpdater.quitAndInstall(true, true)
+      } catch (err) {
+        logCrash('quitAndInstall failed', err)
+        isQuitting = false
+      }
+      return
+    }
+    if (now - startedAt >= MAX_WAIT_MS) {
+      stamp('updater: install postponed → fallback to autoInstallOnAppQuit')
+      return
+    }
+    setTimeout(poll, POLL_INTERVAL_MS)
+  }, GRACE_MS)
+}
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // 패키지 환경 크래시·hang 진단용 — 홈 폴더에 자동 로그
@@ -615,6 +660,7 @@ ipcMain.handle('api:post', async (_event, body) => {
   }
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), API_TIMEOUT_MS)
+  inflightPostCount++
   try {
     const res = await fetch(GAS_BASE, {
       method: 'POST',
@@ -647,6 +693,8 @@ ipcMain.handle('api:post', async (_event, body) => {
     return { ok: false, error: friendlyNetworkError(err), code: 'NETWORK' }
   } finally {
     clearTimeout(timer)
+    inflightPostCount--
+    lastPostFinishedAt = Date.now()
   }
 })
 
@@ -719,7 +767,8 @@ if (!gotSingleInstanceLock) {
 
     // 자동 업데이트 — packaged 앱에서만 동작 (dev 모드 무시)
     // 시작 후 5초 (네트워크 안정화) → 1시간마다 새 버전 체크
-    // 발견 시 백그라운드 다운로드 → 위젯 종료 시 자동 설치
+    // 발견 시 백그라운드 다운로드 → 다운로드 완료 즉시 안전한 시점에 자동 재시작·설치
+    // (autoInstallOnAppQuit=true는 안전망. 폴링 30초 초과 시 다음 종료 시점에 위임)
     if (app.isPackaged) {
       autoUpdater.autoDownload = true
       autoUpdater.autoInstallOnAppQuit = true
@@ -728,9 +777,10 @@ if (!gotSingleInstanceLock) {
         stamp(`updater: available ${info?.version}`)
       )
       autoUpdater.on('update-not-available', () => stamp('updater: up to date'))
-      autoUpdater.on('update-downloaded', (info) =>
-        stamp(`updater: downloaded ${info?.version} → install on quit`)
-      )
+      autoUpdater.on('update-downloaded', (info) => {
+        stamp(`updater: downloaded ${info?.version} → schedule quiet install`)
+        scheduleQuietInstall()
+      })
       autoUpdater.on('error', (err) => logCrash('updater error', err))
 
       setTimeout(() => {
