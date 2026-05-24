@@ -2,8 +2,10 @@ import { useMemo, useState } from 'react'
 import styles from './BackupView.module.css'
 
 // 백업 관리 뷰 — 💚완료 시트에서 백업 미체크 행을 표시
-// 그룹화 토글: 마감일 / 광고주
-// 각 행 우측 '완료' 버튼 클릭으로 M열 TRUE 토글
+// 그룹화 토글: 마감일(=공유일 데이터) / 광고주
+// v0.2.4: 완료 시트의 마감일 컬럼 제거됨. 내부 데이터는 공유일이지만
+//         팀이 마감일·공유일 용어 혼용해서 UI 라벨은 "마감일"로 유지.
+// 각 행 우측 '완료' 버튼 클릭으로 N열(백업) TRUE 토글
 
 function sumQty(items) {
   return (items ?? []).reduce(
@@ -38,7 +40,7 @@ function groupBy(items, mode) {
   for (const item of items) {
     let key
     if (mode === 'due') {
-      key = item['마감일'] ?? '미정'
+      key = item['공유일'] ?? '미정'
     } else {
       const client = item['광고주']?.trim()
       // 완료 시트까지 갔는데 광고주 빈 경우 = 데이터 오류로 추정
@@ -110,7 +112,7 @@ export default function BackupView({ backup, onBackupCheck }) {
                 <div key={`${key}-${i}`} className={styles.rowCard}>
                   {groupMode === 'client' ? (
                     <span className={styles.rowDueShort}>
-                      {formatDueShort(item['마감일'])}
+                      {formatDueShort(item['공유일'])}
                     </span>
                   ) : item['광고주']?.trim() ? (
                     <span className={styles.rowClient} title={item['광고주']}>

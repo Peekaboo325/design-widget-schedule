@@ -1,9 +1,10 @@
 import styles from './ScheduleView.module.css'
 
-// 스케줄 항목의 안정적 unique 키 — 마감일 + 광고주 + 비고
-// 시트 운영상 같은 마감일·광고주·비고 조합은 중복되지 않음 (예: 5/22 하프클리닉 메타01)
-// → 다른 팀원의 공유 처리로 행이 시프트돼도 키 stable. rowIndex에 의존하지 않음.
+// 스케줄 항목의 안정적 unique 키 — GAS가 부여한 시트 L열 UUID
+// (v0.2.4: 시트의 행 위치·내용 변경·시트 간 이관 모두에서 stable)
+// fallback: 구버전 GAS 호환 (응답에 id 없으면 요청일+광고주+비고로 임시 키)
 export function scheduleKey(item) {
+  if (item?.id) return item.id
   return `${item?.due ?? ''}|${item?.['광고주'] ?? ''}|${item?.['비고'] ?? ''}`
 }
 

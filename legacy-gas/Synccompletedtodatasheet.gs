@@ -1,11 +1,14 @@
 // ============================================================
 // 💚완료 → IMC 3본부 업무 데이터 자동 이식 스크립트
 // 작성: 2026.04 | syncCompletedToDataSheet()
-// 버전: v2.0.0
-// 변경: 주차 계산 로직 전면 제거 (Looker Studio 연동 종료에 따른 정리)
-//       - getWeekNum / getWeekLabel / getWeekSort 함수 삭제
-//       - R열(주차) / S열(주차_정렬) 출력 제거
-//       - 이식 컬럼 수 19 → 17열로 축소
+// 버전: v2.1.0
+// 변경(v2.0.0): 주차 계산 로직 전면 제거 (Looker Studio 연동 종료)
+//              - 이식 컬럼 수 19 → 17열로 축소
+// 변경(v2.1.0, 2026.05): L열 ID 신설 대응
+//              - 완료 시트 컬럼 한 칸씩 시프트 (L=ID, M=공유, N=백업, O=요청일, P=공유일, Q=TAT)
+//              - 데이터 시트 R열에 ID 이관 (lifecycle 추적)
+//              - 중복 체크 키: ID 우선, 없으면 기존 4-field fallback
+//              - 데이터 시트 8000+ 행 일괄 마이그레이션 함수 추가 (배치 처리)
 // ============================================================
 
 // ▶ 설정값 (환경에 맞게 수정 필수)
@@ -117,21 +120,21 @@ function syncCompletedToDataSheet() {
   const lastRow = completedSheet.getLastRow();
   if (lastRow < COMPLETED_DATA_START_ROW) { Logger.log("완료 시트에 데이터 없음"); return; }
 
-  // 완료 시트 전체 읽기 (B~P, 15열)
+  // 완료 시트 전체 읽기 (B~Q, 16열)
   // 열 순서: B타입 C팀 D담당자 E광고주 F작업자 G온오프 H작업유형 I수량 J비고
-  //          K상태 L공유 M백업 N요청일 O공유일 P소요일
+  //          K상태 L:ID M공유 N백업 O요청일 P공유일 Q:TAT
   const sourceData = completedSheet
-    .getRange(COMPLETED_DATA_START_ROW, 2, lastRow - COMPLETED_DATA_START_ROW + 1, 15)
+    .getRange(COMPLETED_DATA_START_ROW, 2, lastRow - COMPLETED_DATA_START_ROW + 1, 16)
     .getValues();
 
-  // 기존 업무 데이터 키 세트 (중복 방지)
-  const existingKeys = buildExistingKeys(dataSheet);
+  // 기존 업무 데이터 키 세트 (중복 방지) — ID 기반 + 4-field fallback
+  const { idSet, fallbackKeys } = buildExistingKeys(dataSheet);
 
   const newRows = [];
 
   for (const row of sourceData) {
     const [type, team, manager, advertiser, worker, onoff, workType, qty, note,
-           status, shared, backup, requestDate, shareDate, tat] = row;
+           status, id, shared, backup, requestDate, shareDate, tat] = row;
 
     // 빈 행 · 미이식 대상 스킵
     if (!advertiser || !workType) {
@@ -150,10 +153,14 @@ function syncCompletedToDataSheet() {
     const month  = parsedDate.getMonth() + 1;
     const completedDateStr = formatDateKR(parsedDate);
 
-    // 중복 키: 광고주 + 작업유형 + 비고 + 완료일
-    const key = `${advertiser}|${workType}|${note}|${completedDateStr}`;
-    if (existingKeys.has(key)) {
-      Logger.log(`⚠️ [중복 스킵] ${key}`);
+    // 중복 체크: ID 우선 (확정적), ID 없으면 4-field fallback
+    if (id && idSet.has(String(id))) {
+      Logger.log(`⚠️ [중복 스킵 by ID] ${id}`);
+      continue;
+    }
+    const fallbackKey = `${advertiser}|${workType}|${note}|${completedDateStr}`;
+    if (!id && fallbackKeys.has(fallbackKey)) {
+      Logger.log(`⚠️ [중복 스킵 by 4-field] ${fallbackKey}`);
       continue;
     }
 
@@ -181,10 +188,12 @@ function syncCompletedToDataSheet() {
       qtyScore,         // N: 수량*수치
       note,             // O: 비고
       parsedDate,       // P: 완료일 (Date 객체)
-      tat               // Q: 소요일
+      tat,              // Q: TAT
+      id || ""          // R: ID (완료 시트에서 운반된 UUID, 없으면 빈 문자열)
     ]);
 
-    existingKeys.add(key); // 같은 실행 내 중복도 방지
+    if (id) idSet.add(String(id));
+    fallbackKeys.add(fallbackKey);
   }
 
   if (newRows.length === 0) {
@@ -193,7 +202,7 @@ function syncCompletedToDataSheet() {
   }
 
   const insertStart = dataSheet.getLastRow() + 1;
-  dataSheet.getRange(insertStart, 1, newRows.length, 17).setValues(newRows);
+  dataSheet.getRange(insertStart, 1, newRows.length, 18).setValues(newRows); // 18열 (R열 포함)
   Logger.log(`✅ ${newRows.length}건 이식 완료 (행 ${insertStart}~${insertStart + newRows.length - 1})`);
 }
 
@@ -223,22 +232,27 @@ function setTimeTrigger() {
 // ============================================================
 
 /**
- * 업무 데이터 시트의 기존 행들로 중복 키 Set 생성
- * 키 구성: 광고주(F=6열) + 작업유형(I=9열) + 비고(O=15열) + 완료일(P=16열)
+ * 업무 데이터 시트의 기존 행들로 중복 체크용 두 가지 Set 생성
+ * - idSet: R열(인덱스 17)의 ID들. 이관된 ID는 stable 식별자
+ * - fallbackKeys: 광고주(F=6열) + 작업유형(I=9열) + 비고(O=15열) + 완료일(P=16열)
+ *   (ID 없는 기존 행들 호환용)
  */
 function buildExistingKeys(dataSheet) {
-  const keySet  = new Set();
+  const idSet = new Set();
+  const fallbackKeys = new Set();
   const lastRow = dataSheet.getLastRow();
-  if (lastRow < 2) return keySet;
+  if (lastRow < 2) return { idSet, fallbackKeys };
 
-  const data = dataSheet.getRange(2, 1, lastRow - 1, 17).getValues();
+  const data = dataSheet.getRange(2, 1, lastRow - 1, 18).getValues(); // 18열 (R열 ID 포함)
   data.forEach(row => {
+    const id = row[17]; // R: ID
+    if (id) idSet.add(String(id));
     const dateVal = row[15]; // P: 완료일
     const dateStr = dateVal instanceof Date ? formatDateKR(dateVal) : String(dateVal);
-    const key = `${row[5]}|${row[8]}|${row[14]}|${dateStr}`; // F, I, O, P (0-indexed)
-    keySet.add(key);
+    const key = `${row[5]}|${row[8]}|${row[14]}|${dateStr}`;
+    fallbackKeys.add(key);
   });
-  return keySet;
+  return { idSet, fallbackKeys };
 }
 
 /**
@@ -269,4 +283,88 @@ function formatDateKR(date) {
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}. ${m}. ${d}.`;
+}
+
+// ============================================================
+// 마이그레이션 — 업무 데이터 시트 8000+ 행에 R열 ID 일괄 부여
+// (1회 실행. 큰 분량이라 시간 한도(GAS 6분) 대비 배치 처리 + 이어 진행)
+//
+// 사용법:
+//   1) GAS 콘솔에서 migrateDataSheetIds 선택 후 ▶ 실행
+//   2) 로그에 "전체 마이그레이션 완료" 보일 때까지 반복 실행 (5분 한도 도달 시 자동 종료, 다시 실행하면 이어서 진행)
+//   3) 처음부터 다시 하려면 resetMigrateDataSheetIdsProgress 실행
+// ============================================================
+function migrateDataSheetIds() {
+  const ss = DATA_SHEET_ID ? SpreadsheetApp.openById(DATA_SHEET_ID) : SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(DATA_SHEET_NAME);
+  if (!sheet) { Logger.log('❌ 업무 데이터 시트 없음: ' + DATA_SHEET_NAME); return; }
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) { Logger.log('✅ 데이터 없음'); return; }
+
+  const ID_COL = 18; // R열
+  const ADV_COL = 6; // F: 광고주
+
+  const props = PropertiesService.getScriptProperties();
+  const lastProcessedRow = parseInt(props.getProperty('migrateDataSheetIds_lastRow') || '1', 10);
+  const startRow = Math.max(2, lastProcessedRow + 1);
+
+  if (startRow > lastRow) {
+    Logger.log(`✅ 이미 모두 마이그레이션 완료 (마지막 처리 행: ${lastProcessedRow})`);
+    return;
+  }
+
+  const startTime = new Date().getTime();
+  const TIME_LIMIT_MS = 5 * 60 * 1000; // 5분 안전 마진 (GAS 6분 한도)
+  const BATCH_SIZE = 500;
+
+  let totalAssigned = 0;
+  let row = startRow;
+
+  Logger.log(`📊 시작: 행 ${row}부터 (전체 ${lastRow}행, 진행률 ${Math.round((row-1)/lastRow*100)}%)`);
+
+  while (row <= lastRow) {
+    if (new Date().getTime() - startTime > TIME_LIMIT_MS) {
+      Logger.log(`⏱ 시간 한도 도달. 행 ${row - 1}까지 처리. 다시 실행하면 이어서 진행 (${Math.round((row-1)/lastRow*100)}%)`);
+      break;
+    }
+
+    const batchEnd = Math.min(row + BATCH_SIZE - 1, lastRow);
+    const batchSize = batchEnd - row + 1;
+
+    const existingIds = sheet.getRange(row, ID_COL, batchSize, 1).getValues();
+    const advValues = sheet.getRange(row, ADV_COL, batchSize, 1).getValues();
+
+    const newIds = [];
+    let assignedInBatch = 0;
+    for (let i = 0; i < batchSize; i++) {
+      if (existingIds[i][0]) {
+        newIds.push([existingIds[i][0]]); // 기존 ID 유지
+      } else if (advValues[i][0]) {
+        newIds.push([Utilities.getUuid()]);
+        assignedInBatch++;
+      } else {
+        newIds.push([""]); // 빈 행
+      }
+    }
+
+    sheet.getRange(row, ID_COL, batchSize, 1).setValues(newIds);
+    totalAssigned += assignedInBatch;
+
+    props.setProperty('migrateDataSheetIds_lastRow', String(batchEnd));
+    row = batchEnd + 1;
+  }
+
+  if (row > lastRow) {
+    Logger.log(`✅ 전체 마이그레이션 완료. 이번 실행 ${totalAssigned}개 부여 (이미 ID 있던 행은 유지)`);
+    props.deleteProperty('migrateDataSheetIds_lastRow');
+  } else {
+    Logger.log(`📊 진행 상황: ${row - 1}/${lastRow} 행 처리. 이번 실행 ${totalAssigned}개 부여. 다시 함수 실행하면 이어서 진행`);
+  }
+}
+
+// 마이그레이션 진행 상태 리셋 (처음부터 다시 하려면)
+function resetMigrateDataSheetIdsProgress() {
+  PropertiesService.getScriptProperties().deleteProperty('migrateDataSheetIds_lastRow');
+  Logger.log('✅ 진행 상태 리셋됨. 다음 migrateDataSheetIds 실행은 행 2부터 시작');
 }

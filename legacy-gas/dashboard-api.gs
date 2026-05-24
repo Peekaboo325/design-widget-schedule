@@ -104,12 +104,12 @@ function loadData() {
   const [headers, ...rows] = sheet.getDataRange().getValues();
   const idx = {};
   headers.forEach((h, i) => { idx[h] = i; });
-  const required = ['연도','월','팀','광고주','작업유형','수량','소요일','완료일'];
+  const required = ['연도','월','팀','광고주','작업유형','수량','TAT','완료일'];
   required.forEach(col => { if (idx[col] === undefined) throw new Error('필수 컬럼 없음: ' + col); });
   const priorityIdx = idx['우선순위'] ?? idx['긴급도'] ?? idx['타입'] ?? idx['분류'] ?? null;
   return rows.map(row => {
     const completed = parseDate(row[idx['완료일']]);
-    const tat = row[idx['소요일']] !== '' ? Number(row[idx['소요일']]) : null;
+    const tat = row[idx['TAT']] !== '' ? Number(row[idx['TAT']]) : null;
     const ri = subtractBusinessDays(completed, tat);
     return {
       연도: Number(row[idx['연도']]), 월: String(row[idx['월']] || ''),

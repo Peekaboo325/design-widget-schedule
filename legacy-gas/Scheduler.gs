@@ -90,6 +90,9 @@ function countBusinessDays(startDate, endDate) {
 
 // ============================================================
 // 체크박스 → 완료 시트 이동 + TAT 계산
+// (v0.2.4: L열 ID 신설로 공유 체크박스가 M열로 시프트. ID도 같이 이관)
+// 신규 시트: B타입 C팀 D담당자 E광고주 F작업자 G온/오프 H작업유형 I수량 J비고 K상태 L:ID M:공유 N~날짜
+// 완료 시트: B타입 ... J비고 K상태 L:ID M:공유 N:백업 O:요청일 P:공유일 Q:TAT
 // ============================================================
 function moveRowOnCheck(e) {
   if (!e) return;
@@ -97,7 +100,7 @@ function moveRowOnCheck(e) {
   const range = e.range;
   const col = range.getColumn();
   const value = e.value;
-  const TARGET_COL = 12; // L열
+  const TARGET_COL = 13; // M열 (공유 체크박스, L에서 한 칸 시프트)
 
   if (col !== TARGET_COL || value !== "TRUE") return;
 
@@ -120,14 +123,18 @@ function moveRowOnCheck(e) {
     const rowNotes = rowRange.getNotes()[0];
     const rowBackgrounds = rowRange.getBackgrounds()[0];
 
-    const headerRange = sheet.getRange(9, 13, 1, lastCol - 12);
+    // 날짜 헤더는 N열(14)부터 시작
+    const DATE_START = 14;
+    const headerRange = sheet.getRange(9, DATE_START, 1, lastCol - DATE_START + 1);
     const headers = headerRange.getDisplayValues()[0];
 
+    // 빨강 셀(#ff0000) = 요청일. 가장 좌측 빨강 찾기 (요청일은 한 셀만)
     let parsedRequestDate = "";
-    for (let i = 12; i < rowBackgrounds.length; i++) {
+    for (let i = DATE_START - 1; i < rowBackgrounds.length; i++) {
       const bgColor = rowBackgrounds[i];
       if (bgColor === "#ff0000" || bgColor === "red") {
-        let dateMatch = headers[i - 12].match(/(\d+)\/(\d+)/);
+        const headerIdx = i - (DATE_START - 1);
+        const dateMatch = headers[headerIdx].match(/(\d+)\/(\d+)/);
         if (dateMatch) {
           parsedRequestDate = dateMatch[1].padStart(2, '0') + "/" + dateMatch[2].padStart(2, '0');
         }
@@ -139,14 +146,31 @@ function moveRowOnCheck(e) {
     if (!parsedRequestDate) parsedRequestDate = today;
     const tat = calcBusinessDays(parsedRequestDate, today);
 
+    // 신규 시트의 B~J(인덱스 1~9) 데이터와 노트, L열(인덱스 11)의 ID 추출
     const sourceValues = rowValues.slice(1, 10);
     const sourceNotes = rowValues.slice(1, 10).map((_, i) => rowNotes[i + 1]);
+    let id = String(rowValues[11] || ""); // L열 = ID (0-based 11)
+    if (!id) {
+      // ID 없으면 즉시 발급 (onEdit 누락 백업)
+      id = Utilities.getUuid();
+    }
 
-    const finalRowData = [...sourceValues, "완료", true, false, parsedRequestDate, today, tat];
-    const finalNotes = [...sourceNotes, "", "", "", "", "", ""];
+    // 완료 시트 행 구성 (B~Q, 16열)
+    // [B타입 C팀 D담당자 E광고주 F작업자 G온/오프 H작업유형 I수량 J비고 K상태 L:ID M:공유 N:백업 O:요청일 P:공유일 Q:TAT]
+    const finalRowData = [
+      ...sourceValues,              // B~J (9개)
+      "완료",                       // K: 상태
+      id,                           // L: ID
+      true,                         // M: 공유
+      false,                        // N: 백업
+      parsedRequestDate,            // O: 요청일
+      today,                        // P: 공유일
+      tat                           // Q: TAT
+    ];
+    const finalNotes = [...sourceNotes, "", "", "", "", "", "", ""];
 
     const insertRow = Math.max(targetSheet.getLastRow(), 9) + 1;
-    const targetRange = targetSheet.getRange(insertRow, 2, 1, 15);
+    const targetRange = targetSheet.getRange(insertRow, 2, 1, 16); // B~Q
 
     targetRange.setValues([finalRowData]);
     targetRange.setNotes([finalNotes]);
@@ -158,7 +182,10 @@ function moveRowOnCheck(e) {
                .setVerticalAlignment("middle")
                .setBorder(true, true, true, true, true, true, "#000000", SpreadsheetApp.BorderStyle.SOLID);
 
-    targetSheet.getRange(insertRow, 12, 1, 2).insertCheckboxes();
+    // 체크박스: M(공유) + N(백업)
+    targetSheet.getRange(insertRow, 13, 1, 2).insertCheckboxes();
+    targetSheet.getRange(insertRow, 13).setValue(true);   // 공유 = true (이미 set 됐지만 명시)
+    targetSheet.getRange(insertRow, 14).setValue(false);  // 백업 = false
 
     sheet.deleteRow(row);
 
@@ -191,6 +218,7 @@ function calcBusinessDays(startStr, endStr) {
 
 // ============================================================
 // 캘린더 일괄 동기화
+// (v0.2.4: L열 ID 신설로 날짜 헤더 시작이 M→N으로 시프트)
 // ============================================================
 function syncToCalendar() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -203,7 +231,7 @@ function syncToCalendar() {
   }
 
   const DATE_ROW = 9;
-  const DATE_START_COL = 13;
+  const DATE_START_COL = 14; // N열부터 날짜 (L열 ID 신설로 한 칸 시프트)
   const DATA_START_ROW = 10;
   const lastRow = sheet.getLastRow();
   const lastCol = sheet.getLastColumn();
@@ -268,29 +296,40 @@ function parseDate(value) {
 }
 
 // ============================================================
-// 상태 변경 시 캘린더 자동 등록
+// onEdit 트리거 — ID 자동 발급 (감시견) + 상태 변경 시 캘린더 등록
+// (v0.2.4: 신규·완료 시트 모두 감시. 빈 L열 ID 자동 발급)
 // ============================================================
 function onEditTrigger(e) {
   if (!e) return;
 
   const sheet = e.range.getSheet();
   const sheetName = sheet.getName();
-  if (!sheetName.includes('신규') || !sheetName.includes('유지보수')) return;
+  const isSchedule = sheetName.includes('신규') && sheetName.includes('유지보수');
+  const isCompleted = sheetName === '💚완료';
+  if (!isSchedule && !isCompleted) return;
 
   const row = e.range.getRow();
+  if (row < 10) return; // 데이터 영역만 (10행부터)
+
+  // [감시견] 빈 L열 ID 자동 발급 (신규·완료 시트 공통)
+  assignIdIfNeeded_(sheet, row);
+
+  // [캘린더 등록] 신규 시트의 상태 변경(K열) 시만
+  if (!isSchedule) return;
+
   const col = e.range.getColumn();
+  if (col !== 11) return; // K열 상태
   const newValue = e.value;
   const oldValue = e.oldValue;
-
-  if (col !== 11) return;
   if (oldValue !== '미정' || newValue !== '대기') return;
 
   const calendar = CalendarApp.getCalendarsByName('디자인팀 업무 스케줄러')[0];
   if (!calendar) return;
 
+  const DATE_START = 14; // N열부터 날짜 (L열 ID 신설로 한 칸 시프트)
   const lastCol = sheet.getLastColumn();
-  const backgrounds = sheet.getRange(row, 13, 1, lastCol - 12).getBackgrounds()[0];
-  const dateValues = sheet.getRange(9, 13, 1, lastCol - 12).getValues()[0];
+  const backgrounds = sheet.getRange(row, DATE_START, 1, lastCol - DATE_START + 1).getBackgrounds()[0];
+  const dateValues = sheet.getRange(9, DATE_START, 1, lastCol - DATE_START + 1).getValues()[0];
 
   const advertiser = sheet.getRange(row, 5).getValue();
   const manager = sheet.getRange(row, 4).getValue();
@@ -318,6 +357,26 @@ function onEditTrigger(e) {
   }
   calendar.createAllDayEvent(title, endDate);
   Logger.log(`캘린더 등록: ${title} / ${endDate}`);
+}
+
+/**
+ * L열(12) ID 빈 셀에 UUID 자동 발급
+ * - 광고주(E열) 또는 작업자(F열) 중 하나라도 있어야 데이터 행으로 판단
+ * - 이미 ID 있으면 안 건드림
+ */
+function assignIdIfNeeded_(sheet, row) {
+  const ID_COL = 12; // L열
+  const ADV_COL = 5; // E열 광고주
+  const WORKER_COL = 6; // F열 작업자
+
+  const currentId = sheet.getRange(row, ID_COL).getValue();
+  if (currentId) return;
+
+  const adv = String(sheet.getRange(row, ADV_COL).getValue() || '').trim();
+  const worker = String(sheet.getRange(row, WORKER_COL).getValue() || '').trim();
+  if (!adv && !worker) return;
+
+  sheet.getRange(row, ID_COL).setValue(Utilities.getUuid());
 }
 
 function isDuplicateEvent(calendar, title, date) {
@@ -465,16 +524,10 @@ function sortCompleteSheet() {
 }
 
 // ============================================================
-// OKR 시트 동기화
+// OKR 시트 동기화 — v0.2.4에서 제거됨
+// (사유: 실 연결 끊김 + 필수 기능 아님 → 죽은 코드 정리)
+// 트리거 등록되어 있다면 GAS 콘솔 > 트리거 메뉴에서 함께 제거
 // ============================================================
-function syncCompletionRate() {
-  const sourceSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("💚완료");
-  const completionRate = sourceSheet.getRange("M4").getValue();
-
-  const targetSS = SpreadsheetApp.openById("1FdHxtrrcyaIEjzPSJsVSCnjZdlDG_mAWaJ-ruODv4lA");
-  const targetSheet = targetSS.getSheetByName("3본부_2Q");
-  targetSheet.getRange("I21").setValue(completionRate);
-}
 
 // ============================================================
 // 초기 세팅 확인용 (1회 실행 후 삭제해도 됨)

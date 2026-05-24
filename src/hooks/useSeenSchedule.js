@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { scheduleKey } from '../components/ScheduleView.jsx'
 
-// 신 키 형식: '마감일|광고주|비고' (3 segment)
-// 구 형식 'rN' (v0.2.1~v0.2.2 rowIndex 기반) 또는 '광고주|비고' (v0.2.0 2 segment)는
-// false → 자동 마이그레이션 (첫 fetch를 새 기준선으로)
+// 신 키 형식 (v0.2.4): UUID v4 — 36자 하이픈 포함
+// 예: '550e8400-e29b-41d4-a716-446655440000'
+// 구 형식 (rN, '광고주|비고', '마감일|광고주|비고')은 모두 false → 자동 마이그레이션
 function isNewFormatKey(k) {
   if (typeof k !== 'string') return false
-  if (/^r\d+$/.test(k)) return false
-  return k.split('|').length >= 3
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(k)
 }
 
 // 새 스케줄 알림 — persistent (electron-store에 멤버별 seen keys 저장)

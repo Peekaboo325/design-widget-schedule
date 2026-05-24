@@ -149,7 +149,7 @@ export default function App() {
   // 상태 chip 변경 — 직렬 큐 + STALE 자동 재시도
   const statusQueue = useActionQueue({
     executor: async (task) => {
-      await setRowStatus(task.rowIndex, task.next, task.expect)
+      await setRowStatus(task.rowIndex, task.next, task.expect, task.id)
     },
     findFreshRow: (fresh, task) =>
       fresh?.schedule?.find(
@@ -167,7 +167,7 @@ export default function App() {
           label: '취소',
           onClick: async () => {
             try {
-              await setRowStatus(task.rowIndex, task.prevStatus)
+              await setRowStatus(task.rowIndex, task.prevStatus, task.expect, task.id)
               // refresh로 사라졌던 키가 재등장 → NEW로 잡히는 거 방지
               markSeen(task.scheduleKeyValue)
               refresh()
@@ -230,6 +230,7 @@ export default function App() {
       })
 
       statusQueue.enqueue({
+        id: item.id ?? null,
         rowIndex,
         next,
         prevStatus,
@@ -276,7 +277,7 @@ export default function App() {
   // 공유 체크 — 직렬 큐 + STALE 자동 재시도
   const shareQueue = useActionQueue({
     executor: async (task) => {
-      await setRowShare(task.rowIndex, true, task.expect)
+      await setRowShare(task.rowIndex, true, task.expect, task.id)
     },
     findFreshRow: (fresh, task) =>
       fresh?.pending?.find(
@@ -294,7 +295,7 @@ export default function App() {
           label: '취소',
           onClick: async () => {
             try {
-              await setRowShare(task.rowIndex, false, task.expect)
+              await setRowShare(task.rowIndex, false, task.expect, task.id)
               refresh()
             } catch (err) {
               setToast(buildErrorToast(err, '취소 실패.'))
@@ -326,6 +327,7 @@ export default function App() {
       })
 
       shareQueue.enqueue({
+        id: item.id ?? null,
         rowIndex,
         expect: { 광고주: item['광고주'], 비고: item['비고'] }
       })
@@ -334,10 +336,10 @@ export default function App() {
   )
 
   // 백업 처리 — 직렬 큐 + STALE 자동 재시도
-  // 💚완료 시트의 M열 토글이라 행 이동은 없지만 LockService BUSY/STALE 회피 + 일관성
+  // 💚완료 시트의 N열(v0.2.4부터 M→N 시프트) 토글이라 행 이동은 없지만 LockService BUSY/STALE 회피 + 일관성
   const backupQueue = useActionQueue({
     executor: async (task) => {
-      await setRowBackup(task.rowIndex, true, task.expect)
+      await setRowBackup(task.rowIndex, true, task.expect, task.id)
     },
     findFreshRow: (fresh, task) =>
       fresh?.backup?.find(
@@ -355,7 +357,7 @@ export default function App() {
           label: '취소',
           onClick: async () => {
             try {
-              await setRowBackup(task.rowIndex, false, task.expect)
+              await setRowBackup(task.rowIndex, false, task.expect, task.id)
               refresh()
             } catch (err) {
               setToast(buildErrorToast(err, '취소 실패.'))
@@ -387,6 +389,7 @@ export default function App() {
       })
 
       backupQueue.enqueue({
+        id: item.id ?? null,
         rowIndex,
         expect: { 광고주: item['광고주'], 비고: item['비고'] }
       })

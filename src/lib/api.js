@@ -36,19 +36,21 @@ async function postApi(body) {
 }
 
 // 행 상태 변경 (K열): 미정/대기/진행/완료
-// expect: 클라이언트가 본 광고주/비고. GAS 측 optimistic locking 검증에 사용
-export async function setRowStatus(rowIndex, status, expect) {
-  return postApi({ action: 'setStatus', rowIndex, value: status, expect })
+// id: GAS가 부여한 시트 L열 UUID (v0.2.4+) — 행 시프트에 stable. GAS가 id 우선 lookup
+// rowIndex: 위젯이 본 행 번호. GAS가 id로 못 찾을 때 fallback
+// expect: 광고주/비고. id 미사용 fallback 경로의 optimistic locking
+export async function setRowStatus(rowIndex, status, expect, id) {
+  return postApi({ action: 'setStatus', id, rowIndex, value: status, expect })
 }
 
-// 행 공유 토글 (L열): TRUE/FALSE
-export async function setRowShare(rowIndex, shared, expect) {
-  return postApi({ action: 'setShare', rowIndex, value: Boolean(shared), expect })
+// 행 공유 토글 (M열, v0.2.4부터 L→M 시프트): TRUE/FALSE
+export async function setRowShare(rowIndex, shared, expect, id) {
+  return postApi({ action: 'setShare', id, rowIndex, value: Boolean(shared), expect })
 }
 
-// 행 백업 토글 (💚완료 시트 M열): TRUE/FALSE
-export async function setRowBackup(rowIndex, backed, expect) {
-  return postApi({ action: 'setBackup', rowIndex, value: Boolean(backed), expect })
+// 행 백업 토글 (💚완료 시트 N열, v0.2.4부터 M→N 시프트): TRUE/FALSE
+export async function setRowBackup(rowIndex, backed, expect, id) {
+  return postApi({ action: 'setBackup', id, rowIndex, value: Boolean(backed), expect })
 }
 
 // 팀원 목록 조회

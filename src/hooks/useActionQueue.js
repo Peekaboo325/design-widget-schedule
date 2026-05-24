@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef } from 'react'
 // GAS Optimistic Locking 환경에서 우루루 클릭 회피용 직렬 큐.
 // 클라이언트가 병렬로 보내면 행 이동/시프트로 expect mismatch → STALE 자주.
 // 큐로 1개씩 순차 처리 + STALE 받으면 자동 refresh로 fresh data 받아
-// 광고주·비고 같은 stable id로 새 rowIndex 찾아 1회 재시도.
+// id(우선) + 광고주·비고 같은 stable identifier로 새 rowIndex 찾아 1회 재시도.
 //
 // 인터페이스:
 //   executor(task)       — 실제 API 호출 (Promise)
@@ -60,7 +60,12 @@ export default function useActionQueue({
             const fresh = await h.refresh()
             const freshRow = h.findFreshRow(fresh, task)
             if (freshRow?.rowIndex) {
-              const retried = { ...task, rowIndex: freshRow.rowIndex }
+              // id도 같이 갱신 (fresh 데이터의 id가 정본)
+              const retried = {
+                ...task,
+                rowIndex: freshRow.rowIndex,
+                id: freshRow.id ?? task.id ?? null
+              }
               await h.executor(retried)
               h.onSuccess?.(retried)
               continue
