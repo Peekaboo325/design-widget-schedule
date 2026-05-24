@@ -37,7 +37,10 @@ jobs:
           cache: 'npm'
 
       - name: 의존성 설치
-        run: npm ci
+        # npm ci는 lockfile 엄격 검증으로 환경 간 미세한 차이에도 거부함.
+        # 비개발자 운영을 위해 npm install로 유연하게 — lockfile 있으면 그걸 기준,
+        # 누락 트랜지티브는 install 단계에서 알아서 보강.
+        run: npm install --no-audit --no-fund
 
       - name: 빌드 & GitHub Releases 업로드
         env:
