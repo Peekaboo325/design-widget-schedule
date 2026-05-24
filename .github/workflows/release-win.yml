@@ -1,0 +1,47 @@
+# 디자인팀 스케줄 위젯 — Windows 빌드 & GitHub Releases 자동 배포
+#
+# 트리거: v로 시작하는 태그 push (예: v0.2.5, v0.3.0)
+# 동작:   windows-latest runner에서 build:win 실행 → electron-builder가
+#         GitHub Releases에 .exe + latest.yml 자동 업로드
+#
+# 사용법(맥/Windows 어디서나):
+#   git tag v0.2.5
+#   git push origin v0.2.5
+#
+# 진행 상황 확인: GitHub 레포 > Actions 탭
+# 완료 후:        GitHub 레포 > Releases 탭에 자동 생성
+#                 팀원 머신의 자동 업데이트가 1시간 안에 픽업
+
+name: Release Windows
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+# GITHUB_TOKEN에 Releases 작성 권한 부여 (추가 Secret 등록 불필요)
+permissions:
+  contents: write
+
+jobs:
+  build-win:
+    runs-on: windows-latest
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node 20 셋업 (npm 캐시 포함)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 의존성 설치
+        run: npm ci
+
+      - name: 빌드 & GitHub Releases 업로드
+        env:
+          # electron-builder는 GH_TOKEN을 읽어 Releases API 호출.
+          # GitHub Actions가 자동 발급하는 GITHUB_TOKEN으로 충분 (같은 레포 Releases 권한).
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run build:win
