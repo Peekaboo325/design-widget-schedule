@@ -1,7 +1,7 @@
 # HANDOFF.md — design-widget-schedule
 
 > 새 대화방에서 이 파일을 통째로 컨텍스트로 주면 AI가 현재 상태를 빠르게 흡수합니다.
-> **최신 상태 기준**: v0.2.4 (2026-05-24)
+> **최신 상태 기준**: v0.2.5 (2026-05-25)
 
 ---
 
@@ -27,17 +27,22 @@
 ---
 
 ## 프로젝트 개요
-- **레포**: `Peekaboo325/design-widget-schedule`
+- **레포**: `Peekaboo325/design-widget-schedule` (public, 코드 + 릴리스 통합)
 - **스택**: Electron 33 + React 18 + Vite (electron-vite) + electron-builder + **electron-updater**
-- **버전**: **v0.2.4** (시트 L열 ID 기반 식별로 전환된 안정화 버전)
+- **버전**: **v0.2.5** (다운로드 완료 즉시 silent 재시작·설치)
 - **빌드/실행**:
   - dev: `npm run dev`
   - macOS dev launcher: `start-mac.command` 더블클릭 (자동 git pull + npm install + dev)
   - macOS 패키지: `npm run build:mac` → `.dmg` (실행 hang 이슈 후술)
-  - Windows 패키지: `npm run build:win` → `dist\디자인팀 스케줄 위젯 Setup x.y.z.exe`
+  - Windows 패키지(로컬): `npm run build:win` → `dist\디자인팀 스케줄 위젯 Setup x.y.z.exe`
     - 한국어 NSIS 인스톨러, 패치노트 페이지 자동 표시
     - 첫 빌드 시 Windows '개발자 모드' 필요 (winCodeSign 캐시 symlink 생성용)
     - `--publish always` 박힘 → 빌드 즉시 GitHub Release 업로드 → electron-updater가 픽업
+  - **Windows 패키지(GitHub Actions, v0.2.5+)**: `v*` 태그 push 시 자동 빌드·배포
+    - `.github/workflows/release-win.yml` — windows-latest runner
+    - 본인 손은 태그 5줄만: `git tag vX.Y.Z && git push origin vX.Y.Z`
+    - 후속 정정 시 4줄로 태그 옮기기 (`push :refs/tags/...` → `tag -d` → `tag` → `push`)
+    - 본인 로컬 빌드 불필요 (비개발자 운영 환경 친화)
 
 ---
 
@@ -106,12 +111,22 @@ design-widget-schedule/
 - 단일 인스턴스 락
 - **트레이 메뉴**: `버전 v{현재}` (정보용, 클릭 불가) / ─ / 새로고침 / 위치 초기화 / ─ / 종료
 
-### 자동 업데이트 (electron-updater, v0.2.2+)
-- `publish: github` (electron-builder.yml) → 빌드 시 GitHub Release에 latest.yml + 인스톨러 업로드
+### 자동 업데이트 (electron-updater, v0.2.2+ / 즉시 설치 v0.2.5+)
+- `publish: github` (electron-builder.yml, owner: Peekaboo325, repo: design-widget-schedule)
+  - v0.2.4까지는 별도 `design-widget-releases` 레포로 분리되어 있다가 v0.2.5에서 통합
+  - 분리 이유는 옛날 코드 레포가 private이던 시절 흔적. 현재 둘 다 public이라 통합 운영 부담 ↓
 - 앱 시작 5초 후 + 1시간마다 `autoUpdater.checkForUpdates()`
-- `autoDownload: true`, `autoInstallOnAppQuit: true` → 다음 종료 시 조용히 설치
-- updater 이벤트 전체를 `~/widget-debug.log`에 stamp (checking/available/downloaded/error)
-- **한계**: 사용자가 위젯을 안 끄면 영원히 안 설치됨 (AUDIT.md 1-3 참조)
+- `autoDownload: true`, `autoInstallOnAppQuit: true` (안전망)
+- **v0.2.5+ 즉시 설치 로직** (`electron/main.js`의 `scheduleQuietInstall`):
+  - `update-downloaded` 이벤트 받으면 3초 grace 후 안전 폴링
+  - 안전 조건: `inflightPostCount === 0 && 마지막 POST 종료 후 5초 idle`
+  - 충족 시 `autoUpdater.quitAndInstall(true, true)` — NSIS silent + 설치 후 위젯 자동 재실행
+  - 30초까지 기다려도 idle 안 오면 포기 → 다음 종료에 위임 (autoInstallOnAppQuit)
+  - **renderer 변경 0**: main 프로세스 `api:post` 핸들러가 inflight 카운트 직접 관리
+- updater 이벤트 전체를 `~/widget-debug.log`에 stamp
+- **한계 (AUDIT 1-3, v0.2.4까지)**: 위젯 안 끄면 영원히 안 깔림
+- **v0.2.5에서 한계 해소**: 단 v0.2.5 자체는 옛 "종료 시 설치" 방식으로 한 번 깔려야 → 그 후 v0.2.6부터 효과
+- **첫 마이그레이션 시점 처리**: v0.2.4까지 위젯이 옛 레포(`design-widget-releases`)를 보고 있으므로 v0.2.5는 본인이 한 번 수동 .exe 배포 (디자인팀 5명에게 메신저로 전달)
 
 ### S 모드 (CompactWidget — 200×80)
 - 진짜 컴팩트 가로형 단일 카드 — 전체 그라데이션 한 덩어리
@@ -292,7 +307,21 @@ design-widget-schedule/
 - `extraMetadata.description`: `디자인팀 스케줄 위젯`
 - Mac: dmg (x64 + arm64), `identity: '-'` (ad-hoc 서명)
 - Windows NSIS: 사용자 단위 설치, 바탕화면+시작메뉴 바로가기, 한국어 강제, **`license: CHANGES.rtf`**
-- **`publish: github`** — 토큰 없으면 dist에만 만들고 publish 스킵
+- **`publish: github`** (owner: Peekaboo325, repo: design-widget-schedule)
+  - 토큰 없으면 dist에만 만들고 publish 스킵 (--publish=never 효과)
+
+### GitHub Actions (v0.2.5+)
+- `.github/workflows/release-win.yml`
+- 트리거: `v*` 태그 push
+- runner: `windows-latest`, Node 20 LTS, npm cache 사용
+- **의존성 설치는 `npm install --no-audit --no-fund`** (npm ci 아님)
+  - lockfile 엄격 검증을 풀어둠 — 환경 간 미세한 lockfile drift로 자주 실패하던 케이스 회피
+  - 비개발자 운영 환경에 재현성 손해 미미, 통과율 ↑
+- 권한: `permissions: contents: write` + 기본 발급된 `GITHUB_TOKEN`만 사용
+  - 별도 PAT 등록 불필요 (publish 타겟이 같은 레포로 통합됐기 때문)
+- 빌드 → electron-builder가 NSIS + latest.yml 만들어 Releases에 자동 업로드
+- **태그 운영**: 본인이 윈도우/맥 어디서나 `git tag vX.Y.Z && git push origin vX.Y.Z`
+  - 워크플로우 디버깅 중 태그 재발행 5줄 패턴: `git pull main → push :refs/tags/vX.Y.Z → tag -d → tag → push`
 
 ### 패치노트 (CHANGES.txt → CHANGES.rtf)
 - `CHANGES.txt` (UTF-8, git 추적) — 사용자 친근한 톤 한국어
@@ -323,16 +352,16 @@ design-widget-schedule/
 
 ## 다음 단계
 
-### 1순위 — v0.2.4 마이그레이션 후 안정화 관찰
-- v0.2.4는 **시트 구조 변경(L열 ID 신설)** 동반 → `MIGRATION_v0.2.4.md` 절차로 시트·GAS·위젯 동시 업데이트 완료
-- 자동 업데이트로 디자인팀 5명에게 v0.2.4 배포 중. 위젯 안 끄면 안 깔리는 한계는 인지 (AUDIT 1-3)
-- 첫 실행 시 NEW가 0건으로 리셋되는 것 정상 (식별 키 변경)
-- 가짜 NEW (마감일 변경 케이스) 해소 여부 모니터링
+### 1순위 — v0.2.5 첫 수동 배포 후 자동 업데이트 정착 관찰
+- v0.2.4까지 위젯이 옛 레포(`design-widget-releases`) 보고 있어서, v0.2.5는 본인이 한 번만 수동 .exe 배포
+- 그 이후로는 새 통합 레포(`design-widget-schedule`)에서 자동 업데이트 픽업
+- v0.2.5 깔린 후 다음 빌드(v0.2.6+)부터 "다운 완료 즉시 silent 재시작" 효과 발휘
+- 옛 `design-widget-releases` 레포는 모두 v0.2.5로 올라온 게 확인되면 그때 archive
 
 ### 2순위 — AUDIT.md 잔여 항목
-- 1-1: 마감일 변경 가짜 NEW → v0.2.4 ID 도입으로 해소됐는지 확인
-- 1-2: 시트 구조 변경 시 위젯 어긋남 → 헤더 텍스트 기반 동적 컬럼 lookup 도입 검토
-- 1-3: 자동 업데이트 미적용 (위젯 안 끔) → 트레이 메뉴에 "지금 재시작하고 업데이트" 추가 검토
+- 1-1: 마감일 변경 가짜 NEW → v0.2.4 ID 도입으로 해소됐는지 디자인팀 5명 실 사용 후 확인
+- 1-2: 시트 구조 변경 시 위젯 어긋남 → 사용자 통제 정책으로 사실상 봉인 (디자이너가 컬럼 안 만짐). 코드 방어 우선순위 ↓
+- 1-3: 자동 업데이트 미적용 → v0.2.5의 즉시 설치 로직으로 근본 해소. v0.2.6부터 효과 실측
 
 ### 3순위 — macOS packaging 재시도 (필요 시)
 - Electron 30 LTS 다운그레이드 또는 code signing ($99/년)
@@ -370,6 +399,7 @@ design-widget-schedule/
 - **v0.2.3** (`aec4617`): **scheduleKey를 `마감일+광고주+비고`로 변경 → 알림 폭주 버그 fix**
 - **AUDIT.md** (`ef2de70`): v0.2.3 기준 전수 점검 보고서 (오너 의사결정용)
 - **v0.2.4** (`b891cd1`, `f9b0575`, `3bc4935`): **시트 L열 UUID 도입 + GAS 4개 통합 수정 + 위젯 ID 기반 식별로 전환 / legacy-gas 정리 (dashboard-api.gs 삭제)**
+- **v0.2.5** (`340f207`, `7780105`, `7d6cf67`, `5986572`, `89e93c7`): **자동 업데이트 즉시 silent 설치·재시작 (scheduleQuietInstall) + GitHub Actions 도입 (`v*` 태그 push → windows-latest 자동 빌드·Release 업로드) + 릴리스 레포 통합 (design-widget-releases → design-widget-schedule, 코드/릴리스 단일 운영)**
 
 **시도했다가 폐기/실패**:
 - L/S 더블클릭 토글 (drag region 위 React 이벤트 미수신 + UX 혼동)
@@ -388,7 +418,7 @@ design-widget-schedule/
 >
 > 인프라 풀세트: 캐싱·스켈레톤·persistent NEW·에러 코드 E01-E99·알림 토글·action whitelist·Windows 폰트 보정 + **electron-updater 자동 업데이트 + useActionQueue 직렬 큐 + STALE 자동 재시도**.
 >
-> **현 단계: v0.2.4 배포 완료** — 시트 L열 UUID 기반 식별로 전환. 행 이동·정렬·마감일 변경 시 가짜 NEW 알림 폭주 근본 해결. 자동 업데이트로 5명에게 배포 중 (위젯 안 끄면 미설치 한계는 AUDIT 1-3로 추적).
+> **현 단계: v0.2.5 빌드·배포 완료** — 다운로드 완료 즉시 silent 재시작 로직 도입 (이전 "위젯 안 끄면 영원히 미설치" 한계 근본 해결). GitHub Actions로 v* 태그 push → 자동 윈도 빌드·Release 업로드. 릴리스 레포 단일 통합(`design-widget-schedule`). v0.2.5는 옛 레포(`design-widget-releases`) 보던 v0.2.4 사용자에게 본인이 수동 .exe 한 번 배포. 그 이후 자동 업데이트는 새 레포로 안착.
 >
 > macOS .dmg는 Sequoia 이슈로 보류 (본인 dev 사용). 디자인팀 전부 Windows라 영향 X.
 >
