@@ -49,7 +49,7 @@
 ## 디렉토리 구조
 ```
 design-widget-schedule/
-├── README.md / CLAUDE.md / HANDOFF.md / SPEC.md   # 활성 문서 (루트는 이 4개만)
+├── README.md / CLAUDE.md / HANDOFF.md   # 활성 문서 (루트는 이 3개)
 ├── CHANGES.txt                     # 사용자용 패치노트 (UTF-8, git 추적)
 ├── docs/
 │   └── archive/                    # 종료 마일스톤 문서

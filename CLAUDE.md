@@ -99,16 +99,15 @@ IMC 3본부 디자인팀 팀원용 바탕화면 위젯 (Electron + React + Vite)
 ## 데이터 소스
 - GAS Web App: `schedule-widget-api.gs`
 - `?type=members` → 팀원 목록
-- `?type=schedule&member=이름` → 스케줄 + 공유대기 + 요약
-- API 응답 구조는 SPEC.md 참조
+- `?type=schedule&member=이름` → 스케줄 + 공유대기 + 백업 + 요약
+- API 응답 구조·POST 명세·시트 컬럼 매핑은 HANDOFF.md 참조
 
 ## 디렉토리 구조 (가이드)
 ```
 design-widget-schedule/
 ├── README.md            # public 레포 첫인상용 소개
 ├── CLAUDE.md            # 작업 원칙·정책 (이 파일)
-├── HANDOFF.md           # 현재 상태 스냅샷 (매 작업마다 갱신)
-├── SPEC.md              # GAS API 스펙
+├── HANDOFF.md           # 현재 상태 스냅샷 — GAS API 스펙·시트 구조·컴포넌트 맵 전부 포함
 ├── CHANGES.txt          # 사용자용 패치노트 (NSIS 인스톨러 표시)
 ├── docs/
 │   └── archive/         # 종료된 마일스톤 문서 (AUDIT_v0.2.3, MIGRATION_v0.2.4 등)
