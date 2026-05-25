@@ -1,6 +1,6 @@
-// 체크리스트 데이터 — CHECKLIST.md 원문을 JS 구조로
+// 체크리스트 데이터 — 이 파일이 source of truth.
+// 항목을 추가/수정할 땐 여기서 바로 편집. ChecklistView 탭에 그대로 반영됨.
 // SPEC: 기록 저장 없음. 위젯 재시작 시 초기화.
-// CHECKLIST.md 수정 시 이 파일도 함께 갱신 필요.
 
 const CHECKLIST = [
   {

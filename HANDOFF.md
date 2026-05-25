@@ -49,18 +49,21 @@
 ## 디렉토리 구조
 ```
 design-widget-schedule/
-├── CLAUDE.md / SPEC.md / CHECKLIST.md / HANDOFF.md
-├── AUDIT.md                        # v0.2.3 기준 전수 점검 보고서
-├── MIGRATION_v0.2.4.md             # 시트 L열 ID 도입 마이그레이션 가이드
+├── README.md / CLAUDE.md / HANDOFF.md / SPEC.md   # 활성 문서 (루트는 이 4개만)
 ├── CHANGES.txt                     # 사용자용 패치노트 (UTF-8, git 추적)
+├── docs/
+│   └── archive/                    # 종료 마일스톤 문서
+│       ├── AUDIT_v0.2.3.md         # v0.2.3 시점 전수 점검 보고서 (결론은 HANDOFF에 반영됨)
+│       └── MIGRATION_v0.2.4.md     # L열 ID 도입 절차 (완료)
 ├── schedule-widget-api.gs          # GAS Apps Script (WIDGET_ prefix const)
-├── legacy-gas/                     # 시트 자동화용 GAS (위젯과 별개 프로젝트)
+├── legacy-gas/                     # 시트 자동화 GAS (위젯과 별개 프로젝트)
 │   ├── Scheduler.gs                #   행 이동·휴일·자동 정렬
 │   └── Synccompletedtodatasheet.gs #   💚완료 → 업무 데이터 시트 동기화
-├── electron-builder.yml            # 패키징 설정 (+ publish: github)
+├── electron-builder.yml            # 패키징 설정 (publish: github, releaseType: release)
 ├── start-mac.command               # 맥 더블클릭 dev 실행
+├── .github/workflows/release-win.yml   # GitHub Actions: v* 태그 → 자동 빌드·Release
 ├── electron/
-│   ├── main.js                     # main (창/트레이/IPC/GAS프록시/캐시/seen/whitelist/updater)
+│   ├── main.js                     # 창/트레이/IPC/GAS프록시/캐시/seen/whitelist/updater(scheduleQuietInstall)
 │   └── preload.js                  # contextBridge API
 ├── resources/
 │   ├── design-widget-schedule.ico  (Win)
@@ -73,7 +76,7 @@ design-widget-schedule/
 │   │   ├── CompactWidget.jsx           # S 모드 가로형 단일 카드
 │   │   ├── ScheduleView.jsx            # L 스케줄: 메트릭+그룹별 행카드+풋터 (scheduleKey export)
 │   │   ├── BackupView.jsx              # L 백업 관리: 공유일/광고주 그룹 토글
-│   │   ├── ChecklistView.jsx           # 체크리스트 탭
+│   │   ├── ChecklistView.jsx           # 체크리스트 탭 (src/data/checklist.js 사용)
 │   │   ├── SettingsPanel.jsx
 │   │   ├── PendingPanel.jsx            # 공유 대기 풀스크린 슬라이드
 │   │   ├── MemberPicker.jsx
@@ -81,6 +84,8 @@ design-widget-schedule/
 │   │   ├── Avatar.jsx
 │   │   ├── EmojiPicker.jsx
 │   │   └── Toast.jsx                   # 카드형 (line-clamp 2, code 표시)
+│   ├── data/
+│   │   └── checklist.js                # 체크리스트 항목 source of truth
 │   ├── hooks/
 │   │   ├── useSettings.js
 │   │   ├── useMembers.js               # 캐시
