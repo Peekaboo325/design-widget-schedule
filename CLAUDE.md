@@ -102,29 +102,6 @@ IMC 3본부 디자인팀 팀원용 바탕화면 위젯 (Electron + React + Vite)
 - `?type=schedule&member=이름` → 스케줄 + 공유대기 + 백업 + 요약
 - API 응답 구조·POST 명세·시트 컬럼 매핑은 HANDOFF.md 참조
 
-## 디렉토리 구조 (가이드)
-```
-design-widget-schedule/
-├── README.md            # public 레포 첫인상용 소개
-├── CLAUDE.md            # 작업 원칙·정책 (이 파일)
-├── HANDOFF.md           # 현재 상태 스냅샷 — GAS API 스펙·시트 구조·컴포넌트 맵 전부 포함
-├── CHANGES.txt          # 사용자용 패치노트 (NSIS 인스톨러 표시)
-├── docs/
-│   └── archive/         # 종료된 마일스톤 문서 (AUDIT_v0.2.3, MIGRATION_v0.2.4 등)
-├── electron/            # Electron 메인 프로세스
-├── src/                 # React 렌더러
-│   ├── components/      # UI 컴포넌트
-│   ├── data/            # 정적 데이터 (체크리스트 등 — source of truth)
-│   ├── hooks/           # 커스텀 훅
-│   ├── lib/             # 유틸 (api, color, errors, format, emoji)
-│   ├── styles/          # 스타일
-│   └── App.jsx
-├── legacy-gas/          # 시트 자동화 GAS (위젯과 별개 프로젝트)
-├── scripts/             # 빌드 보조 (CHANGES.txt → RTF 변환)
-├── resources/           # 앱 아이콘
-├── .github/workflows/   # GitHub Actions (release-win.yml)
-├── schedule-widget-api.gs
-├── electron-builder.yml
-└── package.json
-```
-구조 변경 시 반드시 사전 협의.
+## 디렉토리 구조
+- 상세 트리는 **HANDOFF.md** 참조 (single source of truth).
+- 구조 변경 시 반드시 사전 협의.
