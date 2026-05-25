@@ -136,7 +136,7 @@
 1. **`.gs` 파일의 git 버전이 원본(source of truth).** GAS 콘솔에서 코드를 고쳤으면 **즉시 레포에도 반영**한다. (콘솔만 고치고 레포 반영을 빠뜨리면 → 클코가 레포의 옛 코드를 믿고 작업하다 어긋남)
 2. **재배포로 GAS URL이 바뀌면, 위젯과 대시보드 둘 다 교체한다.**
    - 위젯: `electron/main.js`의 `GAS_BASE` (확인 완료)
-   - 대시보드: `config.ts`의 `GAS_URL` (※ 변수명 별도 확인 필요 — §6 참조)
+   - 대시보드: `src/config.ts`의 `GAS_URL` (named export, 확인 완료) — 소비처 6곳에서 `import { GAS_URL } from '../config'`로 일관 import. 이름 변경 시 **총 7곳 동시 갱신** 필요
    - 한쪽만 바꾸면 다른 쪽이 옛 GAS를 **조용히** 본다 (가장 알아채기 어려운 사고).
 3. **대시보드 캐시**: `gas/dashboard.gs`는 시트를 최대 1시간 캐싱한다. 시트 수정 후 즉시 반영하려면 `invalidateCache()` 호출 또는 `CACHE_VERSION` 상수를 올린다.
    - (참고: 현재 운영자는 GAS를 매번 새 URL로 재배포 → 사실상 캐시가 초기화되어 이 문제를 자동 우회 중)
@@ -152,7 +152,7 @@
 - [x] ~~업무데이터 헤더 행 위치 + 우선순위 컬럼명~~ → **확정: 헤더 1행, 우선순위는 "타입"(C열)**
 - [x] ~~위젯 GAS(`schedule-widget-api.gs`)의 컬럼 상수(`WIDGET_COL`/`WIDGET_DONE_COL`) 실제 값이 §2의 신규·유지보수/완료 표와 일치하는지~~ → **확정: `schedule-widget-api.gs:20-43`의 `WIDGET_COL` / `WIDGET_DONE_COL`이 §2 표와 완전 일치 (광고주=5/E, 작업자=6/F, 수량=9/I, 비고=10/J, 상태=11/K, id=12/L, 공유=13/M, 완료의 백업=14/N, 요청일=15/O, 공유일=16/P, TAT=17/Q). 시트명도 일치 (`💛신규·유지보수`, `💚완료`). `WIDGET_DATA_START_ROW=10`, `DATE_HEADER_ROW=9`, `DATE_START_COL=14`(N열)**
 - [x] ~~위젯 `main.js`의 GAS URL 변수명이 `GAS_BASE`가 맞는지~~ → **확정: `electron/main.js:137` `const GAS_BASE = '...'` 그대로**
-- [ ] **대시보드 `config.ts`의 GAS URL 상수 변수명**이 `GAS_URL`이 맞는지 — design-dashboard 레포에서 별도 확인 필요. 다르면 §5의 이름을 정정할 것
+- [x] ~~대시보드 `config.ts`의 GAS URL 상수 변수명이 `GAS_URL`이 맞는지~~ → **확정: `src/config.ts`의 `GAS_URL` (named export). 소비처 6곳에서 동일 이름으로 import. §5 표기 정확**
 - [x] ~~신규·유지보수 10행 시작 / 완료 시트 컬럼~~ → **확정: 신규·유지보수 데이터 10행부터, 완료 시트 B~Q는 §2 표와 일치 (B타입 C팀 D담당자 E광고주 F작업자 G온오프 H작업유형 I수량 J비고 K상태 L:ID M공유 N백업 O요청일 P공유일 Q:TAT)**
 
 ---
