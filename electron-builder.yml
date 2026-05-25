@@ -99,4 +99,4 @@ nsis:
 publish:
   provider: github
   owner: Peekaboo325
-  repo: design-widget-releases
+  repo: design-widget-schedule
