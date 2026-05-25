@@ -29,13 +29,6 @@ Electron 33 · React 18 · Vite (electron-vite) · electron-builder · electron-
 최신 `.exe` 다운로드 후 실행. 한국어 인스톨러, 사용자 단위 설치, 시작 메뉴·바탕화면 바로가기 자동 생성.
 설치 후엔 자동 업데이트로 알아서 최신 상태 유지.
 
-## 디자인 결정 흔적 (몇 가지)
-
-- **그라데이션 헤더 + 라이트 본문 카드** — 위젯은 작고 핵심만, 색은 자기 자리만
-- **본문 카드 외곽은 radial-gradient로** — frameless·transparent 창의 border invalidate Chromium 버그 우회
-- **NEW dot 펄스는 compositor-only로** — `::after` + transform: scale, GPU 가속
-- **STALE 자동 복구** — 직렬 큐 + id(시트 L열 UUID) 기반 행 재탐색 → 디자이너 6명이 시트 동시 편집해도 같은 작업으로 안정 인식
-
 ---
 
 © 2026 Peekaboo325
