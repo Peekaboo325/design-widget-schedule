@@ -89,7 +89,7 @@ design-widget-schedule/
 │   ├── hooks/
 │   │   ├── useSettings.js
 │   │   ├── useMembers.js               # 캐시
-│   │   ├── useSchedule.js              # 캐시 + 5분 폴링 + 백오프 + backup 포함
+│   │   ├── useSchedule.js              # 캐시 + 5분 폴링 + 지수 백오프(2s/4s/8s, 최대 3회) + backup 포함
 │   │   ├── useSeenSchedule.js          # persistent NEW 추적 (key=scheduleKey)
 │   │   └── useActionQueue.js           # 직렬 큐 + STALE 자동 재시도 (id 기반 행 재탐색)
 │   ├── lib/
@@ -104,7 +104,7 @@ design-widget-schedule/
 
 ---
 
-## 현재 동작 (v0.2.4)
+## 현재 동작 (v0.2.5)
 
 ### 위젯 셸
 - frameless + transparent + alwaysOnTop
@@ -248,7 +248,7 @@ design-widget-schedule/
 
 ---
 
-## GAS API (`schedule-widget-api.gs`) — v0.2.4 기준
+## GAS API (`schedule-widget-api.gs`) — v0.2.5 기준
 
 ### 시트 구조 (v0.2.4: L열에 ID 컬럼 신설로 한 칸씩 시프트)
 
@@ -340,7 +340,7 @@ design-widget-schedule/
 |---|---|
 | **dev 모드** (`npm run dev` / `start-mac.command`) | ✅ 정상 (Mac/Windows 둘 다) |
 | **macOS .dmg** | ⚠ 빌드 성공, 실행 시 hang (Sequoia + unsigned + Electron 33 조합) |
-| **Windows .exe** | ✅ v0.2.0~v0.2.4 빌드 완료, 디자인팀 5명 배포 + 자동 업데이트 동작 중 |
+| **Windows .exe** | ✅ v0.2.0~v0.2.5 빌드 완료, 디자인팀 5명 배포 + 자동 업데이트 동작 중 |
 
 ### macOS 패키지 hang 이슈
 - `app.whenReady()` 콜백 호출 안 됨 → dock에서만 튀고 화면 X
@@ -405,6 +405,7 @@ design-widget-schedule/
 - **AUDIT.md** (`ef2de70`): v0.2.3 기준 전수 점검 보고서 (오너 의사결정용)
 - **v0.2.4** (`b891cd1`, `f9b0575`, `3bc4935`): **시트 L열 UUID 도입 + GAS 4개 통합 수정 + 위젯 ID 기반 식별로 전환 / legacy-gas 정리 (dashboard-api.gs 삭제)**
 - **v0.2.5** (`340f207`, `7780105`, `7d6cf67`, `5986572`, `89e93c7`): **자동 업데이트 즉시 silent 설치·재시작 (scheduleQuietInstall) + GitHub Actions 도입 (`v*` 태그 push → windows-latest 자동 빌드·Release 업로드) + 릴리스 레포 통합 (design-widget-releases → design-widget-schedule, 코드/릴리스 단일 운영)**
+- **v0.2.5 빌드 후 보강** (`ba98ae3`): `electron-builder.yml`에 `releaseType: release` 추가 — v0.2.5 .exe엔 이미 미반영이라 첫 Release가 Draft로 올라옴(수동 publish로 해소). **v0.2.6부터 자동 정식 공개 효과** (한 사이클 지연)
 
 **시도했다가 폐기/실패**:
 - L/S 더블클릭 토글 (drag region 위 React 이벤트 미수신 + UX 혼동)
