@@ -100,3 +100,5 @@ publish:
   provider: github
   owner: Peekaboo325
   repo: design-widget-schedule
+  # 빌드 즉시 정식 공개(Latest)로 게시. 기본값은 'draft'라 자동 업데이트가 인식 못 함.
+  releaseType: release
