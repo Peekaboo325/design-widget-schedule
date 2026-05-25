@@ -1,5 +1,8 @@
 # CLAUDE.md — design-widget-schedule
 
+> **⚠ 시트 구조·컬럼·GAS URL 관련 작업은 루트의 [DATA_CONTRACT.md](./DATA_CONTRACT.md)를 먼저 확인할 것.**
+> 한 시트를 위젯·대시보드·입력기(예정)가 공유하므로, 한쪽 변경이 다른 쪽을 조용히 깨뜨릴 수 있다.
+
 ## 프로젝트 개요
 IMC 3본부 디자인팀 팀원용 바탕화면 위젯 (Electron + React + Vite)
 - 본인 배정 스케줄 확인 + 공유대기 리마인드
