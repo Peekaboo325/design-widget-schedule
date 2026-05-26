@@ -1,17 +1,31 @@
 // ============================================================
-// 영업일 계산 (한국 공휴일 + 회사 휴무일 자동 반영)
+// Scheduler.gs — 디자인팀 스케줄러 자동화
+// 진단 로그 전면 보강 (2026-05) — 모든 함수에 [함수명] prefix·시작·결과·에러 로그
+// 자주 호출되는 onEditTrigger·moveRowOnCheck는 silent skip 우선,
+// 데이터 영역 진입 시에만 로그 (콘솔 noise 회피)
 // ============================================================
+
+// ── 상수 ────────────────────────────────────────────────────
 const HOLIDAY_CAL_ID = 'ko.south_korea#holiday@group.v.calendar.google.com';
 const COMPANY_HOLIDAY_SHEET = '회사휴무일'; // A열에 날짜만 입력하면 됨
 
 // 캘린더 동기화 — 시트 행 ↔ 이벤트 매핑용 hidden tag 키
-// (시트의 L열 UUID를 이 키 값으로 박아 증분 sync 매핑에 사용)
 const SYNC_TAG_KEY = 'rowId';
+
+const SCHEDULE_CALENDAR_NAME = '디자인팀 업무 스케줄러';
+
+// 로그 prefix 유틸 — 모든 Logger.log를 이걸 통하면 어느 함수 로그인지 한눈에 보임
+function log_(fn, msg) {
+  Logger.log(`[${fn}] ${msg}`);
+}
+
+// ============================================================
+// 영업일 계산 (한국 공휴일 + 회사 휴무일 자동 반영)
+// ============================================================
 
 /**
  * 한국 공식 공휴일 (Google Calendar 기반, 6시간 캐시)
  * 음력/대체공휴일 자동 반영. 매년 손댈 필요 없음.
- * 첫 실행 시 캘린더 미구독 상태면 자동 구독 시도.
  */
 function getKoreanHolidays(year) {
   const cache = CacheService.getScriptCache();
@@ -21,8 +35,12 @@ function getKoreanHolidays(year) {
 
   let cal = CalendarApp.getCalendarById(HOLIDAY_CAL_ID);
   if (!cal) {
-    try { cal = CalendarApp.subscribeToCalendar(HOLIDAY_CAL_ID); }
-    catch (err) { Logger.log(`공휴일 캘린더 구독 실패: ${err}`); }
+    try {
+      cal = CalendarApp.subscribeToCalendar(HOLIDAY_CAL_ID);
+      log_('getKoreanHolidays', `공휴일 캘린더 신규 구독 완료`);
+    } catch (err) {
+      log_('getKoreanHolidays', `공휴일 캘린더 구독 실패: ${err}`);
+    }
   }
   if (!cal) return new Set();
 
@@ -34,12 +52,12 @@ function getKoreanHolidays(year) {
     Utilities.formatDate(e.getStartTime(), 'Asia/Seoul', 'yyyy-MM-dd')
   );
   cache.put(cacheKey, JSON.stringify(dates), 21600); // 6시간
+  log_('getKoreanHolidays', `${year}년 공휴일 ${dates.length}개 fetch 후 cache (6시간)`);
   return new Set(dates);
 }
 
 /**
  * 회사 자체 휴무일 ('회사휴무일' 시트 A2:A에서 읽음, 1시간 캐시)
- * 시트가 없거나 비어있으면 빈 Set 반환.
  */
 function getCompanyHolidays(year) {
   const cache = CacheService.getScriptCache();
@@ -50,6 +68,7 @@ function getCompanyHolidays(year) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(COMPANY_HOLIDAY_SHEET);
   if (!sheet || sheet.getLastRow() < 2) {
     cache.put(cacheKey, JSON.stringify([]), 3600);
+    log_('getCompanyHolidays', `'${COMPANY_HOLIDAY_SHEET}' 시트 없음 또는 비어있음 — 빈 결과 cache`);
     return new Set();
   }
 
@@ -59,13 +78,12 @@ function getCompanyHolidays(year) {
     .filter(v => v instanceof Date && v.getFullYear() === year)
     .map(d => Utilities.formatDate(d, 'Asia/Seoul', 'yyyy-MM-dd'));
 
-  cache.put(cacheKey, JSON.stringify(dates), 3600); // 1시간 (시트는 변경 잦을 수 있음)
+  cache.put(cacheKey, JSON.stringify(dates), 3600); // 1시간
+  log_('getCompanyHolidays', `${year}년 회사 휴무일 ${dates.length}개 fetch 후 cache (1시간)`);
   return new Set(dates);
 }
 
-/**
- * 영업일 여부 (주말 + 한국 공휴일 + 회사 휴무일 모두 제외)
- */
+/** 영업일 여부 (주말 + 한국 공휴일 + 회사 휴무일 모두 제외) */
 function isBusinessDay(date) {
   const day = date.getDay();
   if (day === 0 || day === 6) return false;
@@ -77,10 +95,7 @@ function isBusinessDay(date) {
   return true;
 }
 
-/**
- * 두 날짜 사이 영업일 수 (start 제외, end 포함)
- * 대시보드의 일평균 건수 계산 등에서 활용
- */
+/** 두 날짜 사이 영업일 수 (start 제외, end 포함) */
 function countBusinessDays(startDate, endDate) {
   let count = 0;
   const cur = new Date(startDate);
@@ -93,118 +108,147 @@ function countBusinessDays(startDate, endDate) {
 }
 
 // ============================================================
-// 체크박스 → 완료 시트 이동 + TAT 계산
+// moveRowOnCheck — 신규·유지보수 시트의 M열 공유 체크박스 → 완료 시트로 이관
 // (v0.2.4: L열 ID 신설로 공유 체크박스가 M열로 시프트. ID도 같이 이관)
 // 신규 시트: B타입 C팀 D담당자 E광고주 F작업자 G온/오프 H작업유형 I수량 J비고 K상태 L:ID M:공유 N~날짜
 // 완료 시트: B타입 ... J비고 K상태 L:ID M:공유 N:백업 O:요청일 P:공유일 Q:TAT
+//
+// onEdit installable trigger에서 호출. 모든 셀 편집마다 발사되므로
+// 관련 없는 셀은 silent skip (콘솔 noise 회피). 진입 확정 시점부터 로그.
 // ============================================================
 function moveRowOnCheck(e) {
   if (!e) return;
 
-  const range = e.range;
-  const col = range.getColumn();
-  const value = e.value;
-  const TARGET_COL = 13; // M열 (공유 체크박스, L에서 한 칸 시프트)
-
-  if (col !== TARGET_COL || value !== "TRUE") return;
-
-  const sheet = range.getSheet();
-  const sheetName = sheet.getName();
-  if (!sheetName.includes("신규") || !sheetName.includes("유지보수")) return;
-
-  const lock = LockService.getScriptLock();
   try {
-    lock.waitLock(5000);
+    const range = e.range;
+    const col = range.getColumn();
+    const value = e.value;
+    const TARGET_COL = 13; // M열 (공유 체크박스)
+
+    // 관련 없는 셀이면 silent (모든 편집마다 호출되므로 조용히)
+    if (col !== TARGET_COL || value !== 'TRUE') return;
+
+    const sheet = range.getSheet();
+    const sheetName = sheet.getName();
+    if (!sheetName.includes('신규') || !sheetName.includes('유지보수')) return;
 
     const row = range.getRow();
-    const ss = e.source;
-    const targetSheet = ss.getSheetByName("💚완료");
-    if (!targetSheet) return;
+    log_('moveRowOnCheck', `시작 — 시트 '${sheetName}' 행 ${row} 공유 체크됨`);
 
-    const lastCol = sheet.getLastColumn();
-    const rowRange = sheet.getRange(row, 1, 1, lastCol);
-    const rowValues = rowRange.getValues()[0];
-    const rowNotes = rowRange.getNotes()[0];
-    const rowBackgrounds = rowRange.getBackgrounds()[0];
-
-    // 날짜 헤더는 N열(14)부터 시작
-    const DATE_START = 14;
-    const headerRange = sheet.getRange(9, DATE_START, 1, lastCol - DATE_START + 1);
-    const headers = headerRange.getDisplayValues()[0];
-
-    // 빨강 셀(#ff0000) = 요청일. 가장 좌측 빨강 찾기 (요청일은 한 셀만)
-    let parsedRequestDate = "";
-    for (let i = DATE_START - 1; i < rowBackgrounds.length; i++) {
-      const bgColor = rowBackgrounds[i];
-      if (bgColor === "#ff0000" || bgColor === "red") {
-        const headerIdx = i - (DATE_START - 1);
-        const dateMatch = headers[headerIdx].match(/(\d+)\/(\d+)/);
-        if (dateMatch) {
-          parsedRequestDate = dateMatch[1].padStart(2, '0') + "/" + dateMatch[2].padStart(2, '0');
-        }
-        break;
+    const lock = LockService.getScriptLock();
+    try {
+      const locked = lock.tryLock(5000);
+      if (!locked) {
+        log_('moveRowOnCheck', `lock 획득 실패 — 다른 처리 진행 중. 행 ${row} skip`);
+        return;
       }
+
+      const ss = e.source;
+      const targetSheet = ss.getSheetByName('💚완료');
+      if (!targetSheet) {
+        log_('moveRowOnCheck', `'💚완료' 시트 없음 — 중단`);
+        return;
+      }
+
+      const lastCol = sheet.getLastColumn();
+      const rowRange = sheet.getRange(row, 1, 1, lastCol);
+      const rowValues = rowRange.getValues()[0];
+      const rowNotes = rowRange.getNotes()[0];
+      const rowBackgrounds = rowRange.getBackgrounds()[0];
+
+      // 날짜 헤더는 N열(14)부터
+      const DATE_START = 14;
+      const headerRange = sheet.getRange(9, DATE_START, 1, lastCol - DATE_START + 1);
+      const headers = headerRange.getDisplayValues()[0];
+
+      // 빨강 셀(#ff0000) = 요청일. 가장 좌측 빨강 찾기
+      let parsedRequestDate = '';
+      for (let i = DATE_START - 1; i < rowBackgrounds.length; i++) {
+        const bgColor = rowBackgrounds[i];
+        if (bgColor === '#ff0000' || bgColor === 'red') {
+          const headerIdx = i - (DATE_START - 1);
+          const dateMatch = headers[headerIdx].match(/(\d+)\/(\d+)/);
+          if (dateMatch) {
+            parsedRequestDate = dateMatch[1].padStart(2, '0') + '/' + dateMatch[2].padStart(2, '0');
+          }
+          break;
+        }
+      }
+
+      const today = Utilities.formatDate(new Date(), 'GMT+9', 'MM/dd');
+      const requestDateFallback = !parsedRequestDate;
+      if (requestDateFallback) parsedRequestDate = today;
+      const tat = calcBusinessDays(parsedRequestDate, today);
+
+      log_(
+        'moveRowOnCheck',
+        `요청일=${parsedRequestDate}${requestDateFallback ? '(fallback)' : ''}, 완료일=${today}, TAT=${tat}일`
+      );
+
+      // 광고주·비고로 어떤 행인지 식별
+      const advertiser = String(rowValues[4] || '').trim(); // E열
+      const note = String(rowValues[9] || '').trim();        // J열
+
+      // 신규 시트 B~J(인덱스 1~9) + L열 ID(인덱스 11)
+      const sourceValues = rowValues.slice(1, 10);
+      const sourceNotes = rowValues.slice(1, 10).map((_, i) => rowNotes[i + 1]);
+      let id = String(rowValues[11] || '').trim();
+      const idIssued = !id;
+      if (idIssued) {
+        id = Utilities.getUuid();
+      }
+      log_(
+        'moveRowOnCheck',
+        `식별 — 광고주='${advertiser}', 비고='${note}', ID=${id}${idIssued ? ' (신규 발급)' : ' (시트에서 가져옴)'}`
+      );
+
+      // 완료 시트 행 구성 (B~Q, 16열)
+      const finalRowData = [
+        ...sourceValues,              // B~J
+        '완료',                       // K
+        id,                           // L
+        true,                         // M 공유
+        false,                        // N 백업
+        parsedRequestDate,            // O 요청일
+        today,                        // P 공유일
+        tat                           // Q TAT
+      ];
+      const finalNotes = [...sourceNotes, '', '', '', '', '', '', ''];
+
+      const insertRow = Math.max(targetSheet.getLastRow(), 9) + 1;
+      const targetRange = targetSheet.getRange(insertRow, 2, 1, 16);
+
+      targetRange.setValues([finalRowData]);
+      targetRange.setNotes([finalNotes]);
+      targetRange.setBackground('#ffffff')
+                 .setFontColor('#000000')
+                 .setFontSize(9)
+                 .setHorizontalAlignment('center')
+                 .setVerticalAlignment('middle')
+                 .setBorder(true, true, true, true, true, true, '#000000', SpreadsheetApp.BorderStyle.SOLID);
+
+      // 체크박스: M(공유) + N(백업)
+      targetSheet.getRange(insertRow, 13, 1, 2).insertCheckboxes();
+      targetSheet.getRange(insertRow, 13).setValue(true);
+      targetSheet.getRange(insertRow, 14).setValue(false);
+
+      sheet.deleteRow(row);
+
+      log_(
+        'moveRowOnCheck',
+        `완료 — '💚완료' ${insertRow}행에 삽입, '${sheetName}' ${row}행 삭제`
+      );
+    } finally {
+      lock.releaseLock();
     }
-
-    const today = Utilities.formatDate(new Date(), "GMT+9", "MM/dd");
-    if (!parsedRequestDate) parsedRequestDate = today;
-    const tat = calcBusinessDays(parsedRequestDate, today);
-
-    // 신규 시트의 B~J(인덱스 1~9) 데이터와 노트, L열(인덱스 11)의 ID 추출
-    const sourceValues = rowValues.slice(1, 10);
-    const sourceNotes = rowValues.slice(1, 10).map((_, i) => rowNotes[i + 1]);
-    let id = String(rowValues[11] || ""); // L열 = ID (0-based 11)
-    if (!id) {
-      // ID 없으면 즉시 발급 (onEdit 누락 백업)
-      id = Utilities.getUuid();
-    }
-
-    // 완료 시트 행 구성 (B~Q, 16열)
-    // [B타입 C팀 D담당자 E광고주 F작업자 G온/오프 H작업유형 I수량 J비고 K상태 L:ID M:공유 N:백업 O:요청일 P:공유일 Q:TAT]
-    const finalRowData = [
-      ...sourceValues,              // B~J (9개)
-      "완료",                       // K: 상태
-      id,                           // L: ID
-      true,                         // M: 공유
-      false,                        // N: 백업
-      parsedRequestDate,            // O: 요청일
-      today,                        // P: 공유일
-      tat                           // Q: TAT
-    ];
-    const finalNotes = [...sourceNotes, "", "", "", "", "", "", ""];
-
-    const insertRow = Math.max(targetSheet.getLastRow(), 9) + 1;
-    const targetRange = targetSheet.getRange(insertRow, 2, 1, 16); // B~Q
-
-    targetRange.setValues([finalRowData]);
-    targetRange.setNotes([finalNotes]);
-
-    targetRange.setBackground("#ffffff")
-               .setFontColor("#000000")
-               .setFontSize(9)
-               .setHorizontalAlignment("center")
-               .setVerticalAlignment("middle")
-               .setBorder(true, true, true, true, true, true, "#000000", SpreadsheetApp.BorderStyle.SOLID);
-
-    // 체크박스: M(공유) + N(백업)
-    targetSheet.getRange(insertRow, 13, 1, 2).insertCheckboxes();
-    targetSheet.getRange(insertRow, 13).setValue(true);   // 공유 = true (이미 set 됐지만 명시)
-    targetSheet.getRange(insertRow, 14).setValue(false);  // 백업 = false
-
-    sheet.deleteRow(row);
-
   } catch (err) {
-    console.error("에러: " + err.toString());
-  } finally {
-    lock.releaseLock();
+    log_('moveRowOnCheck', `에러: ${err}\n${err.stack || ''}`);
   }
 }
 
 /**
  * TAT 계산: 요청일 ~ 완료일 사이 영업일 수
- * 주말 + 한국 공휴일 + 회사 휴무일 모두 제외
- * 연말 경계 처리: 요청월 > 완료월이면 요청일은 전년도로 간주
- *   예) 12/31 → 01/02 호출 시 시작=작년 12/31, 끝=올해 01/02
+ * 연말 경계 처리: 요청월 > 완료월이면 요청일은 전년도로
  */
 function calcBusinessDays(startStr, endStr) {
   const currentYear = new Date().getFullYear();
@@ -221,155 +265,183 @@ function calcBusinessDays(startStr, endStr) {
 }
 
 // ============================================================
-// 캘린더 일괄 동기화 — v0.2.4 ID 기반 증분 sync
-// - 시트 L열 UUID를 캘린더 이벤트의 hidden tag(rowId)에 박아 매핑.
-// - 변경분만 처리 → quota burst 회피 (이전: 매 sync마다 N+N 호출 폭발).
-// - tag 없는 이벤트(개인 추가·옛 sync 잔존)는 안 건드림 (safe default).
-//   옛 잔존 정리는 cleanupUntaggedEvents()를 한 번만 수동 실행.
+// syncToCalendar — v0.2.4 ID 기반 증분 sync
+// - 시트 L열 UUID를 캘린더 이벤트 hidden tag(rowId)에 박아 매핑
+// - 변경분만 처리 → quota burst 회피
+// - tag 없는 이벤트(개인 추가·옛 sync 잔존)는 건드리지 않음
+// - 각 액션(create/update/delete)을 행별로 로그 → 콘솔에서 무엇이 변경됐는지 보임
 // ============================================================
 function syncToCalendar() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName('💛신규·유지보수');
-  const calendar = CalendarApp.getCalendarsByName('디자인팀 업무 스케줄러')[0];
-
-  if (!calendar) {
-    Logger.log('캘린더를 찾을 수 없습니다.');
-    return;
-  }
-
-  const DATE_ROW = 9;
-  const DATE_START_COL = 14; // N열부터 날짜 (L열 ID 신설로 한 칸 시프트)
-  const DATA_START_ROW = 10;
-  const ID_COL = 12;   // L열 — UUID
-  const ADV_COL = 5;   // E열 — 광고주
-  const NOTE_COL = 10; // J열 — 비고
-  const lastRow = sheet.getLastRow();
-  const lastCol = sheet.getLastColumn();
-
-  if (lastRow < DATA_START_ROW) {
-    Logger.log('동기화할 데이터 행 없음');
-    return;
-  }
-
-  // 1. 시트의 활성 행 → { id, title, endDate } 수집
-  const dateValues = sheet.getRange(DATE_ROW, DATE_START_COL, 1, lastCol - DATE_START_COL + 1).getValues()[0];
-  const allValues = sheet.getRange(DATA_START_ROW, 1, lastRow - DATA_START_ROW + 1, lastCol).getValues();
-  const allBackgrounds = sheet.getRange(DATA_START_ROW, DATE_START_COL, lastRow - DATA_START_ROW + 1, lastCol - DATE_START_COL + 1).getBackgrounds();
-
-  const sheetRows = [];
-  for (let i = 0; i < allValues.length; i++) {
-    const rowData = allValues[i];
-    const id = String(rowData[ID_COL - 1] || '').trim();
-    const advertiser = rowData[ADV_COL - 1];
-    if (!id || !advertiser) continue; // ID 없거나 광고주 비면 매핑 불가
-
-    const note = rowData[NOTE_COL - 1];
-    const title = note ? `${advertiser} ${note}` : String(advertiser);
-
-    // 마감일 = pink(#ffdcef) 마지막, 없으면 red(#ff0000) 마지막
-    const backgrounds = allBackgrounds[i];
-    let endColIndex = -1;
-    for (let j = 0; j < backgrounds.length; j++) {
-      if (isPink(backgrounds[j])) endColIndex = j;
+  log_('syncToCalendar', '시작');
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('💛신규·유지보수');
+    if (!sheet) {
+      log_('syncToCalendar', `'💛신규·유지보수' 시트 없음 — 중단`);
+      return;
     }
-    if (endColIndex === -1) {
+    const calendar = CalendarApp.getCalendarsByName(SCHEDULE_CALENDAR_NAME)[0];
+    if (!calendar) {
+      log_('syncToCalendar', `캘린더 '${SCHEDULE_CALENDAR_NAME}' 없음 — 중단`);
+      return;
+    }
+
+    const DATE_ROW = 9;
+    const DATE_START_COL = 14; // N열부터 날짜
+    const DATA_START_ROW = 10;
+    const ID_COL = 12;   // L
+    const ADV_COL = 5;   // E
+    const NOTE_COL = 10; // J
+    const lastRow = sheet.getLastRow();
+    const lastCol = sheet.getLastColumn();
+
+    if (lastRow < DATA_START_ROW) {
+      log_('syncToCalendar', '데이터 행 없음 — 종료');
+      return;
+    }
+
+    // 1. 시트 활성 행 수집
+    const dateValues = sheet.getRange(DATE_ROW, DATE_START_COL, 1, lastCol - DATE_START_COL + 1).getValues()[0];
+    const allValues = sheet.getRange(DATA_START_ROW, 1, lastRow - DATA_START_ROW + 1, lastCol).getValues();
+    const allBackgrounds = sheet.getRange(DATA_START_ROW, DATE_START_COL, lastRow - DATA_START_ROW + 1, lastCol - DATE_START_COL + 1).getBackgrounds();
+
+    const sheetRows = [];
+    let skipNoId = 0, skipNoAdv = 0, skipNoDate = 0;
+    for (let i = 0; i < allValues.length; i++) {
+      const rowData = allValues[i];
+      const id = String(rowData[ID_COL - 1] || '').trim();
+      const advertiser = rowData[ADV_COL - 1];
+      if (!id) { skipNoId++; continue; }
+      if (!advertiser) { skipNoAdv++; continue; }
+
+      const note = rowData[NOTE_COL - 1];
+      const title = note ? `${advertiser} ${note}` : String(advertiser);
+
+      const backgrounds = allBackgrounds[i];
+      let endColIndex = -1;
       for (let j = 0; j < backgrounds.length; j++) {
-        if (isRed(backgrounds[j])) endColIndex = j;
+        if (isPink(backgrounds[j])) endColIndex = j;
       }
+      if (endColIndex === -1) {
+        for (let j = 0; j < backgrounds.length; j++) {
+          if (isRed(backgrounds[j])) endColIndex = j;
+        }
+      }
+      if (endColIndex === -1) { skipNoDate++; continue; }
+
+      const endDate = parseDate(dateValues[endColIndex]);
+      if (!endDate) { skipNoDate++; continue; }
+
+      sheetRows.push({ id: id, title: title, endDate: endDate });
     }
-    if (endColIndex === -1) continue;
+    log_(
+      'syncToCalendar',
+      `시트 수집 — 활성 ${sheetRows.length}건 / skip: ID없음 ${skipNoId}, 광고주없음 ${skipNoAdv}, 마감일없음 ${skipNoDate}`
+    );
 
-    const endDate = parseDate(dateValues[endColIndex]);
-    if (!endDate) continue;
-
-    sheetRows.push({ id: id, title: title, endDate: endDate });
-  }
-
-  // 2. 캘린더의 향후 3개월 이벤트 → tag 기준 매핑
-  const today = new Date();
-  const future = new Date();
-  future.setMonth(future.getMonth() + 3);
-  const calEvents = calendar.getEvents(today, future);
-  const calById = new Map();
-  let untaggedCount = 0;
-  for (let i = 0; i < calEvents.length; i++) {
-    const e = calEvents[i];
-    const tagId = e.getTag(SYNC_TAG_KEY);
-    if (tagId) {
-      calById.set(tagId, e);
-    } else {
-      untaggedCount++;
+    // 2. 캘린더 향후 3개월 이벤트 → tag 매핑
+    const today = new Date();
+    const future = new Date();
+    future.setMonth(future.getMonth() + 3);
+    const calEvents = calendar.getEvents(today, future);
+    const calById = new Map();
+    let untaggedCount = 0;
+    for (let i = 0; i < calEvents.length; i++) {
+      const tagId = calEvents[i].getTag(SYNC_TAG_KEY);
+      if (tagId) calById.set(tagId, calEvents[i]);
+      else untaggedCount++;
     }
-  }
+    log_(
+      'syncToCalendar',
+      `캘린더 수집 — 향후 3개월 ${calEvents.length}건 (tagged ${calById.size}, untagged 무시 ${untaggedCount})`
+    );
 
-  // 3. 비교 → 변경분만 액션 (Asia/Seoul yyyy-MM-dd 문자열 비교로 안전)
-  const fmtDate = (d) => Utilities.formatDate(d, 'Asia/Seoul', 'yyyy-MM-dd');
-  let created = 0, updated = 0, unchanged = 0;
-  for (let i = 0; i < sheetRows.length; i++) {
-    const row = sheetRows[i];
-    const existing = calById.get(row.id);
-    if (!existing) {
-      // 새 행 → 이벤트 생성 + tag 박기
-      const ev = calendar.createAllDayEvent(row.title, row.endDate);
-      ev.setTag(SYNC_TAG_KEY, row.id);
-      created++;
-    } else {
-      const titleChanged = existing.getTitle() !== row.title;
-      const dateChanged = fmtDate(existing.getStartTime()) !== fmtDate(row.endDate);
-      if (titleChanged || dateChanged) {
-        if (titleChanged) existing.setTitle(row.title);
-        if (dateChanged) existing.setAllDayDate(row.endDate);
-        updated++;
+    // 3. 비교 → 변경분만 액션
+    const fmtDate = (d) => Utilities.formatDate(d, 'Asia/Seoul', 'yyyy-MM-dd');
+    let created = 0, updated = 0, unchanged = 0;
+    for (let i = 0; i < sheetRows.length; i++) {
+      const row = sheetRows[i];
+      const existing = calById.get(row.id);
+      if (!existing) {
+        const ev = calendar.createAllDayEvent(row.title, row.endDate);
+        ev.setTag(SYNC_TAG_KEY, row.id);
+        created++;
+        log_('syncToCalendar', `create: ${row.title} / ${fmtDate(row.endDate)}`);
       } else {
-        unchanged++;
+        const titleChanged = existing.getTitle() !== row.title;
+        const dateChanged = fmtDate(existing.getStartTime()) !== fmtDate(row.endDate);
+        if (titleChanged || dateChanged) {
+          const oldTitle = existing.getTitle();
+          const oldDate = fmtDate(existing.getStartTime());
+          if (titleChanged) existing.setTitle(row.title);
+          if (dateChanged) existing.setAllDayDate(row.endDate);
+          updated++;
+          log_(
+            'syncToCalendar',
+            `update: ${oldTitle} / ${oldDate} → ${row.title} / ${fmtDate(row.endDate)}`
+          );
+        } else {
+          unchanged++;
+        }
+        calById.delete(row.id);
       }
-      calById.delete(row.id); // 처리됨 표시 — 남은 것은 시트에 없는 것
     }
-  }
 
-  // 4. 시트에서 사라진 ID의 이벤트 → 삭제 (tag 있는 것만)
-  let deleted = 0;
-  const remainingValues = Array.from(calById.values());
-  for (let i = 0; i < remainingValues.length; i++) {
-    remainingValues[i].deleteEvent();
-    deleted++;
-  }
+    // 4. 시트에서 사라진 ID의 이벤트 → 삭제 (tag 있는 것만)
+    let deleted = 0;
+    for (const [id, ev] of calById) {
+      const title = ev.getTitle();
+      const date = fmtDate(ev.getStartTime());
+      ev.deleteEvent();
+      deleted++;
+      log_('syncToCalendar', `delete: ${title} / ${date} (시트에서 사라진 ID ${id})`);
+    }
 
-  Logger.log(`sync 완료 — 시트 ${sheetRows.length}건 / 캘린더 ${calEvents.length}건 (tagged 처리 ${created + updated + unchanged + deleted}, untagged 무시 ${untaggedCount})`);
-  Logger.log(`결과: create ${created} / update ${updated} / delete ${deleted} / unchanged ${unchanged}`);
+    log_(
+      'syncToCalendar',
+      `완료 요약 — create ${created} / update ${updated} / delete ${deleted} / unchanged ${unchanged}`
+    );
+  } catch (err) {
+    log_('syncToCalendar', `에러: ${err}\n${err.stack || ''}`);
+  }
 }
 
 // ============================================================
 // cleanupUntaggedEvents — 1회용 정리 함수
-// syncToCalendar는 tag 없는 이벤트(개인 추가·옛 sync 잔존)를 건드리지 않는다.
-// 첫 증분 sync 전 캘린더를 깨끗이 비우고 시작하고 싶으면 이 함수를 콘솔에서
-// 수동으로 한 번만 실행. 향후 3개월 안에서 tag 없는 이벤트 모두 삭제.
-//
-// ⚠ '디자인팀 업무 스케줄러' 캘린더에 누군가 개인 일정을 넣어둔 게 있다면
-//    그것도 함께 삭제된다는 점 주의.
+// 향후 3개월에서 tag 없는 이벤트만 삭제 (옛 sync 잔존 정리)
 // ============================================================
 function cleanupUntaggedEvents() {
-  const calendar = CalendarApp.getCalendarsByName('디자인팀 업무 스케줄러')[0];
-  if (!calendar) {
-    Logger.log('캘린더를 찾을 수 없습니다.');
-    return;
-  }
-  const today = new Date();
-  const future = new Date();
-  future.setMonth(future.getMonth() + 3);
-  const events = calendar.getEvents(today, future);
-  let deleted = 0, kept = 0;
-  for (let i = 0; i < events.length; i++) {
-    if (events[i].getTag(SYNC_TAG_KEY)) {
-      kept++;
-    } else {
-      events[i].deleteEvent();
-      deleted++;
+  log_('cleanupUntaggedEvents', '시작');
+  try {
+    const calendar = CalendarApp.getCalendarsByName(SCHEDULE_CALENDAR_NAME)[0];
+    if (!calendar) {
+      log_('cleanupUntaggedEvents', `캘린더 '${SCHEDULE_CALENDAR_NAME}' 없음 — 중단`);
+      return;
     }
+    const fmtDate = (d) => Utilities.formatDate(d, 'Asia/Seoul', 'yyyy-MM-dd');
+    const today = new Date();
+    const future = new Date();
+    future.setMonth(future.getMonth() + 3);
+    const events = calendar.getEvents(today, future);
+    let deleted = 0, kept = 0;
+    for (let i = 0; i < events.length; i++) {
+      if (events[i].getTag(SYNC_TAG_KEY)) {
+        kept++;
+      } else {
+        const title = events[i].getTitle();
+        const date = fmtDate(events[i].getStartTime());
+        events[i].deleteEvent();
+        deleted++;
+        log_('cleanupUntaggedEvents', `삭제: ${title} / ${date}`);
+      }
+    }
+    log_('cleanupUntaggedEvents', `완료 — 삭제 ${deleted}건 / 유지(tag 있음) ${kept}건`);
+  } catch (err) {
+    log_('cleanupUntaggedEvents', `에러: ${err}\n${err.stack || ''}`);
   }
-  Logger.log(`cleanup 완료 — 삭제 ${deleted}건 / 유지(tag 있음) ${kept}건`);
 }
 
+// ── 색상·날짜 유틸 ──────────────────────────────────────────
 function isPink(hex) {
   if (!hex || hex === '#ffffff' || hex === '') return false;
   return hex.toLowerCase() === '#ffdcef';
@@ -392,87 +464,123 @@ function parseDate(value) {
 }
 
 // ============================================================
-// onEdit 트리거 — ID 자동 발급 (감시견) + 상태 변경 시 캘린더 등록
-// (v0.2.4: 신규·완료 시트 모두 감시. 빈 L열 ID 자동 발급)
+// onEditTrigger — installable onEdit 트리거 (수동 등록 필요)
+// 역할:
+//   1. 빈 L열 ID 자동 발급 (신규·완료 시트 공통, 감시견)
+//   2. 신규 시트의 K열 상태가 '미정' → '대기'로 바뀐 순간 캘린더에 단건 등록
+//
+// 모든 셀 편집마다 발사되므로 관련 없는 입력은 silent skip.
+// 데이터 영역 + 관련 시트에 진입한 시점부터 로그 시작.
 // ============================================================
 function onEditTrigger(e) {
   if (!e) return;
 
-  const sheet = e.range.getSheet();
-  const sheetName = sheet.getName();
-  const isSchedule = sheetName.includes('신규') && sheetName.includes('유지보수');
-  const isCompleted = sheetName === '💚완료';
-  if (!isSchedule && !isCompleted) return;
+  try {
+    const sheet = e.range.getSheet();
+    const sheetName = sheet.getName();
+    const isSchedule = sheetName.includes('신규') && sheetName.includes('유지보수');
+    const isCompleted = sheetName === '💚완료';
+    if (!isSchedule && !isCompleted) return; // 관련 없는 시트 silent
 
-  const row = e.range.getRow();
-  if (row < 10) return; // 데이터 영역만 (10행부터)
+    const row = e.range.getRow();
+    if (row < 10) return; // 데이터 영역 밖 silent
 
-  // [감시견] 빈 L열 ID 자동 발급 (신규·완료 시트 공통)
-  assignIdIfNeeded_(sheet, row);
+    const col = e.range.getColumn();
+    log_(
+      'onEditTrigger',
+      `진입 — sheet='${sheetName}', row=${row}, col=${col}, value='${e.value}', old='${e.oldValue}'`
+    );
 
-  // [캘린더 등록] 신규 시트의 상태 변경(K열) 시만
-  if (!isSchedule) return;
-
-  const col = e.range.getColumn();
-  if (col !== 11) return; // K열 상태
-  const newValue = e.value;
-  const oldValue = e.oldValue;
-  if (oldValue !== '미정' || newValue !== '대기') return;
-
-  const calendar = CalendarApp.getCalendarsByName('디자인팀 업무 스케줄러')[0];
-  if (!calendar) return;
-
-  const DATE_START = 14; // N열부터 날짜 (L열 ID 신설로 한 칸 시프트)
-  const lastCol = sheet.getLastColumn();
-  const backgrounds = sheet.getRange(row, DATE_START, 1, lastCol - DATE_START + 1).getBackgrounds()[0];
-  const dateValues = sheet.getRange(9, DATE_START, 1, lastCol - DATE_START + 1).getValues()[0];
-
-  const advertiser = sheet.getRange(row, 5).getValue();
-  const manager = sheet.getRange(row, 4).getValue();
-  const note = sheet.getRange(row, 10).getValue();
-  const title = note ? `${advertiser} ${note} (${manager})` : `${advertiser} (${manager})`;
-
-  let endColIndex = -1;
-  for (let i = 0; i < backgrounds.length; i++) {
-    if (isPink(backgrounds[i])) endColIndex = i;
-  }
-  if (endColIndex === -1) {
-    for (let i = 0; i < backgrounds.length; i++) {
-      if (isRed(backgrounds[i])) endColIndex = i;
+    // [감시견] 빈 L열 ID 자동 발급
+    const issuedId = assignIdIfNeeded_(sheet, row);
+    if (issuedId) {
+      log_('onEditTrigger', `ID 자동 발급 — row=${row}, uuid=${issuedId}`);
     }
+
+    // [캘린더 등록] 신규 시트의 K열 '미정' → '대기'만
+    if (!isSchedule) return;
+    if (col !== 11) return; // K열 외 silent
+    if (e.oldValue !== '미정' || e.value !== '대기') {
+      log_('onEditTrigger', `K열 변경이지만 '미정 → 대기' 아님 — 캘린더 등록 skip`);
+      return;
+    }
+
+    log_('onEditTrigger', `'미정 → 대기' 전이 감지 — 캘린더 등록 시도`);
+
+    const calendar = CalendarApp.getCalendarsByName(SCHEDULE_CALENDAR_NAME)[0];
+    if (!calendar) {
+      log_('onEditTrigger', `캘린더 '${SCHEDULE_CALENDAR_NAME}' 없음 — 등록 중단`);
+      return;
+    }
+
+    const DATE_START = 14;
+    const lastCol = sheet.getLastColumn();
+    const backgrounds = sheet.getRange(row, DATE_START, 1, lastCol - DATE_START + 1).getBackgrounds()[0];
+    const dateValues = sheet.getRange(9, DATE_START, 1, lastCol - DATE_START + 1).getValues()[0];
+
+    const advertiser = sheet.getRange(row, 5).getValue();
+    const manager = sheet.getRange(row, 4).getValue();
+    const note = sheet.getRange(row, 10).getValue();
+    const title = note ? `${advertiser} ${note} (${manager})` : `${advertiser} (${manager})`;
+
+    let endColIndex = -1;
+    for (let i = 0; i < backgrounds.length; i++) {
+      if (isPink(backgrounds[i])) endColIndex = i;
+    }
+    if (endColIndex === -1) {
+      for (let i = 0; i < backgrounds.length; i++) {
+        if (isRed(backgrounds[i])) endColIndex = i;
+      }
+    }
+    if (endColIndex === -1) {
+      log_('onEditTrigger', `마감일 셀(pink/red) 못 찾음 — 등록 skip ('${title}')`);
+      return;
+    }
+
+    const endDate = parseDate(dateValues[endColIndex]);
+    if (!endDate) {
+      log_('onEditTrigger', `마감일 파싱 실패 — 등록 skip ('${title}')`);
+      return;
+    }
+
+    if (isDuplicateEvent(calendar, title, endDate)) {
+      log_('onEditTrigger', `중복 이벤트 존재 — 등록 skip ('${title}' / ${Utilities.formatDate(endDate, 'Asia/Seoul', 'yyyy-MM-dd')})`);
+      return;
+    }
+
+    // 시트의 L열 ID도 같이 박아 syncToCalendar와 매핑 일관성 유지
+    const ev = calendar.createAllDayEvent(title, endDate);
+    const rowId = String(sheet.getRange(row, 12).getValue() || '').trim();
+    if (rowId) ev.setTag(SYNC_TAG_KEY, rowId);
+    log_(
+      'onEditTrigger',
+      `캘린더 등록 완료 — '${title}' / ${Utilities.formatDate(endDate, 'Asia/Seoul', 'yyyy-MM-dd')}${rowId ? ` (rowId=${rowId})` : ' (rowId 없음 — tag 미부착)'}`
+    );
+  } catch (err) {
+    log_('onEditTrigger', `에러: ${err}\n${err.stack || ''}`);
   }
-
-  if (endColIndex === -1) return;
-
-  const endDate = parseDate(dateValues[endColIndex]);
-  if (!endDate) return;
-
-  if (isDuplicateEvent(calendar, title, endDate)) {
-    Logger.log(`중복 건너뜀: ${title} / ${endDate}`);
-    return;
-  }
-  calendar.createAllDayEvent(title, endDate);
-  Logger.log(`캘린더 등록: ${title} / ${endDate}`);
 }
 
 /**
  * L열(12) ID 빈 셀에 UUID 자동 발급
- * - 광고주(E열) 또는 작업자(F열) 중 하나라도 있어야 데이터 행으로 판단
- * - 이미 ID 있으면 안 건드림
+ * - 광고주(E) 또는 작업자(F) 중 하나라도 있어야 데이터 행으로 판단
+ * - 발급한 UUID 반환 / 이미 ID 있거나 빈 행이면 null
  */
 function assignIdIfNeeded_(sheet, row) {
-  const ID_COL = 12; // L열
-  const ADV_COL = 5; // E열 광고주
-  const WORKER_COL = 6; // F열 작업자
+  const ID_COL = 12;     // L
+  const ADV_COL = 5;     // E
+  const WORKER_COL = 6;  // F
 
   const currentId = sheet.getRange(row, ID_COL).getValue();
-  if (currentId) return;
+  if (currentId) return null;
 
   const adv = String(sheet.getRange(row, ADV_COL).getValue() || '').trim();
   const worker = String(sheet.getRange(row, WORKER_COL).getValue() || '').trim();
-  if (!adv && !worker) return;
+  if (!adv && !worker) return null;
 
-  sheet.getRange(row, ID_COL).setValue(Utilities.getUuid());
+  const uuid = Utilities.getUuid();
+  sheet.getRange(row, ID_COL).setValue(uuid);
+  return uuid;
 }
 
 function isDuplicateEvent(calendar, title, date) {
@@ -484,139 +592,163 @@ function isDuplicateEvent(calendar, title, date) {
 }
 
 // ============================================================
-// 급건 자동 이관 (2026.05 트리거 해제, 함수 보존)
+// handleUrgentTask — 급건 자동 이관 (2026.05 트리거 해제, 함수 보존)
+// onEdit 트리거에서 호출되던 함수. 트리거 해제 상태라 현재는 동작 X.
+// 재활성화 시 트리거를 GAS 콘솔에서 다시 등록.
 // ============================================================
 function handleUrgentTask(e) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sourceSheetName = "💛신규·유지보수";
-  const targetSheetName = "💜리스트_급건";
+  if (!e) return;
 
-  const range = e.range;
-  const sheet = range.getSheet();
-  const row = range.getRow();
-  const col = range.getColumn();
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sourceSheetName = '💛신규·유지보수';
+    const targetSheetName = '💜리스트_급건';
 
-  if (sheet.getName() !== sourceSheetName) return;
-  if (row < 10) return;
-  if (col < 2 || col > 10) return;
+    const range = e.range;
+    const sheet = range.getSheet();
+    const row = range.getRow();
+    const col = range.getColumn();
 
-  const rowData = sheet.getRange(row, 2, 1, 9).getValues()[0];
-  if (rowData[0] !== "급건") return;
+    if (sheet.getName() !== sourceSheetName) return;
+    if (row < 10) return;
+    if (col < 2 || col > 10) return;
 
-  const requiredIndices = [0, 1, 2, 3, 4, 5, 6, 8];
-  const allFilled = requiredIndices.every(i => rowData[i] !== "" && rowData[i] !== null);
-  if (!allFilled) return;
+    const rowData = sheet.getRange(row, 2, 1, 9).getValues()[0];
+    if (rowData[0] !== '급건') return;
 
-  const targetSheet = ss.getSheetByName(targetSheetName);
-  if (!targetSheet) {
-    Logger.log("💜리스트_급건 시트를 찾을 수 없습니다.");
-    return;
-  }
+    log_('handleUrgentTask', `진입 — row=${row}, col=${col}, 첫 컬럼='${rowData[0]}'`);
 
-  const DATA_START_ROW = 10;
-  const targetLastRow = targetSheet.getLastRow();
+    const requiredIndices = [0, 1, 2, 3, 4, 5, 6, 8];
+    const allFilled = requiredIndices.every(i => rowData[i] !== '' && rowData[i] !== null);
+    if (!allFilled) {
+      log_('handleUrgentTask', `필수 컬럼 미충족 — skip (row=${row})`);
+      return;
+    }
 
-  let existingRow = -1;
-  if (targetLastRow >= DATA_START_ROW) {
-    const targetData = targetSheet.getRange(DATA_START_ROW, 2, targetLastRow - DATA_START_ROW + 1, 9).getValues();
-    for (let i = 0; i < targetData.length; i++) {
-      if (
-        targetData[i][3] === rowData[3] &&
-        targetData[i][6] === rowData[6] &&
-        targetData[i][8] === rowData[8]
-      ) {
-        existingRow = DATA_START_ROW + i;
-        break;
+    const targetSheet = ss.getSheetByName(targetSheetName);
+    if (!targetSheet) {
+      log_('handleUrgentTask', `'${targetSheetName}' 시트 없음 — 중단`);
+      return;
+    }
+
+    const DATA_START_ROW = 10;
+    const targetLastRow = targetSheet.getLastRow();
+
+    let existingRow = -1;
+    if (targetLastRow >= DATA_START_ROW) {
+      const targetData = targetSheet.getRange(DATA_START_ROW, 2, targetLastRow - DATA_START_ROW + 1, 9).getValues();
+      for (let i = 0; i < targetData.length; i++) {
+        if (
+          targetData[i][3] === rowData[3] &&
+          targetData[i][6] === rowData[6] &&
+          targetData[i][8] === rowData[8]
+        ) {
+          existingRow = DATA_START_ROW + i;
+          break;
+        }
       }
     }
-  }
 
-  if (existingRow !== -1) {
-    targetSheet.getRange(existingRow, 2, 1, 9).setValues([rowData]);
-    Logger.log(`급건 업데이트: 행 ${existingRow}`);
-  } else {
-    const insertRow = targetLastRow + 1;
-    targetSheet.getRange(insertRow, 2, 1, 9).setValues([rowData]);
-    targetSheet.getRange(insertRow, 11).insertCheckboxes().setValue(false);
-    Logger.log(`급건 추가: 행 ${insertRow}`);
+    if (existingRow !== -1) {
+      targetSheet.getRange(existingRow, 2, 1, 9).setValues([rowData]);
+      log_('handleUrgentTask', `급건 업데이트 — '${targetSheetName}' 행 ${existingRow}`);
+    } else {
+      const insertRow = targetLastRow + 1;
+      targetSheet.getRange(insertRow, 2, 1, 9).setValues([rowData]);
+      targetSheet.getRange(insertRow, 11).insertCheckboxes().setValue(false);
+      log_('handleUrgentTask', `급건 신규 추가 — '${targetSheetName}' 행 ${insertRow}`);
+    }
+  } catch (err) {
+    log_('handleUrgentTask', `에러: ${err}\n${err.stack || ''}`);
   }
 }
 
 // ============================================================
-// 완료 시트 정렬
+// sortCompleteSheet — 완료 시트 정렬
+// 정렬 키: 마감일(O열 인덱스 14) → 광고주(E열 인덱스 4) → 비고(J열 인덱스 9, 한글 우선)
+// 셀 스타일·노트·정렬·폰트 크기 등 모두 보존
 // ============================================================
 function sortCompleteSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName('💚완료');
-  if (!sheet) return;
+  log_('sortCompleteSheet', '시작');
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('💚완료');
+    if (!sheet) {
+      log_('sortCompleteSheet', `'💚완료' 시트 없음 — 중단`);
+      return;
+    }
 
-  const DATA_START_ROW = 10;
-  const lastRow = sheet.getLastRow();
-  const lastCol = sheet.getLastColumn();
+    const DATA_START_ROW = 10;
+    const lastRow = sheet.getLastRow();
+    const lastCol = sheet.getLastColumn();
 
-  if (lastRow < DATA_START_ROW) return;
+    if (lastRow < DATA_START_ROW) {
+      log_('sortCompleteSheet', `데이터 행 없음 (lastRow=${lastRow}) — 종료`);
+      return;
+    }
 
-  const dataRange = sheet.getRange(DATA_START_ROW, 1, lastRow - DATA_START_ROW + 1, lastCol);
-  const values = dataRange.getValues();
-  const backgrounds = dataRange.getBackgrounds();
-  const fontColors = dataRange.getFontColors();
-  const notes = dataRange.getNotes();
-  const fontSizes = dataRange.getFontSizes();
-  const horizontalAlignments = dataRange.getHorizontalAlignments();
-  const verticalAlignments = dataRange.getVerticalAlignments();
+    const rowCount = lastRow - DATA_START_ROW + 1;
+    const dataRange = sheet.getRange(DATA_START_ROW, 1, rowCount, lastCol);
+    const values = dataRange.getValues();
+    const backgrounds = dataRange.getBackgrounds();
+    const fontColors = dataRange.getFontColors();
+    const notes = dataRange.getNotes();
+    const fontSizes = dataRange.getFontSizes();
+    const horizontalAlignments = dataRange.getHorizontalAlignments();
+    const verticalAlignments = dataRange.getVerticalAlignments();
 
-  const isKorean = (str) => /[\uAC00-\uD7A3\u1100-\u11FF\u3130-\u318F]/.test(str.toString().trim().charAt(0));
+    const isKorean = (str) => /[가-힣ᄀ-ᇿ㄰-㆏]/.test(str.toString().trim().charAt(0));
 
-  const rows = values.map((v, i) => ({
-    values: v,
-    backgrounds: backgrounds[i],
-    fontColors: fontColors[i],
-    notes: notes[i],
-    fontSizes: fontSizes[i],
-    horizontalAlignments: horizontalAlignments[i],
-    verticalAlignments: verticalAlignments[i]
-  }));
+    const rows = values.map((v, i) => ({
+      values: v,
+      backgrounds: backgrounds[i],
+      fontColors: fontColors[i],
+      notes: notes[i],
+      fontSizes: fontSizes[i],
+      horizontalAlignments: horizontalAlignments[i],
+      verticalAlignments: verticalAlignments[i]
+    }));
 
-  rows.sort((a, b) => {
-    const toDateNum = (val) => {
-      if (val instanceof Date) {
-        return val.getMonth() * 100 + val.getDate();
-      }
-      const str = val.toString().trim();
-      if (!str) return 9999;
-      const parts = str.split('/');
-      if (parts.length === 2) {
-        return parseInt(parts[0]) * 100 + parseInt(parts[1]);
-      }
-      return 9999;
-    };
-    const dateA = toDateNum(a.values[14]);
-    const dateB = toDateNum(b.values[14]);
-    if (dateA !== dateB) return dateA - dateB;
+    rows.sort((a, b) => {
+      const toDateNum = (val) => {
+        if (val instanceof Date) return val.getMonth() * 100 + val.getDate();
+        const str = val.toString().trim();
+        if (!str) return 9999;
+        const parts = str.split('/');
+        if (parts.length === 2) return parseInt(parts[0]) * 100 + parseInt(parts[1]);
+        return 9999;
+      };
+      const dateA = toDateNum(a.values[14]);
+      const dateB = toDateNum(b.values[14]);
+      if (dateA !== dateB) return dateA - dateB;
 
-    const advA = a.values[4].toString().trim();
-    const advB = b.values[4].toString().trim();
-    if (advA < advB) return -1;
-    if (advA > advB) return 1;
+      const advA = a.values[4].toString().trim();
+      const advB = b.values[4].toString().trim();
+      if (advA < advB) return -1;
+      if (advA > advB) return 1;
 
-    const noteA = a.values[9].toString().trim();
-    const noteB = b.values[9].toString().trim();
-    const korA = isKorean(noteA) ? 0 : 1;
-    const korB = isKorean(noteB) ? 0 : 1;
-    if (korA !== korB) return korA - korB;
+      const noteA = a.values[9].toString().trim();
+      const noteB = b.values[9].toString().trim();
+      const korA = isKorean(noteA) ? 0 : 1;
+      const korB = isKorean(noteB) ? 0 : 1;
+      if (korA !== korB) return korA - korB;
+      if (noteA < noteB) return -1;
+      if (noteA > noteB) return 1;
+      return 0;
+    });
 
-    if (noteA < noteB) return -1;
-    if (noteA > noteB) return 1;
-    return 0;
-  });
+    dataRange.setValues(rows.map(r => r.values));
+    dataRange.setBackgrounds(rows.map(r => r.backgrounds));
+    dataRange.setFontColors(rows.map(r => r.fontColors));
+    dataRange.setNotes(rows.map(r => r.notes));
+    dataRange.setFontSizes(rows.map(r => r.fontSizes));
+    dataRange.setHorizontalAlignments(rows.map(r => r.horizontalAlignments));
+    dataRange.setVerticalAlignments(rows.map(r => r.verticalAlignments));
 
-  dataRange.setValues(rows.map(r => r.values));
-  dataRange.setBackgrounds(rows.map(r => r.backgrounds));
-  dataRange.setFontColors(rows.map(r => r.fontColors));
-  dataRange.setNotes(rows.map(r => r.notes));
-  dataRange.setFontSizes(rows.map(r => r.fontSizes));
-  dataRange.setHorizontalAlignments(rows.map(r => r.horizontalAlignments));
-  dataRange.setVerticalAlignments(rows.map(r => r.verticalAlignments));
+    log_('sortCompleteSheet', `완료 — ${rowCount}행 정렬 (마감일 → 광고주 → 비고[한글 우선])`);
+  } catch (err) {
+    log_('sortCompleteSheet', `에러: ${err}\n${err.stack || ''}`);
+  }
 }
 
 // ============================================================
@@ -626,11 +758,16 @@ function sortCompleteSheet() {
 // ============================================================
 
 // ============================================================
-// 초기 세팅 확인용 (1회 실행 후 삭제해도 됨)
+// testHolidaySetup — 1회용 진단. 한국 공휴일 캘린더 정상 로드 확인용.
 // ============================================================
 function testHolidaySetup() {
-  const year = new Date().getFullYear();
-  const holidays = getKoreanHolidays(year);
-  Logger.log(`${year}년 한국 공휴일 ${holidays.size}개 로드됨`);
-  Logger.log([...holidays].sort().join('\n'));
+  log_('testHolidaySetup', '시작');
+  try {
+    const year = new Date().getFullYear();
+    const holidays = getKoreanHolidays(year);
+    log_('testHolidaySetup', `${year}년 한국 공휴일 ${holidays.size}개 로드됨`);
+    log_('testHolidaySetup', '목록:\n' + [...holidays].sort().join('\n'));
+  } catch (err) {
+    log_('testHolidaySetup', `에러: ${err}\n${err.stack || ''}`);
+  }
 }
