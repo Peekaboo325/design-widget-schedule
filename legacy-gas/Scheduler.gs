@@ -25,6 +25,17 @@ function log_(fn, msg) {
   Logger.log(`[${fn}] ${msg}`);
 }
 
+// 캘린더 이벤트 제목 포맷 — 원칙: '광고주 비고 (요청자)'
+// 두 호출 경로(syncToCalendar, onEditTrigger)에서 동일 형식 보장.
+// note/manager 비어있어도 '(undefined)' 같은 흉한 표시 없이 안전 fallback.
+function formatEventTitle_(advertiser, note, manager) {
+  const adv = String(advertiser || '').trim();
+  const n = String(note || '').trim();
+  const m = String(manager || '').trim();
+  const base = n ? `${adv} ${n}` : adv;
+  return m ? `${base} (${m})` : base;
+}
+
 // ============================================================
 // 영업일 계산 (한국 공휴일 + 회사 휴무일 자동 반영)
 // ============================================================
@@ -288,9 +299,10 @@ function syncToCalendar() {
     const DATE_ROW = 9;
     const DATE_START_COL = 14; // N열부터 날짜
     const DATA_START_ROW = 10;
-    const ID_COL = 12;   // L
-    const ADV_COL = 5;   // E
-    const NOTE_COL = 10; // J
+    const ID_COL = 12;       // L
+    const ADV_COL = 5;       // E
+    const NOTE_COL = 10;     // J
+    const MANAGER_COL = 4;   // D — 담당자(요청자)
     const lastRow = sheet.getLastRow();
     const lastCol = sheet.getLastColumn();
 
@@ -314,7 +326,8 @@ function syncToCalendar() {
       if (!advertiser) { skipNoAdv++; continue; }
 
       const note = rowData[NOTE_COL - 1];
-      const title = note ? `${advertiser} ${note}` : String(advertiser);
+      const manager = rowData[MANAGER_COL - 1];
+      const title = formatEventTitle_(advertiser, note, manager);
 
       const backgrounds = allBackgrounds[i];
       let endColIndex = -1;
@@ -485,7 +498,7 @@ function onEditTrigger(e) {
     const advertiser = sheet.getRange(row, 5).getValue();
     const manager = sheet.getRange(row, 4).getValue();
     const note = sheet.getRange(row, 10).getValue();
-    const title = note ? `${advertiser} ${note} (${manager})` : `${advertiser} (${manager})`;
+    const title = formatEventTitle_(advertiser, note, manager);
 
     let endColIndex = -1;
     for (let i = 0; i < backgrounds.length; i++) {
