@@ -4,6 +4,10 @@
 const HOLIDAY_CAL_ID = 'ko.south_korea#holiday@group.v.calendar.google.com';
 const COMPANY_HOLIDAY_SHEET = '회사휴무일'; // A열에 날짜만 입력하면 됨
 
+// 캘린더 동기화 — 시트 행 ↔ 이벤트 매핑용 hidden tag 키
+// (시트의 L열 UUID를 이 키 값으로 박아 증분 sync 매핑에 사용)
+const SYNC_TAG_KEY = 'rowId';
+
 /**
  * 한국 공식 공휴일 (Google Calendar 기반, 6시간 캐시)
  * 음력/대체공휴일 자동 반영. 매년 손댈 필요 없음.
@@ -217,8 +221,11 @@ function calcBusinessDays(startStr, endStr) {
 }
 
 // ============================================================
-// 캘린더 일괄 동기화
-// (v0.2.4: L열 ID 신설로 날짜 헤더 시작이 M→N으로 시프트)
+// 캘린더 일괄 동기화 — v0.2.4 ID 기반 증분 sync
+// - 시트 L열 UUID를 캘린더 이벤트의 hidden tag(rowId)에 박아 매핑.
+// - 변경분만 처리 → quota burst 회피 (이전: 매 sync마다 N+N 호출 폭발).
+// - tag 없는 이벤트(개인 추가·옛 sync 잔존)는 안 건드림 (safe default).
+//   옛 잔존 정리는 cleanupUntaggedEvents()를 한 번만 수동 실행.
 // ============================================================
 function syncToCalendar() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -233,26 +240,33 @@ function syncToCalendar() {
   const DATE_ROW = 9;
   const DATE_START_COL = 14; // N열부터 날짜 (L열 ID 신설로 한 칸 시프트)
   const DATA_START_ROW = 10;
+  const ID_COL = 12;   // L열 — UUID
+  const ADV_COL = 5;   // E열 — 광고주
+  const NOTE_COL = 10; // J열 — 비고
   const lastRow = sheet.getLastRow();
   const lastCol = sheet.getLastColumn();
 
-  const today = new Date();
-  const future = new Date();
-  future.setMonth(future.getMonth() + 3);
-  calendar.getEvents(today, future).forEach(e => e.deleteEvent());
+  if (lastRow < DATA_START_ROW) {
+    Logger.log('동기화할 데이터 행 없음');
+    return;
+  }
 
+  // 1. 시트의 활성 행 → { id, title, endDate } 수집
   const dateValues = sheet.getRange(DATE_ROW, DATE_START_COL, 1, lastCol - DATE_START_COL + 1).getValues()[0];
   const allValues = sheet.getRange(DATA_START_ROW, 1, lastRow - DATA_START_ROW + 1, lastCol).getValues();
   const allBackgrounds = sheet.getRange(DATA_START_ROW, DATE_START_COL, lastRow - DATA_START_ROW + 1, lastCol - DATE_START_COL + 1).getBackgrounds();
 
+  const sheetRows = [];
   for (let i = 0; i < allValues.length; i++) {
     const rowData = allValues[i];
-    const advertiser = rowData[4];
-    if (!advertiser) continue;
+    const id = String(rowData[ID_COL - 1] || '').trim();
+    const advertiser = rowData[ADV_COL - 1];
+    if (!id || !advertiser) continue; // ID 없거나 광고주 비면 매핑 불가
 
-    const note = rowData[9];
-    const title = note ? `${advertiser} ${note}` : advertiser;
+    const note = rowData[NOTE_COL - 1];
+    const title = note ? `${advertiser} ${note}` : String(advertiser);
 
+    // 마감일 = pink(#ffdcef) 마지막, 없으면 red(#ff0000) 마지막
     const backgrounds = allBackgrounds[i];
     let endColIndex = -1;
     for (let j = 0; j < backgrounds.length; j++) {
@@ -263,15 +277,97 @@ function syncToCalendar() {
         if (isRed(backgrounds[j])) endColIndex = j;
       }
     }
-
     if (endColIndex === -1) continue;
 
     const endDate = parseDate(dateValues[endColIndex]);
     if (!endDate) continue;
 
-    calendar.createAllDayEvent(title, endDate);
-    Logger.log(`생성: ${title} / ${endDate}`);
+    sheetRows.push({ id: id, title: title, endDate: endDate });
   }
+
+  // 2. 캘린더의 향후 3개월 이벤트 → tag 기준 매핑
+  const today = new Date();
+  const future = new Date();
+  future.setMonth(future.getMonth() + 3);
+  const calEvents = calendar.getEvents(today, future);
+  const calById = new Map();
+  let untaggedCount = 0;
+  for (let i = 0; i < calEvents.length; i++) {
+    const e = calEvents[i];
+    const tagId = e.getTag(SYNC_TAG_KEY);
+    if (tagId) {
+      calById.set(tagId, e);
+    } else {
+      untaggedCount++;
+    }
+  }
+
+  // 3. 비교 → 변경분만 액션 (Asia/Seoul yyyy-MM-dd 문자열 비교로 안전)
+  const fmtDate = (d) => Utilities.formatDate(d, 'Asia/Seoul', 'yyyy-MM-dd');
+  let created = 0, updated = 0, unchanged = 0;
+  for (let i = 0; i < sheetRows.length; i++) {
+    const row = sheetRows[i];
+    const existing = calById.get(row.id);
+    if (!existing) {
+      // 새 행 → 이벤트 생성 + tag 박기
+      const ev = calendar.createAllDayEvent(row.title, row.endDate);
+      ev.setTag(SYNC_TAG_KEY, row.id);
+      created++;
+    } else {
+      const titleChanged = existing.getTitle() !== row.title;
+      const dateChanged = fmtDate(existing.getStartTime()) !== fmtDate(row.endDate);
+      if (titleChanged || dateChanged) {
+        if (titleChanged) existing.setTitle(row.title);
+        if (dateChanged) existing.setAllDayDate(row.endDate);
+        updated++;
+      } else {
+        unchanged++;
+      }
+      calById.delete(row.id); // 처리됨 표시 — 남은 것은 시트에 없는 것
+    }
+  }
+
+  // 4. 시트에서 사라진 ID의 이벤트 → 삭제 (tag 있는 것만)
+  let deleted = 0;
+  const remainingValues = Array.from(calById.values());
+  for (let i = 0; i < remainingValues.length; i++) {
+    remainingValues[i].deleteEvent();
+    deleted++;
+  }
+
+  Logger.log(`sync 완료 — 시트 ${sheetRows.length}건 / 캘린더 ${calEvents.length}건 (tagged 처리 ${created + updated + unchanged + deleted}, untagged 무시 ${untaggedCount})`);
+  Logger.log(`결과: create ${created} / update ${updated} / delete ${deleted} / unchanged ${unchanged}`);
+}
+
+// ============================================================
+// cleanupUntaggedEvents — 1회용 정리 함수
+// syncToCalendar는 tag 없는 이벤트(개인 추가·옛 sync 잔존)를 건드리지 않는다.
+// 첫 증분 sync 전 캘린더를 깨끗이 비우고 시작하고 싶으면 이 함수를 콘솔에서
+// 수동으로 한 번만 실행. 향후 3개월 안에서 tag 없는 이벤트 모두 삭제.
+//
+// ⚠ '디자인팀 업무 스케줄러' 캘린더에 누군가 개인 일정을 넣어둔 게 있다면
+//    그것도 함께 삭제된다는 점 주의.
+// ============================================================
+function cleanupUntaggedEvents() {
+  const calendar = CalendarApp.getCalendarsByName('디자인팀 업무 스케줄러')[0];
+  if (!calendar) {
+    Logger.log('캘린더를 찾을 수 없습니다.');
+    return;
+  }
+  const today = new Date();
+  const future = new Date();
+  future.setMonth(future.getMonth() + 3);
+  const events = calendar.getEvents(today, future);
+  let deleted = 0, kept = 0;
+  for (let i = 0; i < events.length; i++) {
+    if (events[i].getTag(SYNC_TAG_KEY)) {
+      kept++;
+    } else {
+      events[i].deleteEvent();
+      deleted++;
+    }
+  }
+  Logger.log(`cleanup 완료 — 삭제 ${deleted}건 / 유지(tag 있음) ${kept}건`);
 }
 
 function isPink(hex) {
