@@ -22,3 +22,13 @@ export function nextStatus(current) {
   if (idx < 0) return '대기'
   return STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length]
 }
+
+// 수량 합산 — 사용자에게 '건' = 수량 단위 (행 수 아님)
+// 빈 값은 1로 친다 (시트에 수량 안 적힌 행은 1건으로 간주)
+// ScheduleView / BackupView / App 탭 뱃지에서 모두 사용 (단일 출처)
+export function sumQty(items) {
+  return (items ?? []).reduce(
+    (acc, it) => acc + (Number(it?.['수량']) || 1),
+    0
+  )
+}

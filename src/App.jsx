@@ -15,7 +15,7 @@ import PendingPanel from './components/PendingPanel.jsx'
 import CompactWidget from './components/CompactWidget.jsx'
 import Avatar from './components/Avatar.jsx'
 import EmojiPicker from './components/EmojiPicker.jsx'
-import { shortName, nextStatus } from './lib/format.js'
+import { shortName, nextStatus, sumQty } from './lib/format.js'
 import { resolveMemberEmoji } from './lib/emoji.js'
 import { setRowStatus, setRowShare, setRowBackup } from './lib/api.js'
 import { codeFromGas, codeFromNetworkError, toastForCode } from './lib/errors.js'
@@ -585,7 +585,7 @@ export default function App() {
                 label="백업 관리"
                 active={activeTab === 'backup'}
                 onClick={() => setActiveTab('backup')}
-                badge={scheduleData?.backup?.length ?? 0}
+                badge={sumQty(scheduleData?.backup)}
               />
               <TabButton
                 label="체크리스트"

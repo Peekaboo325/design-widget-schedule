@@ -1,4 +1,5 @@
 import styles from './ScheduleView.module.css'
+import { sumQty } from '../lib/format.js'
 
 // 스케줄 항목의 안정적 unique 키 — GAS가 부여한 시트 L열 UUID
 // (v0.2.4: 시트의 행 위치·내용 변경·시트 간 이관 모두에서 stable)
@@ -41,14 +42,6 @@ export function ScheduleSkeleton({ size }) {
       </div>
       <div className={`${styles.skBadge} skeleton`} />
     </div>
-  )
-}
-
-// 수량 합산 — 사용자에게 '건' = 수량 단위 (행 수 아님)
-function sumQty(items) {
-  return (items ?? []).reduce(
-    (acc, it) => acc + (Number(it?.['수량']) || 1),
-    0
   )
 }
 

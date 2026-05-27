@@ -1,18 +1,12 @@
 import { useMemo, useState } from 'react'
 import styles from './BackupView.module.css'
+import { sumQty } from '../lib/format.js'
 
 // 백업 관리 뷰 — 💚완료 시트에서 백업 미체크 행을 표시
 // 그룹화 토글: 마감일(=공유일 데이터) / 광고주
 // v0.2.4: 완료 시트의 마감일 컬럼 제거됨. 내부 데이터는 공유일이지만
 //         팀이 마감일·공유일 용어 혼용해서 UI 라벨은 "마감일"로 유지.
 // 각 행 우측 '완료' 버튼 클릭으로 N열(백업) TRUE 토글
-
-function sumQty(items) {
-  return (items ?? []).reduce(
-    (acc, it) => acc + (Number(it?.['수량']) || 1),
-    0
-  )
-}
 
 function formatDueHeader(key) {
   if (key === '미정') return '마감일 미정'
