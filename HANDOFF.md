@@ -374,6 +374,23 @@ design-widget-schedule/
 
 ---
 
+## 알려진 이슈 (보류)
+
+### 위젯이 한참 안 만지면 자동으로 화면에서 사라짐 (트레이는 살아있음)
+- **증상**: alwaysOnTop ON 상태에서도 일정 시간 inactive 후 위젯 창이 hide.
+  트레이 아이콘은 살아있어서 클릭하면 다시 떠짐.
+- **범위**: 본인 + 팀원 5명 모두 동일 증상 보고.
+- **코드 측 점검 결과 (v0.2.7 기준)**: 시간 경과로 자동 hide 시키는 코드 없음.
+  hide() 호출 경로는 (1) Alt+F4 등 close 이벤트, (2) 트레이 클릭 토글 두 곳뿐.
+- **가설 (미확정)**: Windows에서 `skipTaskbar + transparent + frameless + alwaysOnTop`
+  조합 창이 OS 이벤트(화면 잠금·절전 복귀·explorer 재시작·DPI 변경 등)에서
+  invisible 상태로 떨어지는 알려진 케이스.
+- **현재 결정**: 운영 영향 작아서 보류. 트레이 클릭 한 번이면 회복.
+- **추후 진단 필요 시**: window의 hide/show/minimize/blur + powerMonitor
+  suspend/resume 이벤트에 stamp 로그 추가 → 다음 발생 시 trigger 식별.
+
+---
+
 ## QC 히스토리 (핵심 마일스톤)
 - **v1~v7**: 기본 셸 + 데이터 fetch + 디자인 초안
 - **v8** (`7988df7`): 폴더 탭 inverse curve
