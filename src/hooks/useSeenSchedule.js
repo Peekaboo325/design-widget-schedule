@@ -35,10 +35,14 @@ export default function useSeenSchedule(activeMember, scheduleItems) {
     window.widgetAPI?.getSeenKeys?.(activeMember).then((stored) => {
       if (cancelled) return
       hydratedRef.current = activeMember
-      // 신 키 형식('마감일|광고주|비고')과 호환되는 데이터만 복원.
-      // 구 형식('rN', '광고주|비고')은 무시하여 첫 fetch를 새 기준선으로 마이그레이션
-      // (구→신 전환 시 NEW 폭주 회피. 일시적으로 NEW 0건 → 다음 새 일정부터 정상)
-      if (Array.isArray(stored) && stored.every(isNewFormatKey)) {
+      // 신 키 형식(UUID v4)과 호환되는 데이터만 복원.
+      // 구 형식('rN', '광고주|비고', '마감일|광고주|비고')은 무시하여
+      // 첫 fetch를 새 기준선으로 마이그레이션 (구→신 전환 시 NEW 폭주 회피).
+      // length > 0 조건이 핵심 — [].every(fn) === true 라서 빈 배열도
+      // 통과해버리면 setSeenKeys(빈 Set) → 매 실행마다 모든 항목 NEW로
+      // 표시되는 자기 강화 루프 발생. 빈 배열은 'null'로 처리해 첫 fetch가
+      // 기준선을 다시 잡도록 한다.
+      if (Array.isArray(stored) && stored.length > 0 && stored.every(isNewFormatKey)) {
         setSeenKeys(new Set(stored))
       } else {
         setSeenKeys(null)
