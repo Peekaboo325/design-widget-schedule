@@ -161,8 +161,8 @@ function moveRowOnCheck(e) {
     const sheetName = sheet.getName();
     if (!sheetName.includes('신규') || !sheetName.includes('유지보수')) return;
 
-    const row = range.getRow();
-    log_('moveRowOnCheck', `시작 — 시트 '${sheetName}' 행 ${row} 공유 체크됨`);
+    let row = range.getRow();
+    log_('moveRowOnCheck', `시작 — 시트 '${sheetName}' 행 ${row} 공유 체크 이벤트 수신`);
 
     const lock = LockService.getScriptLock();
     try {
@@ -170,6 +170,24 @@ function moveRowOnCheck(e) {
       if (!locked) {
         log_('moveRowOnCheck', `lock 획득 실패 — 다른 처리 진행 중. 행 ${row} skip`);
         return;
+      }
+
+      // [race 방어 v0.2.8] lock 대기 중 인접 행 deleteRow로 시트가 시프트되면
+      // e.range.getRow()는 다른 행을 가리킬 수 있음. lock 획득 후 그 행의 M열이
+      // 진짜 TRUE인지 재확인. FALSE면 시트에서 M열 TRUE 행을 다시 찾는다.
+      const checkedNow = sheet.getRange(row, TARGET_COL).getValue();
+      if (checkedNow !== true) {
+        log_(
+          'moveRowOnCheck',
+          `시프트 감지 — lock 획득 후 row ${row}의 M열 = ${checkedNow} (TRUE 아님). 시트에서 진짜 TRUE 행 재탐색`
+        );
+        const trueRow = findFirstSharedRow_(sheet, TARGET_COL);
+        if (!trueRow) {
+          log_('moveRowOnCheck', `시트에 M열 TRUE 행 없음 — 다른 처리에서 이미 처리됨. skip`);
+          return;
+        }
+        log_('moveRowOnCheck', `재탐색 완료 — 처리 대상 row ${row} → ${trueRow}`);
+        row = trueRow;
       }
 
       const ss = e.source;
@@ -272,6 +290,23 @@ function moveRowOnCheck(e) {
   } catch (err) {
     log_('moveRowOnCheck', `에러: ${err}\n${err.stack || ''}`);
   }
+}
+
+/**
+ * 시트 데이터 영역(10행~)에서 지정 컬럼이 TRUE인 첫 번째 행 번호 반환.
+ * moveRowOnCheck의 race 방어용 — 시트 시프트로 e.range가 어긋났을 때
+ * 진짜 처리할 M열 TRUE 행을 다시 찾기 위해 사용.
+ * 없으면 null. (다른 처리에서 이미 이관됐다는 신호)
+ */
+function findFirstSharedRow_(sheet, col) {
+  const DATA_START = 10;
+  const lastRow = sheet.getLastRow();
+  if (lastRow < DATA_START) return null;
+  const values = sheet.getRange(DATA_START, col, lastRow - DATA_START + 1, 1).getValues();
+  for (let i = 0; i < values.length; i++) {
+    if (values[i][0] === true) return DATA_START + i;
+  }
+  return null;
 }
 
 // ============================================================
