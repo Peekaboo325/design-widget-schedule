@@ -35,7 +35,7 @@ async function postApi(body) {
   return res.data
 }
 
-// 행 상태 변경 (K열): 미정/대기/진행/완료
+// 행 상태 변경 (K열): 예정/대기/진행/완료 (v0.2.8: '미정' → '예정')
 // id: GAS가 부여한 시트 L열 UUID (v0.2.4+) — 행 시프트에 stable. GAS가 id 우선 lookup
 // rowIndex: 위젯이 본 행 번호. GAS가 id로 못 찾을 때 fallback
 // expect: 광고주/비고. id 미사용 fallback 경로의 optimistic locking

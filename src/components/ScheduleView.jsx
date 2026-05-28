@@ -13,7 +13,7 @@ export function scheduleKey(item) {
 const STATUS_STYLE = {
   진행: styles.statusActive,
   대기: styles.statusWaiting,
-  미정: styles.statusUndefined
+  예정: styles.statusPlanned
 }
 
 // 사이즈별 정보 단계 — M 폐기, S/L 두 단계만

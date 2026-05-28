@@ -48,7 +48,7 @@ const DATE_START_COL = 14;     // N열부터 날짜
 const DUE_COLOR_PINK = '#ffdcef';
 const DUE_COLOR_RED = '#ff0000';
 
-const VALID_STATUSES = ['미정', '대기', '진행', '완료'];
+const VALID_STATUSES = ['예정', '대기', '진행', '완료']; // v0.2.8: '미정' → '예정'
 const LOCK_TIMEOUT_MS = 10000;
 
 // ============================================================

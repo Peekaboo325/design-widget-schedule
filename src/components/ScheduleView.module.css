@@ -318,8 +318,8 @@
   color: var(--widget-fg);
 }
 
-/* 미정 — 더 옅게 */
-.statusUndefined {
+/* 예정 — 더 옅게 (시작 전 상태) */
+.statusPlanned {
   background: var(--widget-overlay);
   color: var(--widget-muted);
 }

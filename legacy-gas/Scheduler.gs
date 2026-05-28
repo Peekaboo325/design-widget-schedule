@@ -3,7 +3,7 @@
 //
 // 함수 구성:
 //   moveRowOnCheck       — onEdit 트리거: 신규 시트의 M열 공유 체크 → 완료 시트로 이관 + TAT 계산
-//   onEditTrigger        — onEdit 트리거: L열 ID 자동 발급 + K열 '미정→대기' 캘린더 등록
+//   onEditTrigger        — onEdit 트리거: L열 ID 자동 발급 + K열 '진행' 진입 시 캘린더 등록
 //   syncToCalendar       — 수동/시간 트리거: 시트 ↔ 캘린더 ID 기반 증분 sync
 //   sortCompleteSheet    — 수동: 완료 시트 정렬 (마감일 → 광고주 → 비고)
 //   (영업일/TAT/색상 판별 유틸은 위 함수들에서 호출)
@@ -444,7 +444,13 @@ function parseDate(value) {
 // onEditTrigger — installable onEdit 트리거 (수동 등록 필요)
 // 역할:
 //   1. 빈 L열 ID 자동 발급 (신규·완료 시트 공통, 감시견)
-//   2. 신규 시트의 K열 상태가 '미정' → '대기'로 바뀐 순간 캘린더에 단건 등록
+//   2. 신규 시트의 K열 상태가 '진행'으로 바뀐 순간 캘린더에 단건 등록
+//      (어떤 이전 상태에서든 — 예정→진행, 대기→진행 둘 다)
+//      v0.2.8 변경: 옛 '미정→대기' 트리거를 '진행 진입' 트리거로 교체.
+//      디자이너 운영상 '진행' 시점이 캘박 의도와 일치.
+//
+// 중복 체크는 시트 L열 UUID(rowId)를 캘린더 이벤트 tag로 매핑해서 판정.
+// 같은 rowId tag 가진 이벤트가 향후 3개월에 있으면 skip (제목·날짜 변경에도 안전).
 //
 // 모든 셀 편집마다 발사되므로 관련 없는 입력은 silent skip.
 // 데이터 영역 + 관련 시트에 진입한 시점부터 로그 시작.
@@ -474,15 +480,15 @@ function onEditTrigger(e) {
       log_('onEditTrigger', `ID 자동 발급 — row=${row}, uuid=${issuedId}`);
     }
 
-    // [캘린더 등록] 신규 시트의 K열 '미정' → '대기'만
+    // [캘린더 등록] 신규 시트의 K열이 '진행'으로 진입할 때 (어떤 경로든)
     if (!isSchedule) return;
     if (col !== 11) return;
-    if (e.oldValue !== '미정' || e.value !== '대기') {
-      log_('onEditTrigger', `K열 변경이지만 '미정 → 대기' 아님 — 캘린더 등록 skip`);
+    if (e.value !== '진행' || e.oldValue === '진행') {
+      log_('onEditTrigger', `K열 변경이지만 '진행' 진입 아님 (old='${e.oldValue}', new='${e.value}') — 캘린더 등록 skip`);
       return;
     }
 
-    log_('onEditTrigger', `'미정 → 대기' 전이 감지 — 캘린더 등록 시도`);
+    log_('onEditTrigger', `'진행' 진입 감지 (이전: '${e.oldValue}') — 캘린더 등록 시도`);
 
     const calendar = CalendarApp.getCalendarsByName(SCHEDULE_CALENDAR_NAME)[0];
     if (!calendar) {
@@ -520,14 +526,15 @@ function onEditTrigger(e) {
       return;
     }
 
-    if (isDuplicateEvent(calendar, title, endDate)) {
-      log_('onEditTrigger', `중복 이벤트 존재 — 등록 skip ('${title}' / ${Utilities.formatDate(endDate, 'Asia/Seoul', 'yyyy-MM-dd')})`);
+    // rowId(시트 L열 UUID)를 미리 추출 — 중복 체크와 tag 부착 모두에 사용
+    const rowId = String(sheet.getRange(row, 12).getValue() || '').trim();
+
+    if (isDuplicateEvent(calendar, rowId, title, endDate)) {
+      log_('onEditTrigger', `중복 이벤트 존재 — 등록 skip ('${title}' / ${Utilities.formatDate(endDate, 'Asia/Seoul', 'yyyy-MM-dd')}, rowId=${rowId || '없음'})`);
       return;
     }
 
-    // 시트의 L열 ID도 같이 박아 syncToCalendar와 매핑 일관성 유지
     const ev = calendar.createAllDayEvent(title, endDate);
-    const rowId = String(sheet.getRange(row, 12).getValue() || '').trim();
     if (rowId) ev.setTag(SYNC_TAG_KEY, rowId);
     log_(
       'onEditTrigger',
@@ -560,7 +567,20 @@ function assignIdIfNeeded_(sheet, row) {
   return uuid;
 }
 
-function isDuplicateEvent(calendar, title, date) {
+// 중복 체크 — rowId tag 우선, 없으면 제목+날짜로 fallback (v0.2.8 강화)
+//
+// rowId가 있으면 향후 3개월에서 같은 tag 가진 이벤트 검사 →
+//   제목·날짜가 바뀌어도 중복 인식. syncToCalendar와 매핑 일관성 보장.
+// rowId가 없으면 옛 방식(같은 날짜의 같은 제목)으로 fallback.
+function isDuplicateEvent(calendar, rowId, title, date) {
+  if (rowId) {
+    const today = new Date();
+    const future = new Date();
+    future.setMonth(future.getMonth() + 3);
+    const events = calendar.getEvents(today, future);
+    return events.some(e => e.getTag(SYNC_TAG_KEY) === rowId);
+  }
+  // fallback — tag 없는 이벤트 호환
   const start = new Date(date);
   const end = new Date(date);
   end.setDate(end.getDate() + 1);

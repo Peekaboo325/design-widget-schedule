@@ -13,9 +13,10 @@ export function shortName(name) {
   return trimmed.slice(-2)
 }
 
-// 상태 순환: 미정 → 대기 → 진행 → 완료 → 미정
+// 상태 순환: 예정 → 대기 → 진행 → 완료 → 예정
 // 빈 값/알 수 없는 값은 '대기'부터 시작
-const STATUS_CYCLE = ['미정', '대기', '진행', '완료']
+// v0.2.8: '미정' → '예정' 으로 의미 재정의. 옛 데이터는 시트 일괄 변환 + GAS 검증 함수로 마이그레이션.
+const STATUS_CYCLE = ['예정', '대기', '진행', '완료']
 
 export function nextStatus(current) {
   const idx = STATUS_CYCLE.indexOf(String(current ?? '').trim())
