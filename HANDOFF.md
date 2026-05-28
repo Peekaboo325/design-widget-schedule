@@ -1,7 +1,7 @@
 # HANDOFF.md — design-widget-schedule
 
 > 새 대화방에서 이 파일을 통째로 컨텍스트로 주면 AI가 현재 상태를 빠르게 흡수합니다.
-> **최신 상태 기준**: v0.2.5 (2026-05-25)
+> **최신 상태 기준**: v0.2.8 (2026-05-25)
 
 ---
 
@@ -29,7 +29,7 @@
 ## 프로젝트 개요
 - **레포**: `Peekaboo325/design-widget-schedule` (public, 코드 + 릴리스 통합)
 - **스택**: Electron 33 + React 18 + Vite (electron-vite) + electron-builder + **electron-updater**
-- **버전**: **v0.2.5** (다운로드 완료 즉시 silent 재시작·설치)
+- **버전**: **v0.2.8** (K열 상태 운영 의미 정비: '미정' → '예정' + 캘박 트리거 '진행 진입' + 중복 체크 rowId 강화)
 - **빌드/실행**:
   - dev: `npm run dev`
   - macOS dev launcher: `start-mac.command` 더블클릭 (자동 git pull + npm install + dev)
@@ -104,7 +104,7 @@ design-widget-schedule/
 
 ---
 
-## 현재 동작 (v0.2.5)
+## 현재 동작 (v0.2.8)
 
 ### 위젯 셸
 - frameless + transparent + alwaysOnTop
@@ -248,7 +248,7 @@ design-widget-schedule/
 
 ---
 
-## GAS API (`schedule-widget-api.gs`) — v0.2.5 기준
+## GAS API (`schedule-widget-api.gs`) — v0.2.8 기준
 
 ### 시트 구조 (v0.2.4: L열에 ID 컬럼 신설로 한 칸씩 시프트)
 
@@ -340,7 +340,7 @@ design-widget-schedule/
 |---|---|
 | **dev 모드** (`npm run dev` / `start-mac.command`) | ✅ 정상 (Mac/Windows 둘 다) |
 | **macOS .dmg** | ⚠ 빌드 성공, 실행 시 hang (Sequoia + unsigned + Electron 33 조합) |
-| **Windows .exe** | ✅ v0.2.0~v0.2.5 빌드 완료, 디자인팀 5명 배포 + 자동 업데이트 동작 중 |
+| **Windows .exe** | ✅ v0.2.0~v0.2.8 빌드 완료, 디자인팀 5명 자동 업데이트 안착 |
 
 ### macOS 패키지 hang 이슈
 - `app.whenReady()` 콜백 호출 안 됨 → dock에서만 튀고 화면 X
@@ -357,16 +357,17 @@ design-widget-schedule/
 
 ## 다음 단계
 
-### 1순위 — v0.2.5 첫 수동 배포 후 자동 업데이트 정착 관찰
-- v0.2.4까지 위젯이 옛 레포(`design-widget-releases`) 보고 있어서, v0.2.5는 본인이 한 번만 수동 .exe 배포
-- 그 이후로는 새 통합 레포(`design-widget-schedule`)에서 자동 업데이트 픽업
-- v0.2.5 깔린 후 다음 빌드(v0.2.6+)부터 "다운 완료 즉시 silent 재시작" 효과 발휘
-- 옛 `design-widget-releases` 레포는 모두 v0.2.5로 올라온 게 확인되면 그때 archive
+### 1순위 — 운영 안정화 관찰
+- v0.2.8 자동 업데이트로 본인 + 팀원 5명 모두 갱신 안착 확인 (트레이 메뉴 버전 표시로 점검)
+- 새 K열 상태 흐름('예정 → 대기 → 진행 → 완료') 운영 정착도. 디자이너 6명이 의미 재정의 적응
+- 캘박 트리거('진행' 진입) 누락·중복 사례 모니터링
+- 옛 `design-widget-releases` 레포는 모두 새 레포로 옮겨온 게 확인되면 archive
 
-### 2순위 — AUDIT.md 잔여 항목
-- 1-1: 마감일 변경 가짜 NEW → v0.2.4 ID 도입으로 해소됐는지 디자인팀 5명 실 사용 후 확인
-- 1-2: 시트 구조 변경 시 위젯 어긋남 → 사용자 통제 정책으로 사실상 봉인 (디자이너가 컬럼 안 만짐). 코드 방어 우선순위 ↓
-- 1-3: 자동 업데이트 미적용 → v0.2.5의 즉시 설치 로직으로 근본 해소. v0.2.6부터 효과 실측
+### 2순위 — AUDIT.md 잔여 항목 + 알려진 이슈
+- 1-1: 마감일 변경 가짜 NEW → v0.2.4 ID 도입으로 해소
+- 1-2: 시트 구조 변경 시 위젯 어긋남 → 사용자 통제 정책으로 사실상 봉인
+- 1-3: 자동 업데이트 미적용 → v0.2.5의 즉시 설치 로직으로 근본 해소 (v0.2.6+ 실측 검증 완료)
+- **위젯 자동 hide (알려진 이슈 섹션 참조)**: 운영 영향 작아 보류. 진단 로그 추가 시 trigger 식별 가능
 
 ### 3순위 — macOS packaging 재시도 (필요 시)
 - Electron 30 LTS 다운그레이드 또는 code signing ($99/년)
@@ -423,6 +424,9 @@ design-widget-schedule/
 - **v0.2.4** (`b891cd1`, `f9b0575`, `3bc4935`): **시트 L열 UUID 도입 + GAS 4개 통합 수정 + 위젯 ID 기반 식별로 전환 / legacy-gas 정리 (dashboard-api.gs 삭제)**
 - **v0.2.5** (`340f207`, `7780105`, `7d6cf67`, `5986572`, `89e93c7`): **자동 업데이트 즉시 silent 설치·재시작 (scheduleQuietInstall) + GitHub Actions 도입 (`v*` 태그 push → windows-latest 자동 빌드·Release 업로드) + 릴리스 레포 통합 (design-widget-releases → design-widget-schedule, 코드/릴리스 단일 운영)**
 - **v0.2.5 빌드 후 보강** (`ba98ae3`): `electron-builder.yml`에 `releaseType: release` 추가 — v0.2.5 .exe엔 이미 미반영이라 첫 Release가 Draft로 올라옴(수동 publish로 해소). **v0.2.6부터 자동 정식 공개 효과** (한 사이클 지연)
+- **v0.2.6** (`a281427`, `1919a51`): **백업 탭 뱃지 카운트 행 수 → 수량 합산 통일** (sumQty 헬퍼 추출 후 ScheduleView·BackupView·App.jsx 단일 출처). v0.2.5의 즉시 silent 설치 로직 첫 실측 검증 성공
+- **v0.2.7** (`fe91e1d`, `6c41547`): **NEW 폭주 자기 강화 버그 수정** — useSeenSchedule의 빈 배열 store 처리에 `stored.length > 0` 조건 추가. 빈 Set 영구 유지 → 모든 항목 NEW 표시되던 자기 강화 루프 차단 + HANDOFF에 '알려진 이슈(보류)' 섹션 신설 (위젯 자동 hide)
+- **v0.2.8** (`90b4718`, `2fb1d40`): **K열 상태 '미정' → '예정' 의미 재정의 + 캘박 트리거 옛 '미정→대기' → 새 '진행 진입'으로 교체** (어떤 이전 상태에서든) + **isDuplicateEvent rowId tag 기준 강화** (제목·날짜 변경 시에도 중복 안 만듦) + GAS Web App URL 교체. CSS `.statusUndefined` → `.statusPlanned`로 정리
 
 **시도했다가 폐기/실패**:
 - L/S 더블클릭 토글 (drag region 위 React 이벤트 미수신 + UX 혼동)
@@ -441,7 +445,7 @@ design-widget-schedule/
 >
 > 인프라 풀세트: 캐싱·스켈레톤·persistent NEW·에러 코드 E01-E99·알림 토글·action whitelist·Windows 폰트 보정 + **electron-updater 자동 업데이트 + useActionQueue 직렬 큐 + STALE 자동 재시도**.
 >
-> **현 단계: v0.2.5 빌드·배포 완료** — 다운로드 완료 즉시 silent 재시작 로직 도입 (이전 "위젯 안 끄면 영원히 미설치" 한계 근본 해결). GitHub Actions로 v* 태그 push → 자동 윈도 빌드·Release 업로드. 릴리스 레포 단일 통합(`design-widget-schedule`). v0.2.5는 옛 레포(`design-widget-releases`) 보던 v0.2.4 사용자에게 본인이 수동 .exe 한 번 배포. 그 이후 자동 업데이트는 새 레포로 안착.
+> **현 단계: v0.2.8 빌드·배포 완료** — K열 상태 운영 의미 정비('미정' → '예정' + 캘박 트리거 '진행 진입'으로 교체 + 중복 체크 rowId 강화). 디자인팀 6명에 자동 업데이트로 안착. v0.2.5의 즉시 silent 재시작 효과는 v0.2.6/0.2.7/0.2.8 사이클에서 실측 검증 완료. 운영 안정화 관찰 단계.
 >
 > macOS .dmg는 Sequoia 이슈로 보류 (본인 dev 사용). 디자인팀 전부 Windows라 영향 X.
 >
