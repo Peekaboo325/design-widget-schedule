@@ -663,13 +663,14 @@ function isDuplicateEvent(calendar, rowId, title, date) {
 // 광고주 없는 팀(예: SM본부(부산))은 해당 광고주 컬럼 자체가 마스터에 없음 → E열 자유 입력.
 //
 // 흐름:
-//   - C 채워짐 → D/E 검증을 C팀 멤버로 갱신 + 옛 D/E 값 비움
-//   - C 비워짐 → D/E 검증을 전체 노출로 갱신 + 옛 D/E 값 비움
+//   - C 채워짐 → D/E 검증을 C팀 멤버로 갱신 (옛 D/E 값 유지)
+//   - C 비워짐 → D/E 검증을 전체 노출로 갱신 (옛 D/E 값 유지)
 //   - D 채워짐 + C 비어있음 → 담당자→팀 자동 추론 + C 자동 채우기 + E 그 팀 광고주 필터
 //   - E 채워짐 → 자동 채우기 없음 (광고주 1:다 팀 가능성, 예: 하프클리닉)
 //
 // 마스터 데이터 5분 캐시. 마스터 시트 변경 후 최대 5분 반영 지연.
-// 잘못된 입력은 경고만 (setAllowInvalid=true) — 디자이너 인지만 유도, 차단 X.
+// 잘못된 입력은 경고만 (setAllowInvalid=true) — 디자이너 인지만 유도, 차단·자동 삭제 X.
+// (옛 D/E 자동 비움 기능은 운영 부담으로 v0.2.8 후속에서 제거)
 // ============================================================
 
 /**
@@ -782,9 +783,12 @@ function handleCascadingDropdown_(e) {
   const newValue = String(e.value || '').trim();
 
   if (col === TEAM_COL) {
-    // [C 변경] D/E 검증 갱신 + 옛 값 비움
+    // [C 변경] D/E 검증만 갱신 (옛 값은 유지)
+    // 자동 비움 제거 — 의도치 않은 데이터 손실 + 토글 실수에 의한 입력 부담 회피.
+    // 잘못된 조합(예: C=2팀인데 D=1팀 담당자)은 setAllowInvalid=true로 셀 경고
+    // 표시되어 디자이너가 인지하고 직접 수정.
     const team = newValue;
-    log_('handleCascadingDropdown_', `C${row} 팀 = '${team}' → D/E 검증 갱신 + 옛 값 비움`);
+    log_('handleCascadingDropdown_', `C${row} 팀 = '${team}' → D/E 검증 갱신 (값 유지)`);
     if (team) {
       setDropdown_(sheet.getRange(row, MANAGER_COL), master.managersByTeam[team] || []);
       setDropdown_(sheet.getRange(row, CLIENT_COL), master.clientsByTeam[team] || []);
@@ -792,8 +796,6 @@ function handleCascadingDropdown_(e) {
       setDropdown_(sheet.getRange(row, MANAGER_COL), master.allManagers);
       setDropdown_(sheet.getRange(row, CLIENT_COL), master.allClients);
     }
-    sheet.getRange(row, MANAGER_COL).clearContent();
-    sheet.getRange(row, CLIENT_COL).clearContent();
   } else if (col === MANAGER_COL) {
     // [D 변경] C 비어있으면 → 담당자→팀 자동 추론 + C 자동 채우기 + E 갱신
     if (!newValue) return;
