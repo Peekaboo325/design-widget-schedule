@@ -854,45 +854,43 @@ function initCascadingDropdowns() {
       }
     }
 
-    // 팀 채워진 행 — 팀별 RangeList로 한 번에 검증 박기
+    // 팀 채워진 행 — 팀별 RangeList의 각 Range에 검증 박기
+    // (GAS의 RangeList는 setDataValidation 미지원, clearDataValidations만 있음.
+    //  forEach로 Range별 호출. 그래도 sheet.getRange를 매번 만드는 것보단 가벼움)
     for (const team in rowsByTeam) {
       const rows = rowsByTeam[team];
       const managers = master.managersByTeam[team] || [];
       const clients = master.clientsByTeam[team] || [];
 
-      const managerRanges = sheet.getRangeList(rows.map(r => `D${r}`));
+      const managerRanges = sheet.getRangeList(rows.map(r => `D${r}`)).getRanges();
       if (managers.length > 0) {
-        managerRanges.setDataValidation(
-          SpreadsheetApp.newDataValidation()
-            .requireValueInList(managers, true).setAllowInvalid(true).build()
-        );
+        const rule = SpreadsheetApp.newDataValidation()
+          .requireValueInList(managers, true).setAllowInvalid(true).build();
+        managerRanges.forEach(r => r.setDataValidation(rule));
       } else {
-        managerRanges.clearDataValidations();
+        managerRanges.forEach(r => r.clearDataValidations());
       }
 
-      const clientRanges = sheet.getRangeList(rows.map(r => `E${r}`));
+      const clientRanges = sheet.getRangeList(rows.map(r => `E${r}`)).getRanges();
       if (clients.length > 0) {
-        clientRanges.setDataValidation(
-          SpreadsheetApp.newDataValidation()
-            .requireValueInList(clients, true).setAllowInvalid(true).build()
-        );
+        const rule = SpreadsheetApp.newDataValidation()
+          .requireValueInList(clients, true).setAllowInvalid(true).build();
+        clientRanges.forEach(r => r.setDataValidation(rule));
       } else {
-        clientRanges.clearDataValidations(); // 광고주 없는 팀(예: SM본부(부산)) → 자유 입력
+        clientRanges.forEach(r => r.clearDataValidations()); // 광고주 없는 팀 → 자유 입력
       }
     }
 
     // C 비어있는 행 — 전체 노출
     if (rowsEmpty.length > 0) {
-      const managerRanges = sheet.getRangeList(rowsEmpty.map(r => `D${r}`));
-      managerRanges.setDataValidation(
-        SpreadsheetApp.newDataValidation()
-          .requireValueInList(master.allManagers, true).setAllowInvalid(true).build()
-      );
-      const clientRanges = sheet.getRangeList(rowsEmpty.map(r => `E${r}`));
-      clientRanges.setDataValidation(
-        SpreadsheetApp.newDataValidation()
-          .requireValueInList(master.allClients, true).setAllowInvalid(true).build()
-      );
+      const managerRule = SpreadsheetApp.newDataValidation()
+        .requireValueInList(master.allManagers, true).setAllowInvalid(true).build();
+      const clientRule = SpreadsheetApp.newDataValidation()
+        .requireValueInList(master.allClients, true).setAllowInvalid(true).build();
+      sheet.getRangeList(rowsEmpty.map(r => `D${r}`)).getRanges()
+        .forEach(r => r.setDataValidation(managerRule));
+      sheet.getRangeList(rowsEmpty.map(r => `E${r}`)).getRanges()
+        .forEach(r => r.setDataValidation(clientRule));
     }
 
     const teamSummary = Object.keys(rowsByTeam)
