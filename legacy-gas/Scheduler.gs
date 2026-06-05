@@ -813,11 +813,13 @@ function handleCascadingDropdown_(e) {
 
 /**
  * 1회용 초기 설정 — C/D/E 10~1000행에 Data Validation 박음.
- * - C = 팀 목록
- * - D = 전체 담당자 (초기 기본값)
- * - E = 전체 광고주 (초기 기본값)
- * onEdit이 동적으로 갱신하지만 초기 박혀있어야 새 행도 안전.
- * 마스터 변경 후 재적용하고 싶을 때도 재실행 가능.
+ * - C = 팀 목록 (전체 행 동일)
+ * - D/E = 행별 C 값에 따라 분기:
+ *     C에 팀 값 있음 → 그 팀 필터로 박음 (옛 데이터 정합 즉시 보장)
+ *     C 비어있음 → 전체 노출 (D 먼저 선택 시 모든 담당자 보이도록)
+ * 팀별로 행들을 RangeList로 묶어서 한 번에 setDataValidation → 빠름.
+ *
+ * 마스터 변경 후 재실행 가능 — 캐시 무효화 + 재적용.
  */
 function initCascadingDropdowns() {
   log_('initCascadingDropdowns', '시작');
@@ -827,7 +829,6 @@ function initCascadingDropdowns() {
       log_('initCascadingDropdowns', `'💛신규·유지보수' 시트 없음 — 중단`);
       return;
     }
-    // 마스터 캐시 무효화 후 다시 읽음 (마스터 변경 직후 재실행 케이스 대응)
     CacheService.getScriptCache().remove('master_data_v1');
     const master = getMasterData_();
     if (!master) {
@@ -835,12 +836,70 @@ function initCascadingDropdowns() {
       return;
     }
     const numRows = DROPDOWN_END_ROW - 10 + 1;
+
+    // C열 (팀): 전체 행 동일 검증 — 일괄
     setDropdown_(sheet.getRange(10, TEAM_COL, numRows, 1), master.teams);
-    setDropdown_(sheet.getRange(10, MANAGER_COL, numRows, 1), master.allManagers);
-    setDropdown_(sheet.getRange(10, CLIENT_COL, numRows, 1), master.allClients);
+
+    // C 값 읽어서 행별 분류
+    const teamValues = sheet.getRange(10, TEAM_COL, numRows, 1).getValues();
+    const rowsByTeam = {}; // { 팀명: [row1, row2, ...] }
+    const rowsEmpty = []; // C 비어있는 행들
+    for (let i = 0; i < numRows; i++) {
+      const team = String(teamValues[i][0] || '').trim();
+      const row = 10 + i;
+      if (team && master.managersByTeam[team]) {
+        (rowsByTeam[team] = rowsByTeam[team] || []).push(row);
+      } else {
+        rowsEmpty.push(row);
+      }
+    }
+
+    // 팀 채워진 행 — 팀별 RangeList로 한 번에 검증 박기
+    for (const team in rowsByTeam) {
+      const rows = rowsByTeam[team];
+      const managers = master.managersByTeam[team] || [];
+      const clients = master.clientsByTeam[team] || [];
+
+      const managerRanges = sheet.getRangeList(rows.map(r => `D${r}`));
+      if (managers.length > 0) {
+        managerRanges.setDataValidation(
+          SpreadsheetApp.newDataValidation()
+            .requireValueInList(managers, true).setAllowInvalid(true).build()
+        );
+      } else {
+        managerRanges.clearDataValidations();
+      }
+
+      const clientRanges = sheet.getRangeList(rows.map(r => `E${r}`));
+      if (clients.length > 0) {
+        clientRanges.setDataValidation(
+          SpreadsheetApp.newDataValidation()
+            .requireValueInList(clients, true).setAllowInvalid(true).build()
+        );
+      } else {
+        clientRanges.clearDataValidations(); // 광고주 없는 팀(예: SM본부(부산)) → 자유 입력
+      }
+    }
+
+    // C 비어있는 행 — 전체 노출
+    if (rowsEmpty.length > 0) {
+      const managerRanges = sheet.getRangeList(rowsEmpty.map(r => `D${r}`));
+      managerRanges.setDataValidation(
+        SpreadsheetApp.newDataValidation()
+          .requireValueInList(master.allManagers, true).setAllowInvalid(true).build()
+      );
+      const clientRanges = sheet.getRangeList(rowsEmpty.map(r => `E${r}`));
+      clientRanges.setDataValidation(
+        SpreadsheetApp.newDataValidation()
+          .requireValueInList(master.allClients, true).setAllowInvalid(true).build()
+      );
+    }
+
+    const teamSummary = Object.keys(rowsByTeam)
+      .map(t => `${t}=${rowsByTeam[t].length}`).join(', ');
     log_(
       'initCascadingDropdowns',
-      `완료 — C/D/E 10~${DROPDOWN_END_ROW}행 검증 설정 (팀 ${master.teams.length}, 담당자 ${master.allManagers.length}, 광고주 ${master.allClients.length})`
+      `완료 — 팀 채워진 행 [${teamSummary || '없음'}], 빈 행 ${rowsEmpty.length}건. C/D/E 10~${DROPDOWN_END_ROW}행 검증 설정`
     );
   } catch (err) {
     log_('initCascadingDropdowns', `에러: ${err}\n${err.stack || ''}`);
