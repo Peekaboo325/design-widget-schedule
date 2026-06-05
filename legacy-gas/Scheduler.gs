@@ -208,17 +208,31 @@ function moveRowOnCheck(e) {
       const headerRange = sheet.getRange(9, DATE_START, 1, lastCol - DATE_START + 1);
       const headers = headerRange.getDisplayValues()[0];
 
-      // 빨강 셀(#ff0000) = 요청일. 가장 좌측 빨강 찾기
+      // 빨강 셀(#ff0000) = 요청일. 가장 우측 빨강 사용 (안전장치).
+      // 행 복사/붙여넣기 실수로 빨강 셀이 한 행에 여러 개 생기는 경우 대비.
+      // 사용자 운영 룰: 더 오른쪽 = 더 최근 = 진짜 의도. 좌측은 잔존으로 간주.
+      // 여러 개 감지 시 진단 로그로 사용자 인지 가능.
       let parsedRequestDate = '';
+      let lastRedIndex = -1;
+      let redCount = 0;
       for (let i = DATE_START - 1; i < rowBackgrounds.length; i++) {
         const bgColor = rowBackgrounds[i];
         if (bgColor === '#ff0000' || bgColor === 'red') {
-          const headerIdx = i - (DATE_START - 1);
-          const dateMatch = headers[headerIdx].match(/(\d+)\/(\d+)/);
-          if (dateMatch) {
-            parsedRequestDate = dateMatch[1].padStart(2, '0') + '/' + dateMatch[2].padStart(2, '0');
-          }
-          break;
+          lastRedIndex = i;
+          redCount++;
+        }
+      }
+      if (redCount > 1) {
+        log_(
+          'moveRowOnCheck',
+          `⚠ 빨강 셀 ${redCount}개 발견 (행 복사 잔존 의심) — 가장 우측 셀 사용. 시트에서 정정 권장`
+        );
+      }
+      if (lastRedIndex !== -1) {
+        const headerIdx = lastRedIndex - (DATE_START - 1);
+        const dateMatch = headers[headerIdx].match(/(\d+)\/(\d+)/);
+        if (dateMatch) {
+          parsedRequestDate = dateMatch[1].padStart(2, '0') + '/' + dateMatch[2].padStart(2, '0');
         }
       }
 
