@@ -427,7 +427,8 @@ design-widget-schedule/
 - **v0.2.6** (`a281427`, `1919a51`): **백업 탭 뱃지 카운트 행 수 → 수량 합산 통일** (sumQty 헬퍼 추출 후 ScheduleView·BackupView·App.jsx 단일 출처). v0.2.5의 즉시 silent 설치 로직 첫 실측 검증 성공
 - **v0.2.7** (`fe91e1d`, `6c41547`): **NEW 폭주 자기 강화 버그 수정** — useSeenSchedule의 빈 배열 store 처리에 `stored.length > 0` 조건 추가. 빈 Set 영구 유지 → 모든 항목 NEW 표시되던 자기 강화 루프 차단 + HANDOFF에 '알려진 이슈(보류)' 섹션 신설 (위젯 자동 hide)
 - **v0.2.8** (`90b4718`, `2fb1d40`): **K열 상태 '미정' → '예정' 의미 재정의 + 캘박 트리거 옛 '미정→대기' → 새 '진행 진입'으로 교체** (어떤 이전 상태에서든) + **isDuplicateEvent rowId tag 기준 강화** (제목·날짜 변경 시에도 중복 안 만듦) + GAS Web App URL 교체. CSS `.statusUndefined` → `.statusPlanned`로 정리
-- **v0.2.8 후속 GAS 패치 (위젯 빌드 없음)**: `moveRowOnCheck` race 방어 — lock 대기 중 인접 행 deleteRow로 시트가 시프트되면 `e.range.getRow()`가 다른 행을 가리켜 잘못된 행이 완료 시트로 이관되던 사고 차단. lock 획득 후 M열 = TRUE 재확인 + 시프트 감지 시 `findFirstSharedRow_`로 진짜 처리 대상 행 재탐색. (광고주+비고 비슷한 두 작업이 인접 행일 때 발현, 실 사고 보고 후 패치)
+- **v0.2.8 후속 GAS 패치 (위젯 빌드 없음)**: `moveRowOnCheck` race 방어 — lock 대기 중 인접 행 deleteRow로 시트가 시프트되면 `e.range.getRow()`가 다른 행을 가리켜 잘못된 행이 완료 시트로 이관되던 사고 차단. lock 획득 후 M열 = TRUE 재확인 + 시프트 감지 시 `findFirstSharedRow_`로 진짜 처리 대상 행 재탐색. (광고주+비고 비슷한 두 작업이 인접 행일 때 발현, 실 사고 보고 후 패치) + `moveRowOnCheck` 요청일 추출을 좌측 첫 빨강 → **우측 마지막 빨강**으로 변경 (행 복사 잔존 안전장치, 빨강 2개+ 감지 시 ⚠ 로그)
+- **v0.2.8 GAS 확장 — 종속 드롭다운 (위젯 빌드 없음)**: 신규·유지보수 시트의 C(팀) ↔ D(담당자) ↔ E(광고주) 동적 Data Validation. 마스터 데이터 시트(`마스터 데이터`)의 헤더 패턴(`{팀명} 담당자`/`{팀명} 광고주`)으로 자동 매핑. 양방향 흐름: C 채워짐 → D/E 그 팀 필터 + 옛 값 비움 / D 채워짐 + C 비어있음 → 담당자→팀 자동 추론으로 C 자동 채우기 + E 그 팀 광고주 필터. 광고주 없는 팀(SM본부(부산))은 E열 자유 입력. 마스터 5분 캐시. `initCascadingDropdowns` 1회 실행으로 C/D/E 10~1000행 초기 검증 설정
 
 **시도했다가 폐기/실패**:
 - L/S 더블클릭 토글 (drag region 위 React 이벤트 미수신 + UX 혼동)
