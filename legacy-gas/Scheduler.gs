@@ -688,6 +688,8 @@ function backfillCalendarApply() {
         failed++;
         log_('backfillCalendarApply', `  실패: ${row.title} / ${fmtDate(row.endDate)} — ${createErr}`);
       }
+      // 분당 throttle 회피용 페이스 조절. 100건 = +20초.
+      Utilities.sleep(200);
     }
 
     log_('backfillCalendarApply', `완료 — 생성 ${created}, 실패 ${failed}`);
