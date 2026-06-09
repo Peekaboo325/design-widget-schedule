@@ -377,6 +377,20 @@ design-widget-schedule/
 
 ## 알려진 이슈 (보류)
 
+### ⚠ 캘린더 폭주 사고 (2026-06, 현재 진행 중)
+- **증상**: '디자인팀 업무 스케줄러' 캘린더에 같은 이벤트가 한 날짜에 1000개+ 누적. 전체 약 4500건 폭주 확인.
+- **추정 원인 (미확정)**: `syncToCalendar`의 자기 강화 루프 가능성.
+  - 옛 destructive sync ("향후 3개월 다 지우고 다시 만들기") → 증분 sync (id 기반 변경분만) 전환 시점에 옛 destructive의 "자연 정리" 효과 소실.
+  - id 매칭이 어떤 이유로 실패하면 매시간 시간 trigger 실행마다 시트 행 수만큼 새로 create 누적 → 캘린더 비대 → `getEvents` 응답 불안정 → 매칭 더 실패 → 더 폭주.
+  - `wipeAll` 수동 정리 후 잔존 일부 + 새 sync 충돌도 누적 기여 가능.
+- **현재 대응**:
+  - `syncToCalendar` 시간 trigger 일시 중지 권장
+  - `wipeAllBatch` 등 1회용 wipe 함수로 캘린더 비우는 중 (burst limit 페이스 ~180건/실행, 5분 trigger 자동 반복)
+- **다음 작업 필요**:
+  - 자기 강화 폭주 안전망 코드 추가 (예: `create` 카운트가 시트 활성 행 수의 N배 초과 시 abort + 진단 로그 + 자동 trigger 중지)
+  - 또는 syncToCalendar 자체 재설계 검토 (옛 destructive 회귀 / 더 보수적 매칭 / 다른 패턴)
+  - 캘린더 비운 후 안전망 박힌 코드로 정상 sync 한 번 + 며칠 관찰 후 시간 trigger 재등록
+
 ### 위젯이 한참 안 만지면 자동으로 화면에서 사라짐 (트레이는 살아있음)
 - **증상**: alwaysOnTop ON 상태에서도 일정 시간 inactive 후 위젯 창이 hide.
   트레이 아이콘은 살아있어서 클릭하면 다시 떠짐.
@@ -423,6 +437,7 @@ design-widget-schedule/
 - **AUDIT.md** (`ef2de70`): v0.2.3 기준 전수 점검 보고서 (오너 의사결정용)
 - **v0.2.4** (`b891cd1`, `f9b0575`, `3bc4935`): **시트 L열 UUID 도입 + GAS 4개 통합 수정 + 위젯 ID 기반 식별로 전환 / legacy-gas 정리 (dashboard-api.gs 삭제)**
 - **v0.2.5** (`340f207`, `7780105`, `7d6cf67`, `5986572`, `89e93c7`): **자동 업데이트 즉시 silent 설치·재시작 (scheduleQuietInstall) + GitHub Actions 도입 (`v*` 태그 push → windows-latest 자동 빌드·Release 업로드) + 릴리스 레포 통합 (design-widget-releases → design-widget-schedule, 코드/릴리스 단일 운영)**
+- **v0.2.5 시점 GAS 정리** (`55b0478`, `58451a5`, `dec331d`, `ee4b52b`): syncToCalendar **증분 sync 재작성** (옛 destructive → id 기반 변경분만, Calendar API quota burst 해결) + 모든 함수에 `[함수명]` prefix·시작·결과·에러 **진단 로그 전수 보강** + 사용 안 하는 코드 정리 (cleanupUntaggedEvents·testHolidaySetup·handleUrgentTask 제거, 진입 함수 4개로 축소) + 캘박 **이벤트 제목 통일 '광고주 비고 (요청자)' 원칙 회복**. ※ 증분 sync는 옛 destructive의 "자연 정리" 효과를 잃었고, 안전망 부재로 2026-06 캘린더 폭주의 한 원인이 됨 (알려진 이슈 참조)
 - **v0.2.5 빌드 후 보강** (`ba98ae3`): `electron-builder.yml`에 `releaseType: release` 추가 — v0.2.5 .exe엔 이미 미반영이라 첫 Release가 Draft로 올라옴(수동 publish로 해소). **v0.2.6부터 자동 정식 공개 효과** (한 사이클 지연)
 - **v0.2.6** (`a281427`, `1919a51`): **백업 탭 뱃지 카운트 행 수 → 수량 합산 통일** (sumQty 헬퍼 추출 후 ScheduleView·BackupView·App.jsx 단일 출처). v0.2.5의 즉시 silent 설치 로직 첫 실측 검증 성공
 - **v0.2.7** (`fe91e1d`, `6c41547`): **NEW 폭주 자기 강화 버그 수정** — useSeenSchedule의 빈 배열 store 처리에 `stored.length > 0` 조건 추가. 빈 Set 영구 유지 → 모든 항목 NEW 표시되던 자기 강화 루프 차단 + HANDOFF에 '알려진 이슈(보류)' 섹션 신설 (위젯 자동 hide)
