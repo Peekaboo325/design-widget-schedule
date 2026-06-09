@@ -2,14 +2,19 @@
 // Scheduler.gs — 디자인팀 스케줄러 자동화
 //
 // 함수 구성:
-//   moveRowOnCheck       — onEdit 트리거: 신규 시트의 M열 공유 체크 → 완료 시트로 이관 + TAT 계산
-//   onEditTrigger        — onEdit 트리거: L열 ID 자동 발급 + K열 '진행' 진입 시 캘린더 등록
-//   syncToCalendar       — 수동/시간 트리거: 시트 ↔ 캘린더 ID 기반 증분 sync
-//   sortCompleteSheet    — 수동: 완료 시트 정렬 (마감일 → 광고주 → 비고)
+//   moveRowOnCheck            — onEdit 트리거: 신규 시트 M열 공유 체크 → 완료 시트 이관 + TAT 계산
+//   onEditTrigger             — onEdit 트리거: L열 ID 자동 발급 + K열 '진행' 진입 시 캘박 단건 등록
+//   syncToCalendar            — 시간 트리거: 시트 '진행' 행 ↔ 캘박 update 전용 sync (v0.2.9 재설계)
+//   backfillCalendarDryRun    — 수동(콘솔 ▶): 캘박 없는 '진행' 작업 리스트 미리보기 (변경 없음)
+//   backfillCalendarApply     — 수동(콘솔 ▶): dry-run 후 일괄 캘박 생성 (1회용)
+//   enableSyncTrigger         — 수동(콘솔 ▶): syncToCalendar 시간 trigger 등록 (1시간 주기)
+//   sortCompleteSheet         — 수동: 완료 시트 정렬 (마감일 → 광고주 → 비고)
 //   (영업일/TAT/색상 판별 유틸은 위 함수들에서 호출)
 //
 // 모든 진입 함수는 [함수명] prefix 진단 로그 + try/catch로 가시성 확보.
 // 자주 호출되는 onEditTrigger·moveRowOnCheck는 데이터 영역 진입 시에만 로그.
+//
+// 캘박 동기화는 v0.2.9에서 안전 재설계. 상세 원칙은 syncToCalendar 섹션 헤더 주석 참조.
 // ============================================================
 
 // ── 상수 ────────────────────────────────────────────────────
@@ -324,14 +329,185 @@ function findFirstSharedRow_(sheet, col) {
 }
 
 // ============================================================
-// syncToCalendar — v0.2.4 ID 기반 증분 sync
-// - 시트 L열 UUID를 캘린더 이벤트 hidden tag(rowId)에 박아 매핑
-// - 변경분만 처리 → quota burst 회피
-// - tag 없는 이벤트는 안 건드림 (개인 일정 등 보호)
-// - 각 액션(create/update/delete) 행별로 로그
+// 캘린더 동기화 — v0.2.9 안전 재설계
+//
+// 사고 배경 (2026-06): 옛 syncToCalendar(증분 sync)가 setTag/getTag 매칭 실패 시
+// 무한 신규 create로 폭주 (같은 이름·같은 날짜 1000건+ 누적). 캘박 4500건 wipe 후 재설계.
+//
+// 새 원칙:
+//   [create] onEditTrigger 단독. K열이 '진행'으로 진입한 그 순간 단건만.
+//   [update] syncToCalendar 시간 trigger. 시트 '진행' 행 ↔ 캘박 비교, 날짜만 이동.
+//            create 절대 안 함. delete 절대 안 함.
+//   [delete] 자동화 0. 사람이 캘린더 앱에서 직접만.
+//   [backfill] 1회용 backfillCalendarDryRun / backfillCalendarApply.
+//              wipe 등으로 캘박이 비었을 때만 사용.
+//
+// 매칭: 라벨(rowId) 우선 → 이름 fallback. 어느 쪽도 매칭 안 되면 syncToCalendar는 무시(=create 없음).
+// 폭주 가드:
+//   syncToCalendar 한 회 update 50건 초과 시 즉시 abort + 시간 trigger 자동 정지.
+//   backfillCalendarApply 한 회 100건 초과 시 즉시 abort (수동 점검 요구).
+//
+// 사용자 정책 (운영):
+//   - AE(타 부서)가 보는 공유 캘린더. 같은 이름 폭주 = 신뢰 즉사. 재발 0이 목표.
+//   - 시트 비고/광고주 변경 시 캘박 제목 안 따라감 (이름 매칭이 깨질 일 거의 없음).
+//   - 시트에서 행 사라져도(완료/이관/삭제) 캘박 그대로 둠. 마감일 지나면 자연 소멸.
+// ============================================================
+
+const CAL_UPDATE_GUARD_MAX = 50;
+const CAL_BACKFILL_GUARD_MAX = 100;
+const CAL_LOOKBACK_DAYS = 90;
+const CAL_LOOKAHEAD_DAYS = 180;
+
+// ── 캘린더 동기화 공통 헬퍼 ──────────────────────────────────
+
+/**
+ * 시트의 '진행' 상태 행만 수집.
+ * 반환: [{ id, title, endDate, sheetRow }]
+ * - id: 시트 L열 UUID (빈 값일 수도 있음)
+ * - title: '광고주 비고 (요청자)' 포맷
+ * - endDate: 마감일 (Date, 핑크 우선 → 빨강 fallback)
+ * - sheetRow: 시트 행 번호 (로그용)
+ */
+function collectActiveProgressRows_(sheet) {
+  const DATE_ROW = 9;
+  const DATE_START_COL = 14; // N열
+  const DATA_START_ROW = 10;
+  const ID_COL = 12;       // L
+  const ADV_COL = 5;       // E
+  const NOTE_COL = 10;     // J
+  const STATUS_COL = 11;   // K
+  const MANAGER_COL = 4;   // D — 담당자(요청자)
+
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+  if (lastRow < DATA_START_ROW) return [];
+
+  const dateValues = sheet.getRange(DATE_ROW, DATE_START_COL, 1, lastCol - DATE_START_COL + 1).getValues()[0];
+  const allValues = sheet.getRange(DATA_START_ROW, 1, lastRow - DATA_START_ROW + 1, lastCol).getValues();
+  const allBackgrounds = sheet.getRange(DATA_START_ROW, DATE_START_COL, lastRow - DATA_START_ROW + 1, lastCol - DATE_START_COL + 1).getBackgrounds();
+
+  const rows = [];
+  for (let i = 0; i < allValues.length; i++) {
+    const r = allValues[i];
+    const status = String(r[STATUS_COL - 1] || '').trim();
+    if (status !== '진행') continue;
+
+    const advertiser = r[ADV_COL - 1];
+    if (!advertiser) continue;
+
+    const id = String(r[ID_COL - 1] || '').trim();
+    const note = r[NOTE_COL - 1];
+    const manager = r[MANAGER_COL - 1];
+    const title = formatEventTitle_(advertiser, note, manager);
+
+    const bgs = allBackgrounds[i];
+    let endIdx = -1;
+    for (let j = 0; j < bgs.length; j++) {
+      if (isPink(bgs[j])) endIdx = j;
+    }
+    if (endIdx === -1) {
+      for (let j = 0; j < bgs.length; j++) {
+        if (isRed(bgs[j])) endIdx = j;
+      }
+    }
+    if (endIdx === -1) continue;
+
+    const endDate = parseDate(dateValues[endIdx]);
+    if (!endDate) continue;
+
+    rows.push({ id: id, title: title, endDate: endDate, sheetRow: DATA_START_ROW + i });
+  }
+  return rows;
+}
+
+/**
+ * 캘박 매칭용 인덱스 구축.
+ * 조회 범위: 오늘 -90일 ~ +180일 (마감일 옮길 때 과거 캘박도 찾을 수 있게 넉넉히)
+ * 반환: { events, byTag(rowId→event), byTitle(title→event[]), untagged, range }
+ */
+function buildCalendarIndex_(calendar) {
+  const now = new Date();
+  const start = new Date(now);
+  start.setDate(start.getDate() - CAL_LOOKBACK_DAYS);
+  const end = new Date(now);
+  end.setDate(end.getDate() + CAL_LOOKAHEAD_DAYS);
+
+  const events = calendar.getEvents(start, end);
+  const byTag = new Map();
+  const byTitle = new Map();
+  let untagged = 0;
+
+  for (const ev of events) {
+    const tag = ev.getTag(SYNC_TAG_KEY);
+    if (tag) byTag.set(tag, ev);
+    else untagged++;
+
+    const t = ev.getTitle();
+    if (!byTitle.has(t)) byTitle.set(t, []);
+    byTitle.get(t).push(ev);
+  }
+
+  return { events: events, byTag: byTag, byTitle: byTitle, untagged: untagged, range: { start: start, end: end } };
+}
+
+/**
+ * 시트 행에 대응하는 캘박 찾기.
+ * 1) 라벨(rowId) 매칭 — 가장 신뢰
+ * 2) 이름 매칭 — 라벨 깨졌거나 옛 캘박 대응
+ * 둘 다 못 찾으면 null (syncToCalendar는 create 안 함, 정책)
+ */
+function matchEventForRow_(index, rowId, title) {
+  if (rowId && index.byTag.has(rowId)) {
+    return index.byTag.get(rowId);
+  }
+  const events = index.byTitle.get(title);
+  if (events && events.length > 0) {
+    return events[0]; // 동명 여러 개면 첫 거 update
+  }
+  return null;
+}
+
+// ── 시간 trigger 관리 (비개발자가 GAS 콘솔에서 ▶로 직접 호출) ──
+
+/** 시간 trigger 등록 — 1시간마다 syncToCalendar 실행. 이미 있으면 중복 생성 안 함. */
+function enableSyncTrigger() {
+  const triggers = ScriptApp.getProjectTriggers();
+  for (const t of triggers) {
+    if (t.getHandlerFunction() === 'syncToCalendar' && t.getEventType() === ScriptApp.EventType.CLOCK) {
+      log_('enableSyncTrigger', `기존 시간 trigger 있음 — 추가 등록 안 함`);
+      return;
+    }
+  }
+  ScriptApp.newTrigger('syncToCalendar').timeBased().everyHours(1).create();
+  log_('enableSyncTrigger', `시간 trigger 등록 완료 — 1시간마다 syncToCalendar 실행`);
+}
+
+/** 폭주 가드 발동 시 자동 호출. 시간 trigger 전부 제거. */
+function disableSyncTrigger_() {
+  const triggers = ScriptApp.getProjectTriggers();
+  let removed = 0;
+  for (const t of triggers) {
+    if (t.getHandlerFunction() === 'syncToCalendar' && t.getEventType() === ScriptApp.EventType.CLOCK) {
+      try {
+        ScriptApp.deleteTrigger(t);
+        removed++;
+      } catch (err) {
+        log_('disableSyncTrigger_', `trigger 삭제 실패: ${err}`);
+      }
+    }
+  }
+  log_('disableSyncTrigger_', `시간 trigger ${removed}개 제거`);
+}
+
+// ============================================================
+// syncToCalendar — 시간 trigger용 update 전용 sync
+// - 시트 '진행' 행 ↔ 캘박 비교, 날짜만 이동
+// - create 절대 안 함 (사용자 정책). 캘박 없는 작업은 로그만.
+// - delete 절대 안 함 (사용자 정책). 시트 사라진 캘박도 그대로.
+// - 가드: 한 회 update 50건 초과 시 즉시 abort + 시간 trigger 자동 정지
 // ============================================================
 function syncToCalendar() {
-  log_('syncToCalendar', '시작');
+  log_('syncToCalendar', '시작 — update 전용 모드 (create/delete 안 함)');
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName('💛신규·유지보수');
@@ -345,125 +521,178 @@ function syncToCalendar() {
       return;
     }
 
-    const DATE_ROW = 9;
-    const DATE_START_COL = 14; // N열부터 날짜
-    const DATA_START_ROW = 10;
-    const ID_COL = 12;       // L
-    const ADV_COL = 5;       // E
-    const NOTE_COL = 10;     // J
-    const MANAGER_COL = 4;   // D — 담당자(요청자)
-    const lastRow = sheet.getLastRow();
-    const lastCol = sheet.getLastColumn();
-
-    if (lastRow < DATA_START_ROW) {
-      log_('syncToCalendar', '데이터 행 없음 — 종료');
+    const rows = collectActiveProgressRows_(sheet);
+    log_('syncToCalendar', `시트 수집 — '진행' 상태 ${rows.length}건`);
+    if (rows.length === 0) {
+      log_('syncToCalendar', '처리할 행 없음 — 종료');
       return;
     }
 
-    // 1. 시트 활성 행 수집
-    const dateValues = sheet.getRange(DATE_ROW, DATE_START_COL, 1, lastCol - DATE_START_COL + 1).getValues()[0];
-    const allValues = sheet.getRange(DATA_START_ROW, 1, lastRow - DATA_START_ROW + 1, lastCol).getValues();
-    const allBackgrounds = sheet.getRange(DATA_START_ROW, DATE_START_COL, lastRow - DATA_START_ROW + 1, lastCol - DATE_START_COL + 1).getBackgrounds();
-
-    const sheetRows = [];
-    let skipNoId = 0, skipNoAdv = 0, skipNoDate = 0;
-    for (let i = 0; i < allValues.length; i++) {
-      const rowData = allValues[i];
-      const id = String(rowData[ID_COL - 1] || '').trim();
-      const advertiser = rowData[ADV_COL - 1];
-      if (!id) { skipNoId++; continue; }
-      if (!advertiser) { skipNoAdv++; continue; }
-
-      const note = rowData[NOTE_COL - 1];
-      const manager = rowData[MANAGER_COL - 1];
-      const title = formatEventTitle_(advertiser, note, manager);
-
-      const backgrounds = allBackgrounds[i];
-      let endColIndex = -1;
-      for (let j = 0; j < backgrounds.length; j++) {
-        if (isPink(backgrounds[j])) endColIndex = j;
-      }
-      if (endColIndex === -1) {
-        for (let j = 0; j < backgrounds.length; j++) {
-          if (isRed(backgrounds[j])) endColIndex = j;
-        }
-      }
-      if (endColIndex === -1) { skipNoDate++; continue; }
-
-      const endDate = parseDate(dateValues[endColIndex]);
-      if (!endDate) { skipNoDate++; continue; }
-
-      sheetRows.push({ id: id, title: title, endDate: endDate });
-    }
+    const index = buildCalendarIndex_(calendar);
     log_(
       'syncToCalendar',
-      `시트 수집 — 활성 ${sheetRows.length}건 / skip: ID없음 ${skipNoId}, 광고주없음 ${skipNoAdv}, 마감일없음 ${skipNoDate}`
+      `캘린더 수집 — ${index.events.length}건 (tagged ${index.byTag.size}, untagged ${index.untagged})`
     );
 
-    // 2. 캘린더 향후 3개월 이벤트 → tag 매핑
-    const today = new Date();
-    const future = new Date();
-    future.setMonth(future.getMonth() + 3);
-    const calEvents = calendar.getEvents(today, future);
-    const calById = new Map();
-    let untaggedCount = 0;
-    for (let i = 0; i < calEvents.length; i++) {
-      const tagId = calEvents[i].getTag(SYNC_TAG_KEY);
-      if (tagId) calById.set(tagId, calEvents[i]);
-      else untaggedCount++;
-    }
-    log_(
-      'syncToCalendar',
-      `캘린더 수집 — 향후 3개월 ${calEvents.length}건 (tagged ${calById.size}, untagged 무시 ${untaggedCount})`
-    );
-
-    // 3. 비교 → 변경분만 액션
     const fmtDate = (d) => Utilities.formatDate(d, 'Asia/Seoul', 'yyyy-MM-dd');
-    let created = 0, updated = 0, unchanged = 0;
-    for (let i = 0; i < sheetRows.length; i++) {
-      const row = sheetRows[i];
-      const existing = calById.get(row.id);
-      if (!existing) {
-        const ev = calendar.createAllDayEvent(row.title, row.endDate);
-        ev.setTag(SYNC_TAG_KEY, row.id);
-        created++;
-        log_('syncToCalendar', `create: ${row.title} / ${fmtDate(row.endDate)}`);
-      } else {
-        const titleChanged = existing.getTitle() !== row.title;
-        const dateChanged = fmtDate(existing.getStartTime()) !== fmtDate(row.endDate);
-        if (titleChanged || dateChanged) {
-          const oldTitle = existing.getTitle();
-          const oldDate = fmtDate(existing.getStartTime());
-          if (titleChanged) existing.setTitle(row.title);
-          if (dateChanged) existing.setAllDayDate(row.endDate);
-          updated++;
-          log_(
-            'syncToCalendar',
-            `update: ${oldTitle} / ${oldDate} → ${row.title} / ${fmtDate(row.endDate)}`
-          );
-        } else {
-          unchanged++;
-        }
-        calById.delete(row.id);
+    let updated = 0, unchanged = 0, missing = 0;
+    const updateLog = [];
+    const missingLog = [];
+
+    for (const row of rows) {
+      const ev = matchEventForRow_(index, row.id, row.title);
+      if (!ev) {
+        missing++;
+        missingLog.push(`  - ${row.title} / ${fmtDate(row.endDate)} (시트 ${row.sheetRow}행)`);
+        continue;
       }
+
+      const evDate = fmtDate(ev.getStartTime());
+      const rowDate = fmtDate(row.endDate);
+      if (evDate === rowDate) { unchanged++; continue; }
+
+      // 폭주 가드 — update 시도 직전에 검사
+      if (updated >= CAL_UPDATE_GUARD_MAX) {
+        log_('syncToCalendar', `⚠ 폭주 가드 발동 — update ${CAL_UPDATE_GUARD_MAX}건 초과. 즉시 중단`);
+        log_('syncToCalendar', `이미 처리한 update ${updated}건은 유지. 처리 못한 행은 다음 회차로 미룸`);
+        disableSyncTrigger_();
+        log_('syncToCalendar', `시간 trigger 자동 정지. 원인 점검 후 enableSyncTrigger 수동 호출로 재가동 필요`);
+        return;
+      }
+
+      ev.setAllDayDate(row.endDate);
+      // 라벨 없으면 부착 시도 (다음 회차부터 라벨 매칭으로 더 견고). 실패해도 이름 매칭으로 동작하므로 무시.
+      if (row.id && !ev.getTag(SYNC_TAG_KEY)) {
+        try { ev.setTag(SYNC_TAG_KEY, row.id); } catch (tagErr) { /* 의존 안 함 */ }
+      }
+      updated++;
+      updateLog.push(`  - ${row.title}: ${evDate} → ${rowDate}`);
     }
 
-    // 4. 시트에서 사라진 ID의 이벤트 → 삭제 (tag 있는 것만)
-    let deleted = 0;
-    for (const [id, ev] of calById) {
-      const title = ev.getTitle();
-      const date = fmtDate(ev.getStartTime());
-      ev.deleteEvent();
-      deleted++;
-      log_('syncToCalendar', `delete: ${title} / ${date} (시트에서 사라진 ID ${id})`);
+    log_('syncToCalendar', `완료 — update ${updated}, unchanged ${unchanged}, missing(캘박없음) ${missing}`);
+    if (updated > 0) {
+      log_('syncToCalendar', '날짜 이동된 일정:');
+      updateLog.forEach(l => log_('syncToCalendar', l));
     }
-
-    log_(
-      'syncToCalendar',
-      `완료 요약 — create ${created} / update ${updated} / delete ${deleted} / unchanged ${unchanged}`
-    );
+    if (missing > 0) {
+      log_('syncToCalendar', `⚠ 시트엔 '진행'인데 캘박 없는 작업 ${missing}건 (create 안 함, 사용자 정책):`);
+      missingLog.forEach(l => log_('syncToCalendar', l));
+      log_('syncToCalendar', `→ 필요 시 backfillCalendarDryRun 먼저 확인 후 backfillCalendarApply로 채우세요`);
+    }
   } catch (err) {
     log_('syncToCalendar', `에러: ${err}\n${err.stack || ''}`);
+  }
+}
+
+// ============================================================
+// backfillCalendarDryRun — 1회용. 캘박 없는 '진행' 작업 리스트만 로그.
+// 실제 캘박 변경 없음. backfillCalendarApply 실행 전 무조건 먼저 돌려서 확인.
+// ============================================================
+function backfillCalendarDryRun() {
+  log_('backfillCalendarDryRun', '시작 — 시트의 \'진행\' 행 중 캘박 없는 작업 리스트 (실제 변경 없음)');
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('💛신규·유지보수');
+    if (!sheet) { log_('backfillCalendarDryRun', `'💛신규·유지보수' 시트 없음 — 중단`); return; }
+
+    const calendar = CalendarApp.getCalendarsByName(SCHEDULE_CALENDAR_NAME)[0];
+    if (!calendar) { log_('backfillCalendarDryRun', `캘린더 '${SCHEDULE_CALENDAR_NAME}' 없음 — 중단`); return; }
+
+    const rows = collectActiveProgressRows_(sheet);
+    log_('backfillCalendarDryRun', `시트 수집 — '진행' 상태 ${rows.length}건`);
+
+    const index = buildCalendarIndex_(calendar);
+    log_('backfillCalendarDryRun', `캘린더 수집 — ${index.events.length}건 (tagged ${index.byTag.size}, untagged ${index.untagged})`);
+
+    const fmtDate = (d) => Utilities.formatDate(d, 'Asia/Seoul', 'yyyy-MM-dd');
+    const candidates = [];
+    let existing = 0;
+
+    for (const row of rows) {
+      const ev = matchEventForRow_(index, row.id, row.title);
+      if (ev) { existing++; continue; }
+      candidates.push(row);
+    }
+
+    log_('backfillCalendarDryRun', `결과 — 이미 캘박 있음 ${existing}건, 만들 후보 ${candidates.length}건`);
+    if (candidates.length === 0) {
+      log_('backfillCalendarDryRun', '만들 후보 없음. backfill 불필요 — 작업 완료');
+      return;
+    }
+
+    log_('backfillCalendarDryRun', '만들 후보 리스트:');
+    candidates.forEach((row, i) => {
+      log_('backfillCalendarDryRun', `  ${i + 1}. ${row.title} / ${fmtDate(row.endDate)} (시트 ${row.sheetRow}행)`);
+    });
+
+    if (candidates.length > CAL_BACKFILL_GUARD_MAX) {
+      log_('backfillCalendarDryRun', `⚠ 후보 ${candidates.length}건이 가드(${CAL_BACKFILL_GUARD_MAX}) 초과. backfillCalendarApply 실행 시 자동 중단됨. 시트 확인 또는 가드 임계 조정 필요`);
+    } else {
+      log_('backfillCalendarDryRun', `→ 위 리스트가 OK면 backfillCalendarApply 실행. 실제로 ${candidates.length}건 캘박 생성 + 라벨 부착`);
+    }
+  } catch (err) {
+    log_('backfillCalendarDryRun', `에러: ${err}\n${err.stack || ''}`);
+  }
+}
+
+// ============================================================
+// backfillCalendarApply — 1회용. dry-run 결과대로 일괄 캘박 생성.
+// 가드: 후보 100건 초과 시 즉시 중단 (수동 점검 요구).
+// ============================================================
+function backfillCalendarApply() {
+  log_('backfillCalendarApply', '시작 — 시트의 \'진행\' 행 중 캘박 없는 작업 일괄 생성');
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('💛신규·유지보수');
+    if (!sheet) { log_('backfillCalendarApply', `'💛신규·유지보수' 시트 없음 — 중단`); return; }
+
+    const calendar = CalendarApp.getCalendarsByName(SCHEDULE_CALENDAR_NAME)[0];
+    if (!calendar) { log_('backfillCalendarApply', `캘린더 '${SCHEDULE_CALENDAR_NAME}' 없음 — 중단`); return; }
+
+    const rows = collectActiveProgressRows_(sheet);
+    const index = buildCalendarIndex_(calendar);
+
+    const fmtDate = (d) => Utilities.formatDate(d, 'Asia/Seoul', 'yyyy-MM-dd');
+    const candidates = [];
+
+    for (const row of rows) {
+      const ev = matchEventForRow_(index, row.id, row.title);
+      if (ev) continue;
+      candidates.push(row);
+    }
+
+    log_('backfillCalendarApply', `시트 '진행' ${rows.length}건 중 만들 후보 ${candidates.length}건`);
+
+    if (candidates.length === 0) {
+      log_('backfillCalendarApply', '만들 후보 없음 — 종료');
+      return;
+    }
+
+    if (candidates.length > CAL_BACKFILL_GUARD_MAX) {
+      log_('backfillCalendarApply', `⚠ 후보 ${candidates.length}건이 가드(${CAL_BACKFILL_GUARD_MAX}) 초과 — 중단`);
+      log_('backfillCalendarApply', `시트 확인 또는 코드 상단 CAL_BACKFILL_GUARD_MAX 조정 후 재실행`);
+      return;
+    }
+
+    let created = 0, failed = 0;
+    for (const row of candidates) {
+      try {
+        const ev = calendar.createAllDayEvent(row.title, row.endDate);
+        if (row.id) {
+          try { ev.setTag(SYNC_TAG_KEY, row.id); }
+          catch (tagErr) { log_('backfillCalendarApply', `라벨 부착 실패 (이름 매칭은 동작): ${row.title}`); }
+        }
+        created++;
+        log_('backfillCalendarApply', `  생성 ${created}: ${row.title} / ${fmtDate(row.endDate)}${row.id ? '' : ' (rowId 없음)'}`);
+      } catch (createErr) {
+        failed++;
+        log_('backfillCalendarApply', `  실패: ${row.title} / ${fmtDate(row.endDate)} — ${createErr}`);
+      }
+    }
+
+    log_('backfillCalendarApply', `완료 — 생성 ${created}, 실패 ${failed}`);
+  } catch (err) {
+    log_('backfillCalendarApply', `에러: ${err}\n${err.stack || ''}`);
   }
 }
 
@@ -494,12 +723,8 @@ function parseDate(value) {
 // 역할:
 //   1. 빈 L열 ID 자동 발급 (신규·완료 시트 공통, 감시견)
 //   2. 신규 시트의 K열 상태가 '진행'으로 바뀐 순간 캘린더에 단건 등록
-//      (어떤 이전 상태에서든 — 예정→진행, 대기→진행 둘 다)
-//      v0.2.8 변경: 옛 '미정→대기' 트리거를 '진행 진입' 트리거로 교체.
-//      디자이너 운영상 '진행' 시점이 캘박 의도와 일치.
-//
-// 중복 체크는 시트 L열 UUID(rowId)를 캘린더 이벤트 tag로 매핑해서 판정.
-// 같은 rowId tag 가진 이벤트가 향후 3개월에 있으면 skip (제목·날짜 변경에도 안전).
+//      v0.2.9: 이름+날짜 중복 체크 강화. 같은 제목·같은 날짜 캘박 있으면 무조건 skip.
+//              라벨(rowId) 매칭이 깨져도 폭주 안 일어남.
 //
 // 모든 셀 편집마다 발사되므로 관련 없는 입력은 silent skip.
 // 데이터 영역 + 관련 시트에 진입한 시점부터 로그 시작.
@@ -529,7 +754,7 @@ function onEditTrigger(e) {
       log_('onEditTrigger', `ID 자동 발급 — row=${row}, uuid=${issuedId}`);
     }
 
-    // [캘린더 등록] 신규 시트의 K열이 '진행'으로 진입할 때 (어떤 경로든)
+    // [캘린더 등록] 신규 시트의 K열이 '진행'으로 진입할 때
     if (!isSchedule) return;
     if (col !== 11) return;
     if (e.value !== '진행' || e.oldValue === '진행') {
@@ -575,7 +800,6 @@ function onEditTrigger(e) {
       return;
     }
 
-    // rowId(시트 L열 UUID)를 미리 추출 — 중복 체크와 tag 부착 모두에 사용
     const rowId = String(sheet.getRange(row, 12).getValue() || '').trim();
 
     if (isDuplicateEvent(calendar, rowId, title, endDate)) {
@@ -584,7 +808,10 @@ function onEditTrigger(e) {
     }
 
     const ev = calendar.createAllDayEvent(title, endDate);
-    if (rowId) ev.setTag(SYNC_TAG_KEY, rowId);
+    if (rowId) {
+      try { ev.setTag(SYNC_TAG_KEY, rowId); }
+      catch (tagErr) { log_('onEditTrigger', `라벨 부착 실패 (이름 매칭으로 동작): ${tagErr}`); }
+    }
     log_(
       'onEditTrigger',
       `캘린더 등록 완료 — '${title}' / ${Utilities.formatDate(endDate, 'Asia/Seoul', 'yyyy-MM-dd')}${rowId ? ` (rowId=${rowId})` : ' (rowId 없음 — tag 미부착)'}`
@@ -616,25 +843,24 @@ function assignIdIfNeeded_(sheet, row) {
   return uuid;
 }
 
-// 중복 체크 — rowId tag 우선, 없으면 제목+날짜로 fallback (v0.2.8 강화)
+// 중복 체크 — v0.2.9: 같은 날짜·같은 제목 또는 같은 rowId 라벨 둘 중 하나라도 매칭되면 중복
 //
-// rowId가 있으면 향후 3개월에서 같은 tag 가진 이벤트 검사 →
-//   제목·날짜가 바뀌어도 중복 인식. syncToCalendar와 매핑 일관성 보장.
-// rowId가 없으면 옛 방식(같은 날짜의 같은 제목)으로 fallback.
+// 사고 교훈: 라벨에만 의존하면 setTag/getTag가 깨질 때 폭주.
+// 이름+날짜 매칭을 1차 안전판으로 두면 라벨 깨져도 중복 만들 일 없음.
+// 범위를 같은 날짜로 좁혀서 조회 비용도 최소.
 function isDuplicateEvent(calendar, rowId, title, date) {
-  if (rowId) {
-    const today = new Date();
-    const future = new Date();
-    future.setMonth(future.getMonth() + 3);
-    const events = calendar.getEvents(today, future);
-    return events.some(e => e.getTag(SYNC_TAG_KEY) === rowId);
-  }
-  // fallback — tag 없는 이벤트 호환
   const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
   const end = new Date(date);
   end.setDate(end.getDate() + 1);
+  end.setHours(0, 0, 0, 0);
+
   const events = calendar.getEvents(start, end);
-  return events.some(e => e.getTitle() === title);
+  for (const ev of events) {
+    if (rowId && ev.getTag(SYNC_TAG_KEY) === rowId) return true;
+    if (ev.getTitle() === title) return true;
+  }
+  return false;
 }
 
 // ============================================================
