@@ -7,6 +7,8 @@
 //   syncToCalendar            — 시간 트리거: 시트 '진행' 행 ↔ 캘박 update 전용 sync (v0.2.9 재설계)
 //   backfillCalendarDryRun    — 수동(콘솔 ▶): 캘박 없는 '진행' 작업 리스트 미리보기 (변경 없음)
 //   backfillCalendarApply     — 수동(콘솔 ▶): dry-run 후 일괄 캘박 생성 (1회용)
+//   diagnoseDuplicateRowIds   — 수동(콘솔 ▶): 행 복사로 인한 L열 중복 ID 진단 (변경 없음)
+//   fixDuplicateRowIds        — 수동(콘솔 ▶): 중복 ID 그룹의 두 번째 행부터 새 UUID 부여
 //   enableSyncTrigger         — 수동(콘솔 ▶): syncToCalendar 시간 trigger 등록 (1시간 주기)
 //   sortCompleteSheet         — 수동: 완료 시트 정렬 (마감일 → 광고주 → 비고)
 //   (영업일/TAT/색상 판별 유틸은 위 함수들에서 호출)
@@ -636,9 +638,120 @@ function backfillCalendarDryRun() {
 }
 
 // ============================================================
-// backfillCalendarApply — 1회용. dry-run 결과대로 일괄 캘박 생성.
-// 가드: 후보 100건 초과 시 즉시 중단 (수동 점검 요구).
+// diagnoseDuplicateRowIds — 신규 시트 L열 중복 ID 진단 (변경 없음)
+//
+// 행 복사로 같은 UUID가 여러 행에 박힌 경우 그룹별로 로그 출력.
+// backfill에서 라벨 매칭으로 "이미 있음" 판정되어 후보에서 빠지는 원인 진단용.
 // ============================================================
+function diagnoseDuplicateRowIds() {
+  log_('diagnoseDuplicateRowIds', '시작 — 신규·유지보수 시트 L열 ID 중복 검사 (변경 없음)');
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('💛신규·유지보수');
+    if (!sheet) { log_('diagnoseDuplicateRowIds', `'💛신규·유지보수' 시트 없음 — 중단`); return; }
+
+    const DATA_START_ROW = 10;
+    const ID_COL = 12;
+    const ADV_COL = 5;
+    const NOTE_COL = 10;
+    const STATUS_COL = 11;
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow < DATA_START_ROW) { log_('diagnoseDuplicateRowIds', '데이터 없음'); return; }
+
+    const data = sheet.getRange(DATA_START_ROW, 1, lastRow - DATA_START_ROW + 1, ID_COL).getValues();
+
+    const byId = new Map();
+    for (let i = 0; i < data.length; i++) {
+      const id = String(data[i][ID_COL - 1] || '').trim();
+      if (!id) continue;
+      const entry = {
+        row: DATA_START_ROW + i,
+        advertiser: String(data[i][ADV_COL - 1] || '').trim(),
+        note: String(data[i][NOTE_COL - 1] || '').trim(),
+        status: String(data[i][STATUS_COL - 1] || '').trim(),
+      };
+      if (!byId.has(id)) byId.set(id, []);
+      byId.get(id).push(entry);
+    }
+
+    let dupGroups = 0;
+    let dupRows = 0;
+    for (const [id, entries] of byId) {
+      if (entries.length < 2) continue;
+      dupGroups++;
+      dupRows += entries.length;
+      log_('diagnoseDuplicateRowIds', `중복 ID '${id}' — ${entries.length}개 행:`);
+      for (const e of entries) {
+        log_('diagnoseDuplicateRowIds', `  - 시트 ${e.row}행: ${e.advertiser} / ${e.note} (상태: ${e.status})`);
+      }
+    }
+
+    log_('diagnoseDuplicateRowIds', `결과 — 중복 ID 그룹 ${dupGroups}개, 영향 받은 행 ${dupRows}개`);
+    if (dupGroups > 0) {
+      log_('diagnoseDuplicateRowIds', '→ 행 복사로 ID가 함께 복사된 케이스. fixDuplicateRowIds ▶로 정리 가능');
+    } else {
+      log_('diagnoseDuplicateRowIds', '→ 중복 없음. backfill 부분 누락 원인은 다른 데 있음');
+    }
+  } catch (err) {
+    log_('diagnoseDuplicateRowIds', `에러: ${err}\n${err.stack || ''}`);
+  }
+}
+
+// ============================================================
+// fixDuplicateRowIds — 중복 그룹의 첫 행 제외하고 나머지에 새 UUID 부여
+//
+// 정책: 첫 행은 기존 캘박 라벨과의 연동 유지. 나머지 행은 새 UUID로 분리.
+// 정리 후 backfillCalendarApply 다시 돌리면 새 UUID 행들이 캘박 누락으로 잡혀 생성됨.
+// ============================================================
+function fixDuplicateRowIds() {
+  log_('fixDuplicateRowIds', '시작 — 중복 ID 정리 (첫 행 유지, 나머지에 새 UUID 부여)');
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('💛신규·유지보수');
+    if (!sheet) { log_('fixDuplicateRowIds', `'💛신규·유지보수' 시트 없음 — 중단`); return; }
+
+    const DATA_START_ROW = 10;
+    const ID_COL = 12;
+    const ADV_COL = 5;
+    const NOTE_COL = 10;
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow < DATA_START_ROW) { log_('fixDuplicateRowIds', '데이터 없음'); return; }
+
+    const data = sheet.getRange(DATA_START_ROW, 1, lastRow - DATA_START_ROW + 1, ID_COL).getValues();
+
+    const byId = new Map();
+    for (let i = 0; i < data.length; i++) {
+      const id = String(data[i][ID_COL - 1] || '').trim();
+      if (!id) continue;
+      if (!byId.has(id)) byId.set(id, []);
+      byId.get(id).push({
+        row: DATA_START_ROW + i,
+        advertiser: String(data[i][ADV_COL - 1] || '').trim(),
+        note: String(data[i][NOTE_COL - 1] || '').trim(),
+      });
+    }
+
+    let updated = 0;
+    for (const [id, entries] of byId) {
+      if (entries.length < 2) continue;
+      // 첫 행은 유지, 두 번째부터 새 UUID 부여
+      for (let k = 1; k < entries.length; k++) {
+        const e = entries[k];
+        const newId = Utilities.getUuid();
+        sheet.getRange(e.row, ID_COL).setValue(newId);
+        updated++;
+        log_('fixDuplicateRowIds', `  시트 ${e.row}행 (${e.advertiser} / ${e.note}): ${id} → ${newId}`);
+      }
+    }
+
+    log_('fixDuplicateRowIds', `완료 — ${updated}개 행에 새 UUID 부여`);
+    if (updated > 0) {
+      log_('fixDuplicateRowIds', '→ 다음: backfillCalendarApply ▶로 누락된 캘박 채우기');
+    }
+  } catch (err) {
+    log_('fixDuplicateRowIds', `에러: ${err}\n${err.stack || ''}`);
+  }
+}
 function backfillCalendarApply() {
   log_('backfillCalendarApply', '시작 — 시트의 \'진행\' 행 중 캘박 없는 작업 일괄 생성');
   try {
