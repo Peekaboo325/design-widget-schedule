@@ -869,6 +869,16 @@ function onEditTrigger(e) {
       log_('onEditTrigger', `ID 자동 발급 — row=${row}, uuid=${issuedId}`);
     }
 
+    // [감시견] 행 복사로 인한 L열 ID 중복 자동 해소
+    // 편집된 행의 ID가 시트 내 다른 행과 겹치면 그 행에 새 UUID 부여 (원본 유지)
+    const collision = resolveIdCollisionIfAny_(sheet, row);
+    if (collision) {
+      log_(
+        'onEditTrigger',
+        `ID 중복 자동 해소 — row=${row}, ${collision.oldId} → ${collision.newId} (시트 내 동일 ID ${collision.collisionCount}개)`
+      );
+    }
+
     // [캘린더 등록] 신규 시트의 K열이 '진행'으로 진입할 때
     if (!isSchedule) return;
     if (col !== 11) return;
@@ -934,6 +944,39 @@ function onEditTrigger(e) {
   } catch (err) {
     log_('onEditTrigger', `에러: ${err}\n${err.stack || ''}`);
   }
+}
+
+/**
+ * 행 복사로 인한 L열 ID 중복 자동 해소
+ * - 편집된 행의 ID가 시트 내 다른 데이터 행과 겹치면, 그 행에 새 UUID 부여
+ * - 원본(다른 행)은 기존 ID 유지 → 캘박 라벨 연동 보존
+ * - 충돌 없거나 ID 빈 칸이면 null
+ * - 반환: { oldId, newId, collisionCount } | null
+ */
+function resolveIdCollisionIfAny_(sheet, row) {
+  const ID_COL = 12;
+  const DATA_START_ROW = 10;
+
+  const currentId = String(sheet.getRange(row, ID_COL).getValue() || '').trim();
+  if (!currentId) return null;
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < DATA_START_ROW) return null;
+
+  const idColValues = sheet.getRange(DATA_START_ROW, ID_COL, lastRow - DATA_START_ROW + 1, 1).getValues();
+  let collisionCount = 0;
+  for (let i = 0; i < idColValues.length; i++) {
+    const r = DATA_START_ROW + i;
+    if (r === row) continue;
+    const otherId = String(idColValues[i][0] || '').trim();
+    if (otherId === currentId) collisionCount++;
+  }
+
+  if (collisionCount === 0) return null;
+
+  const newId = Utilities.getUuid();
+  sheet.getRange(row, ID_COL).setValue(newId);
+  return { oldId: currentId, newId: newId, collisionCount: collisionCount };
 }
 
 /**
