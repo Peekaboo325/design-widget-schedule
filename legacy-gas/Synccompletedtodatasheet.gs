@@ -1,7 +1,7 @@
 // ============================================================
 // 💚완료 → IMC 3본부 업무 데이터 자동 이식 스크립트
 // 작성: 2026.04 | syncCompletedToDataSheet()
-// 버전: v2.1.0
+// 버전: v2.2.0
 // 변경(v2.0.0): 주차 계산 로직 전면 제거 (Looker Studio 연동 종료)
 //              - 이식 컬럼 수 19 → 17열로 축소
 // 변경(v2.1.0, 2026.05): L열 ID 신설 대응
@@ -9,6 +9,13 @@
 //              - 데이터 시트 R열에 ID 이관 (lifecycle 추적)
 //              - 중복 체크 키: ID 우선, 없으면 기존 4-field fallback
 //              - 데이터 시트 8000+ 행 일괄 마이그레이션 함수 추가 (배치 처리)
+// 변경(v2.2.0, 2026.06): 중복 체크 키 4-field 단독으로 회귀 — ID 우선 폐기
+//              - 사고 배경: v2.1.0 도입 후 행 복사로 인한 시트 내 ID 중복이 완료 시트로
+//                전파되면 idSet.has(id) 첫 행만 통과 → 묶음 단위로 5월 데이터 로스 발생.
+//              - 4-field 시절엔 비고가 다르면 키도 달라 묶음 행 다 정상 이관됐음.
+//              - 이관은 단방향이라 stable ID 매칭 필요 없음. 중복만 안 들어가면 충분.
+//              - R열 ID는 계속 운반 (lifecycle 추적용 데이터). 중복 체크 키로만 안 씀.
+//              - 회복: 본 코드로 syncCompletedToDataSheet 재실행하면 5월 누락분 자동 보강.
 // ============================================================
 
 // ▶ 설정값 (환경에 맞게 수정 필수)
@@ -127,8 +134,8 @@ function syncCompletedToDataSheet() {
     .getRange(COMPLETED_DATA_START_ROW, 2, lastRow - COMPLETED_DATA_START_ROW + 1, 16)
     .getValues();
 
-  // 기존 업무 데이터 키 세트 (중복 방지) — ID 기반 + 4-field fallback
-  const { idSet, fallbackKeys } = buildExistingKeys(dataSheet);
+  // 기존 업무 데이터 키 세트 (중복 방지) — 광고주+작업유형+비고+완료일
+  const existingKeys = buildExistingKeys(dataSheet);
 
   const newRows = [];
 
@@ -153,14 +160,10 @@ function syncCompletedToDataSheet() {
     const month  = parsedDate.getMonth() + 1;
     const completedDateStr = formatDateKR(parsedDate);
 
-    // 중복 체크: ID 우선 (확정적), ID 없으면 4-field fallback
-    if (id && idSet.has(String(id))) {
-      Logger.log(`⚠️ [중복 스킵 by ID] ${id}`);
-      continue;
-    }
-    const fallbackKey = `${advertiser}|${workType}|${note}|${completedDateStr}`;
-    if (!id && fallbackKeys.has(fallbackKey)) {
-      Logger.log(`⚠️ [중복 스킵 by 4-field] ${fallbackKey}`);
+    // 중복 체크: 4-field (광고주+작업유형+비고+완료일)
+    const key = `${advertiser}|${workType}|${note}|${completedDateStr}`;
+    if (existingKeys.has(key)) {
+      Logger.log(`⚠️ [중복 스킵] ${key}`);
       continue;
     }
 
@@ -192,8 +195,7 @@ function syncCompletedToDataSheet() {
       id || ""          // R: ID (완료 시트에서 운반된 UUID, 없으면 빈 문자열)
     ]);
 
-    if (id) idSet.add(String(id));
-    fallbackKeys.add(fallbackKey);
+    existingKeys.add(key);
   }
 
   if (newRows.length === 0) {
@@ -232,27 +234,25 @@ function setTimeTrigger() {
 // ============================================================
 
 /**
- * 업무 데이터 시트의 기존 행들로 중복 체크용 두 가지 Set 생성
- * - idSet: R열(인덱스 17)의 ID들. 이관된 ID는 stable 식별자
- * - fallbackKeys: 광고주(F=6열) + 작업유형(I=9열) + 비고(O=15열) + 완료일(P=16열)
- *   (ID 없는 기존 행들 호환용)
+ * 업무 데이터 시트의 기존 행들로 중복 체크용 Set 생성
+ * 키: 광고주(F=6열) + 작업유형(I=9열) + 비고(O=15열) + 완료일(P=16열)
+ *
+ * v2.2.0: ID 기반 검사 제거. 사고 회피용 단순화 (헤더 주석 참조).
+ * R열 ID는 데이터로만 운반되고 중복 체크엔 안 씀.
  */
 function buildExistingKeys(dataSheet) {
-  const idSet = new Set();
-  const fallbackKeys = new Set();
+  const existingKeys = new Set();
   const lastRow = dataSheet.getLastRow();
-  if (lastRow < 2) return { idSet, fallbackKeys };
+  if (lastRow < 2) return existingKeys;
 
-  const data = dataSheet.getRange(2, 1, lastRow - 1, 18).getValues(); // 18열 (R열 ID 포함)
+  const data = dataSheet.getRange(2, 1, lastRow - 1, 16).getValues(); // 16열 (P 완료일까지)
   data.forEach(row => {
-    const id = row[17]; // R: ID
-    if (id) idSet.add(String(id));
     const dateVal = row[15]; // P: 완료일
     const dateStr = dateVal instanceof Date ? formatDateKR(dateVal) : String(dateVal);
     const key = `${row[5]}|${row[8]}|${row[14]}|${dateStr}`;
-    fallbackKeys.add(key);
+    existingKeys.add(key);
   });
-  return { idSet, fallbackKeys };
+  return existingKeys;
 }
 
 /**
