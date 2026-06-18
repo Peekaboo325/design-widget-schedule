@@ -111,6 +111,90 @@ const PRICE_TABLE = {
 };
 
 // ============================================================
+// forceMigrateAllCompletedRows — 1회용 강제 이관
+//
+// 완료 시트의 모든 행을 업무 데이터에 그대로 추가. 중복 체크 없음.
+// 빈 행(광고주 또는 작업유형 비어있음)과 날짜 파싱 실패 행만 스킵.
+//
+// 용도: syncCompletedToDataSheet가 4-field 키로 중복 인식해 누락 회복 안 되는 경우,
+//      사용자가 수동으로 업무 데이터 청소 후 통째로 다시 채울 때.
+//
+// ⚠ 주의:
+//   - 이미 업무 데이터에 있는 행도 또 들어감 (중복 검사 X)
+//   - 사전에 업무 데이터 시트에서 이관 대상 기간을 비워두는 게 안전
+//   - 시간 trigger에 절대 걸지 말 것. 수동 ▶ 전용.
+// ============================================================
+function forceMigrateAllCompletedRows() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const completedSheet = ss.getSheetByName(COMPLETED_SHEET_NAME);
+  const dataSS = DATA_SHEET_ID ? SpreadsheetApp.openById(DATA_SHEET_ID) : ss;
+  const dataSheet = dataSS.getSheetByName(DATA_SHEET_NAME);
+
+  if (!completedSheet) { Logger.log("❌ 완료 시트 없음"); return; }
+  if (!dataSheet) { Logger.log("❌ 업무 데이터 시트 없음"); return; }
+
+  const lastRow = completedSheet.getLastRow();
+  if (lastRow < COMPLETED_DATA_START_ROW) { Logger.log("완료 시트 데이터 없음"); return; }
+
+  const sourceData = completedSheet
+    .getRange(COMPLETED_DATA_START_ROW, 2, lastRow - COMPLETED_DATA_START_ROW + 1, 16)
+    .getValues();
+
+  Logger.log(`📊 시작 — 완료 시트 ${sourceData.length}행 중 빈 행/파싱 실패 제외하고 강제 이관`);
+
+  const newRows = [];
+  let skippedEmpty = 0;
+  let skippedDate = 0;
+
+  for (const row of sourceData) {
+    const [type, team, manager, advertiser, worker, onoff, workType, qty, note,
+           status, id, shared, backup, requestDate, shareDate, tat] = row;
+
+    if (!advertiser || !workType) {
+      skippedEmpty++;
+      continue;
+    }
+
+    const parsedDate = parseDateValue(shareDate);
+    if (!parsedDate) {
+      skippedDate++;
+      Logger.log(`⚠️ [날짜 파싱 실패 → 스킵] ${advertiser} / ${workType} / "${shareDate}"`);
+      continue;
+    }
+
+    const year = parsedDate.getFullYear();
+    const month = parsedDate.getMonth() + 1;
+
+    const info = PRICE_TABLE[workType] || null;
+    const price = info !== null ? info.price : "";
+    const score = info !== null ? info.score : "";
+    const qtyPrice = (price !== "" && qty !== "" && qty !== 0) ? qty * price : "";
+    const qtyScore = (score !== "" && qty !== "" && qty !== 0) ? qty * score : "";
+
+    newRows.push([
+      year,
+      `${month}월`,
+      type, team, manager, advertiser, worker, onoff, workType, qty,
+      price, score, qtyPrice, qtyScore,
+      note, parsedDate, tat,
+      id || ""
+    ]);
+  }
+
+  if (newRows.length === 0) {
+    Logger.log("✅ 이식할 데이터 없음 (전부 빈 행 또는 날짜 파싱 실패)");
+    return;
+  }
+
+  const insertStart = dataSheet.getLastRow() + 1;
+  dataSheet.getRange(insertStart, 1, newRows.length, 18).setValues(newRows);
+  Logger.log(
+    `✅ 강제 이식 완료 — ${newRows.length}건 (행 ${insertStart}~${insertStart + newRows.length - 1}), ` +
+    `스킵: 빈 행 ${skippedEmpty}, 날짜 파싱 실패 ${skippedDate}`
+  );
+}
+
+// ============================================================
 // 메인 함수 — 수동 실행 or 시간 기반 트리거로 호출
 // ============================================================
 function syncCompletedToDataSheet() {
