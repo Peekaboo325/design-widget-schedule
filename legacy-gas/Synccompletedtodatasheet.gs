@@ -1,7 +1,7 @@
 // ============================================================
 // 💚완료 → IMC 3본부 업무 데이터 자동 이식 스크립트
 // 작성: 2026.04 | syncCompletedToDataSheet()
-// 버전: v2.2.0
+// 버전: v2.3.0
 // 변경(v2.0.0): 주차 계산 로직 전면 제거 (Looker Studio 연동 종료)
 //              - 이식 컬럼 수 19 → 17열로 축소
 // 변경(v2.1.0, 2026.05): L열 ID 신설 대응
@@ -16,6 +16,10 @@
 //              - 이관은 단방향이라 stable ID 매칭 필요 없음. 중복만 안 들어가면 충분.
 //              - R열 ID는 계속 운반 (lifecycle 추적용 데이터). 중복 체크 키로만 안 씀.
 //              - 회복: 본 코드로 syncCompletedToDataSheet 재실행하면 5월 누락분 자동 보강.
+// 변경(v2.3.0, 2026.06): 중복 체크 키 4-field → 6-field 확장 (작업자·담당자 추가)
+//              - 옛 4-field(광고주+작업유형+비고+완료일)는 같은 비고를 다른 작업자가
+//                같은 날 처리하는 경우 한 건 누락 가능 (드물지만 0% 아님).
+//              - 6-field(+ 작업자 + 담당자)로 충돌 확률 거의 0. 비용 동일.
 // ============================================================
 
 // ▶ 설정값 (환경에 맞게 수정 필수)
@@ -244,8 +248,8 @@ function syncCompletedToDataSheet() {
     const month  = parsedDate.getMonth() + 1;
     const completedDateStr = formatDateKR(parsedDate);
 
-    // 중복 체크: 4-field (광고주+작업유형+비고+완료일)
-    const key = `${advertiser}|${workType}|${note}|${completedDateStr}`;
+    // 중복 체크: 6-field (광고주+작업유형+비고+완료일+작업자+담당자)
+    const key = `${advertiser}|${workType}|${note}|${completedDateStr}|${worker}|${manager}`;
     if (existingKeys.has(key)) {
       Logger.log(`⚠️ [중복 스킵] ${key}`);
       continue;
@@ -319,10 +323,11 @@ function setTimeTrigger() {
 
 /**
  * 업무 데이터 시트의 기존 행들로 중복 체크용 Set 생성
- * 키: 광고주(F=6열) + 작업유형(I=9열) + 비고(O=15열) + 완료일(P=16열)
+ * 키: 광고주(F) + 작업유형(I) + 비고(O) + 완료일(P) + 작업자(G) + 담당자(E)
  *
- * v2.2.0: ID 기반 검사 제거. 사고 회피용 단순화 (헤더 주석 참조).
- * R열 ID는 데이터로만 운반되고 중복 체크엔 안 씀.
+ * v2.3.0: 4-field → 6-field 확장. 같은 비고를 다른 작업자가 같은 날 처리하는
+ *         케이스까지 별개 인식 → 충돌 확률 거의 0.
+ * v2.2.0: ID 기반 검사 제거. R열 ID는 데이터로만 운반.
  */
 function buildExistingKeys(dataSheet) {
   const existingKeys = new Set();
@@ -333,7 +338,8 @@ function buildExistingKeys(dataSheet) {
   data.forEach(row => {
     const dateVal = row[15]; // P: 완료일
     const dateStr = dateVal instanceof Date ? formatDateKR(dateVal) : String(dateVal);
-    const key = `${row[5]}|${row[8]}|${row[14]}|${dateStr}`;
+    // row[5]=F광고주, row[8]=I작업유형, row[14]=O비고, dateStr=P완료일, row[6]=G작업자, row[4]=E담당자
+    const key = `${row[5]}|${row[8]}|${row[14]}|${dateStr}|${row[6]}|${row[4]}`;
     existingKeys.add(key);
   });
   return existingKeys;
