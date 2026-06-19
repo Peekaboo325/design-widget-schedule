@@ -28,6 +28,9 @@ const DATA_SHEET_NAME = "업무데이터"; // 업무 데이터 시트 탭 이름
 const COMPLETED_SHEET_NAME   = "💚완료";
 const COMPLETED_DATA_START_ROW = 10; // 완료 시트 데이터 시작 행
 
+// 정합성 점검 결과 통보용 이메일 (checkSyncIntegrity가 매주 발송)
+const INTEGRITY_NOTIFY_EMAIL = "bsb0325@bydream.co.kr";
+
 // ▶ 단가 / 수치 테이블
 const PRICE_TABLE = {
   "KV(프리미엄)":              { price: 500000,   score: 4    },
@@ -457,4 +460,119 @@ function migrateDataSheetIds() {
 function resetMigrateDataSheetIdsProgress() {
   PropertiesService.getScriptProperties().deleteProperty('migrateDataSheetIds_lastRow');
   Logger.log('✅ 진행 상태 리셋됨. 다음 migrateDataSheetIds 실행은 행 2부터 시작');
+}
+
+// ============================================================
+// checkSyncIntegrity — 이관 정합성 점검 (주 1회 자동)
+//
+// 완료 시트의 모든 활성 행(빈 행·날짜 파싱 실패 제외)을 6-field 키로 만들어
+// 업무 데이터 시트에 대응 행이 있는지 검사. 누락된 행 리스트를 이메일로 발송.
+//
+// 5월 ID 사고처럼 사람이 모르는 사이 데이터 로스가 누적되는 상황을 일주일 안에 발견.
+// trigger 등록은 enableIntegrityCheckTrigger 한 번만 ▶.
+// ============================================================
+function checkSyncIntegrity() {
+  Logger.log('[checkSyncIntegrity] 시작');
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const completedSheet = ss.getSheetByName(COMPLETED_SHEET_NAME);
+  const dataSS = DATA_SHEET_ID ? SpreadsheetApp.openById(DATA_SHEET_ID) : ss;
+  const dataSheet = dataSS.getSheetByName(DATA_SHEET_NAME);
+
+  if (!completedSheet) { Logger.log('[checkSyncIntegrity] 완료 시트 없음 — 중단'); return; }
+  if (!dataSheet)      { Logger.log('[checkSyncIntegrity] 업무 데이터 시트 없음 — 중단'); return; }
+
+  const existingKeys = buildExistingKeys(dataSheet);
+  Logger.log(`[checkSyncIntegrity] 업무 데이터 키 ${existingKeys.size}개 로드`);
+
+  const lastRow = completedSheet.getLastRow();
+  if (lastRow < COMPLETED_DATA_START_ROW) {
+    Logger.log('[checkSyncIntegrity] 완료 시트 데이터 없음 — 종료');
+    return;
+  }
+
+  const sourceData = completedSheet
+    .getRange(COMPLETED_DATA_START_ROW, 2, lastRow - COMPLETED_DATA_START_ROW + 1, 16)
+    .getValues();
+
+  const missing = [];
+  let checked = 0;
+  let skipped = 0;
+
+  for (let i = 0; i < sourceData.length; i++) {
+    const row = sourceData[i];
+    const [type, team, manager, advertiser, worker, onoff, workType, qty, note,
+           status, id, shared, backup, requestDate, shareDate, tat] = row;
+
+    if (!advertiser || !workType) { skipped++; continue; }
+
+    const parsedDate = parseDateValue(shareDate);
+    if (!parsedDate) { skipped++; continue; }
+
+    const completedDateStr = formatDateKR(parsedDate);
+    const key = `${advertiser}|${workType}|${note}|${completedDateStr}|${worker}|${manager}`;
+
+    if (!existingKeys.has(key)) {
+      missing.push({
+        sheetRow: COMPLETED_DATA_START_ROW + i,
+        advertiser, workType, note, worker, manager, completedDateStr,
+      });
+    }
+    checked++;
+  }
+
+  Logger.log(`[checkSyncIntegrity] 검사 ${checked}건, 스킵 ${skipped}건, 누락 ${missing.length}건`);
+
+  const subject = missing.length === 0
+    ? `[디자인팀 위젯] 이관 정합성 OK (${checked}건 정상)`
+    : `[디자인팀 위젯] ⚠ 이관 누락 ${missing.length}건 감지`;
+
+  let body;
+  if (missing.length === 0) {
+    body = `이번 주 정합성 검사 결과 정상입니다.\n\n`
+         + `검사 대상: 완료 시트 ${checked}건\n`
+         + `누락: 0건\n\n`
+         + `— GAS 자동 발송`;
+  } else {
+    body = `완료 시트엔 있는데 업무 데이터에 안 들어간 행이 ${missing.length}건 발견됐어요.\n\n`
+         + `검사 대상: 완료 시트 ${checked}건\n`
+         + `누락: ${missing.length}건\n\n`
+         + `[누락 리스트]\n`;
+    missing.forEach((m, idx) => {
+      body += `${idx + 1}. 완료 시트 ${m.sheetRow}행\n`;
+      body += `   광고주: ${m.advertiser} / 작업유형: ${m.workType} / 비고: ${m.note}\n`;
+      body += `   작업자: ${m.worker} / 담당자: ${m.manager} / 완료일: ${m.completedDateStr}\n\n`;
+    });
+    body += `[복구 방법]\n`
+         + `GAS 콘솔에서 syncCompletedToDataSheet ▶ 실행하면 누락분 자동 이관됩니다.\n`
+         + `(6-field 키로 검사하니 위 행들이 신규로 인식되어 업무 데이터에 들어감)\n\n`
+         + `— GAS 자동 발송`;
+  }
+
+  try {
+    MailApp.sendEmail(INTEGRITY_NOTIFY_EMAIL, subject, body);
+    Logger.log(`[checkSyncIntegrity] 이메일 발송 완료 → ${INTEGRITY_NOTIFY_EMAIL}`);
+  } catch (err) {
+    Logger.log(`[checkSyncIntegrity] 이메일 발송 실패: ${err}`);
+  }
+}
+
+// ============================================================
+// enableIntegrityCheckTrigger — 매주 월요일 오전 9시 자동 점검 등록
+// 한 번만 ▶ 누르면 됨. 기존 trigger 있으면 중복 생성 안 함.
+// ============================================================
+function enableIntegrityCheckTrigger() {
+  const triggers = ScriptApp.getProjectTriggers();
+  for (const t of triggers) {
+    if (t.getHandlerFunction() === 'checkSyncIntegrity' && t.getEventType() === ScriptApp.EventType.CLOCK) {
+      Logger.log('[enableIntegrityCheckTrigger] 기존 trigger 있음 — 추가 등록 안 함');
+      return;
+    }
+  }
+  ScriptApp.newTrigger('checkSyncIntegrity')
+    .timeBased()
+    .onWeekDay(ScriptApp.WeekDay.MONDAY)
+    .atHour(9)
+    .create();
+  Logger.log('[enableIntegrityCheckTrigger] 등록 완료 — 매주 월요일 오전 9시 checkSyncIntegrity 실행');
 }
