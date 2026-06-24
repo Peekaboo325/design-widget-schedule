@@ -7,7 +7,8 @@ import {
   Tray,
   nativeImage,
   net,
-  screen
+  screen,
+  session
 } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
@@ -659,6 +660,7 @@ ipcMain.handle('api:post', async (_event, body) => {
   if (!ALLOWED_POST_ACTIONS.has(body.action)) {
     return { ok: false, error: 'invalid action', code: 'INVALID' }
   }
+  stamp(`api:post start action=${body.action}`)
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), API_TIMEOUT_MS)
   inflightPostCount++
@@ -691,8 +693,11 @@ ipcMain.handle('api:post', async (_event, body) => {
         code: data.code || 'UNKNOWN'
       }
     }
+    stamp(`api:post ok action=${body.action}`)
     return { ok: true, data }
   } catch (err) {
+    // [v0.2.10 진단] api:get과 동일 — 원본 에러 자세히 기록
+    stamp(`api:post FAIL action=${body.action} name=${err?.name || '?'} code=${err?.code || '?'} msg=${err?.message || err}`)
     return { ok: false, error: friendlyNetworkError(err), code: 'NETWORK' }
   } finally {
     clearTimeout(timer)
@@ -710,6 +715,7 @@ ipcMain.handle('api:get', async (_event, params) => {
   }
   const search = new URLSearchParams(params).toString()
   const url = `${GAS_BASE}?${search}`
+  stamp(`api:get start type=${params.type || '?'}`)
 
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), API_TIMEOUT_MS)
@@ -720,6 +726,7 @@ ipcMain.handle('api:get', async (_event, params) => {
       redirect: 'follow',
       signal: controller.signal
     })
+    stamp(`api:get response status=${res.status} ct=${res.headers.get('content-type') || ''}`)
     if (!res.ok) {
       return { ok: false, error: `HTTP ${res.status}`, code: 'HTTP' }
     }
@@ -733,8 +740,11 @@ ipcMain.handle('api:get', async (_event, params) => {
       }
     }
     const data = await res.json()
+    stamp(`api:get ok type=${params.type || '?'}`)
     return { ok: true, data }
   } catch (err) {
+    // [v0.2.10 진단] 원본 에러 자세히 기록 — friendlyNetworkError로 묻혀 사라지던 실패 원인 추적용
+    stamp(`api:get FAIL type=${params.type || '?'} name=${err?.name || '?'} code=${err?.code || '?'} msg=${err?.message || err}`)
     return { ok: false, error: friendlyNetworkError(err), code: 'NETWORK' }
   } finally {
     clearTimeout(timer)
@@ -760,6 +770,18 @@ if (!gotSingleInstanceLock) {
   stamp('about to app.whenReady')
   app.whenReady().then(() => {
     stamp('app.whenReady resolved')
+    stamp(`app version: ${app.getVersion()}`)
+
+    // [v0.2.10 진단] 시스템 프록시(자동 감지/PAC 포함) 명시 적용 + 결과 stamp.
+    // net.fetch는 default session의 proxy 설정을 따름. mode:'system'으로 OS 시스템 프록시 자동 적용.
+    try {
+      session.defaultSession.setProxy({ mode: 'system' })
+        .then(() => stamp('proxy: setProxy({mode:"system"}) ok'))
+        .catch((err) => stamp(`proxy: setProxy failed: ${err?.message || err}`))
+    } catch (err) {
+      stamp(`proxy: setProxy threw: ${err?.message || err}`)
+    }
+
     // 저장된 자동 실행 설정을 OS에 적용 (앱 시작 때마다 동기화)
     applyLaunchOnBoot(store.get('launchOnBoot'))
     stamp('applyLaunchOnBoot done')
