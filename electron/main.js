@@ -6,6 +6,7 @@ import {
   Notification,
   Tray,
   nativeImage,
+  net,
   screen
 } from 'electron'
 import { fileURLToPath } from 'node:url'
@@ -662,7 +663,9 @@ ipcMain.handle('api:post', async (_event, body) => {
   const timer = setTimeout(() => controller.abort(), API_TIMEOUT_MS)
   inflightPostCount++
   try {
-    const res = await fetch(GAS_BASE, {
+    // net.fetch: 크로미움 네트워크 스택 경유 → 윈도우 시스템 프록시(자동 구성 포함) 자동 적용.
+    // Node 기본 fetch는 시스템 프록시를 안 타서 프록시 뒤 PC에서 GAS 도달 실패 (E01). (2026-06 사고)
+    const res = await net.fetch(GAS_BASE, {
       method: 'POST',
       // GAS Apps Script는 application/json POST 시 e.postData.contents에 본문 전달
       // CORS preflight 회피를 위해 text/plain으로 보냄 (main 프로세스라 어차피 CORS 무관하지만 GAS 호환)
@@ -711,7 +714,8 @@ ipcMain.handle('api:get', async (_event, params) => {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), API_TIMEOUT_MS)
   try {
-    const res = await fetch(url, {
+    // net.fetch: 윈도우 시스템 프록시(자동 구성 포함) 자동 적용 — 위 POST 핸들러 주석 참조.
+    const res = await net.fetch(url, {
       method: 'GET',
       redirect: 'follow',
       signal: controller.signal
