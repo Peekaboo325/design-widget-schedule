@@ -1,7 +1,7 @@
 # HANDOFF.md — design-widget-schedule
 
 > 새 대화방에서 이 파일을 통째로 컨텍스트로 주면 AI가 현재 상태를 빠르게 흡수합니다.
-> **최신 상태 기준**: v0.2.8 (2026-05-25)
+> **최신 상태 기준**: 위젯 v0.2.10 / GAS Scheduler.gs v0.3.1 (2026-08-04)
 
 ---
 
@@ -29,7 +29,8 @@
 ## 프로젝트 개요
 - **레포**: `Peekaboo325/design-widget-schedule` (public, 코드 + 릴리스 통합)
 - **스택**: Electron 33 + React 18 + Vite (electron-vite) + electron-builder + **electron-updater**
-- **버전**: **v0.2.8** (K열 상태 운영 의미 정비: '미정' → '예정' + 캘박 트리거 '진행 진입' + 중복 체크 rowId 강화)
+- **버전**: **위젯 v0.2.10** (프록시 환경 GAS 도달 실패 수정 — `net.fetch` + `setProxy(system)` + 네트워크 진단 로그)
+- **GAS 버전**: `Scheduler.gs` v0.3.1 (캘박 메일제목 기반 재설계 + TAT 계산 행 수정) / `Synccompletedtodatasheet.gs` v2.3.0 (중복 키 6-field)
 - **빌드/실행**:
   - dev: `npm run dev`
   - macOS dev launcher: `start-mac.command` 더블클릭 (자동 git pull + npm install + dev)
@@ -104,7 +105,7 @@ design-widget-schedule/
 
 ---
 
-## 현재 동작 (v0.2.8)
+## 현재 동작 (v0.2.10)
 
 ### 위젯 셸
 - frameless + transparent + alwaysOnTop
@@ -132,6 +133,17 @@ design-widget-schedule/
 - **한계 (AUDIT 1-3, v0.2.4까지)**: 위젯 안 끄면 영원히 안 깔림
 - **v0.2.5에서 한계 해소**: 단 v0.2.5 자체는 옛 "종료 시 설치" 방식으로 한 번 깔려야 → 그 후 v0.2.6부터 효과
 - **첫 마이그레이션 시점 처리**: v0.2.4까지 위젯이 옛 레포(`design-widget-releases`)를 보고 있으므로 v0.2.5는 본인이 한 번 수동 .exe 배포 (디자인팀 5명에게 메신저로 전달)
+
+### 네트워크 계층 (v0.2.9 / v0.2.10)
+- **GAS 호출은 `net.fetch`** (`electron/main.js`의 `api:get` / `api:post`)
+  - Node 기본 `fetch`는 윈도우 시스템 프록시를 안 탐 → 회사 자동 프록시(PAC) 뒤 PC에서 GAS 도달 실패, E01 "네트워크 연결을 확인해주세요"만 뜸
+  - 크롬으로 GAS URL을 직접 열면 정상인데 위젯만 실패 = 이 증상의 지문
+  - `net.fetch`는 크로미움 네트워크 스택 경유라 브라우저와 동일하게 프록시 적용
+- **`session.defaultSession.setProxy({ mode: 'system' })`** 를 `app.whenReady`에서 명시 호출 (v0.2.10)
+  - `net.fetch`만으로는 PAC 자동 감지가 누락되는 환경이 있어 명시 활성화 필요. **실제로 이 한 줄이 막혀 있던 팀원 PC를 풀어줌**
+- **네트워크 진단 로그** (v0.2.10): `api:get` / `api:post`의 진입·응답 status·성공·실패를 `~/widget-debug.log`에 stamp. catch에서 `err.name / err.code / err.message` 원본 기록
+  - 그전에는 `friendlyNetworkError`가 원인을 뭉개서 로그에 실패 흔적이 아예 안 남았음
+- 시작 시 `app.getVersion()` stamp → 그 PC에 실제로 깔린 버전을 로그 첫 줄로 확인 가능
 
 ### S 모드 (CompactWidget — 200×80)
 - 진짜 컴팩트 가로형 단일 카드 — 전체 그라데이션 한 덩어리
@@ -264,6 +276,12 @@ design-widget-schedule/
 
 **업무 데이터 시트** (legacy-gas 동기화 대상)
 - Q열 헤더 `TAT` (기존 "소요일"에서 개명) / R열 `ID` 신설
+- **중복 체크 키 = 6-field** (광고주 + 작업유형 + 비고 + 완료일 + 작업자 + 담당자). v2.3.0
+  - v2.1.0에서 ID 우선 판정으로 갔다가 **행 복사로 생긴 시트 내 중복 UUID가 완료 시트로 전파 → 묶음 단위 데이터 로스** (5월분 사고). ID 판정 폐기하고 field 키로 회귀 후 확장
+  - 이관은 단방향이라 stable ID 매칭이 애초에 불필요. R열 ID는 lifecycle 추적용으로 운반만
+- `checkSyncIntegrity` — **매주 월 09시** 완료 시트 ↔ 업무 데이터를 6-field로 대조, 누락분을 `bsb0325@bydream.co.kr`로 메일 통보 (`enableIntegrityCheckTrigger` ▶로 등록)
+  - 5월 사고가 한 달 묻혀 있었던 게 진짜 문제였음. 로스를 일주일 안에 발견하는 안전망
+- `forceMigrateAllCompletedRows` — 중복 체크 없이 완료 시트 전체를 강제 이관하는 1회용. **시간 트리거 금지, 수동 ▶ 전용**
 
 ### Const namespace
 - `WIDGET_` prefix로 다른 .gs 파일(`legacy-gas/Scheduler.gs` 등)과 격리
@@ -298,9 +316,38 @@ design-widget-schedule/
 - 액세스 권한: "모든 사용자" (익명 fetch 필요)
 
 ### legacy-gas/ (위젯과 별개 GAS 프로젝트 — 시트 자동화)
-- `Scheduler.gs`: 행 이동·정렬·휴일 처리
+- `Scheduler.gs`: 행 이동·캘박 동기화·정렬·휴일 처리
 - `Synccompletedtodatasheet.gs`: 💚완료 → 업무 데이터 시트 동기화 (ID 컬럼 전파 포함)
-- v0.2.4에서 함께 업데이트됨. `dashboard-api.gs`는 정리됨(삭제)
+- `dashboard-api.gs`는 정리됨(삭제)
+
+#### Scheduler.gs 함수 맵 (v0.3.1)
+| 함수 | 호출 경로 | 역할 |
+|---|---|---|
+| `onEdit` | **간이 트리거** (등록·승인 불필요) | 아래 둘을 호출. 설치형 트리거 사망 대비 경로 |
+| `moveRowOnCheck` | onEdit / 수동 배치 | M열 공유 체크 → 💚완료 이관 + TAT 계산 + 원본 행 삭제 |
+| `onEditTrigger` | onEdit | L열 ID 자동 발급 + 행 복사 중복 ID 해소 (**위젯용. 캘박 안 건드림**) |
+| `processCheckedRowsNow` | **시간 트리거 5분** / 수동 ▶ | M열 TRUE 행 일괄 이관. onEdit이 놓친 것 쓸어담기 |
+| `enableAutoMoveTrigger` / `disableAutoMoveTrigger` | 수동 ▶ | 위 5분 트리거 등록·해제 |
+| `syncToCalendar` | 시간 트리거 1시간 | 메일제목 기반 캘박 create + update |
+| `enableSyncTrigger` / `disableSyncTrigger_` | 수동 ▶ / 가드 자동 | 캘박 시간 트리거 등록·해제 |
+| `backfillCalendarDryRun` / `backfillCalendarApply` | 수동 ▶ | 캘박 초기 일괄 생성 (dry-run 먼저) |
+| `wipeTaggedEventsDryRun` / `wipeTaggedEventsApply` | 수동 ▶ | 전환용. 옛 태그(rowId) 캘박 삭제, 개인 일정 보존 |
+| `diagnoseDuplicateRowIds` / `fixDuplicateRowIds` | 수동 ▶ | 행 복사로 생긴 L열 중복 UUID 진단·정리 |
+| `pingOnEdit` / `whichSpreadsheetAmIBoundTo` | 진단용 | 트리거 생사 확인 / 바인딩된 시트 확인 |
+| `sortCompleteSheet` | 수동 ▶ | 완료 시트 정렬 |
+
+#### 캘박 동기화 — 메일제목 기반 (v0.3.0 재설계, 2026-06)
+- **식별 기준 = J열 셀의 '메모'(팀원이 적어둔 요청 메일 제목).** UUID·K열 상태 안 씀
+  - 전환 이유: 사람이 셀을 복사·드래그·일괄수정하는 스타일이 ID/상태 기반 로직과 근본적으로 안 맞아 중복·누락이 반복됨
+  - 메일 제목은 요청 1건당 고유 → 행을 복사/이동/수정해도 같은 제목이면 캘박 1개로 수렴
+- **대상**: J열 메모 있음 + 마감일(핑크 우선 → 빨강) 색칠됨. **K열 상태 무관** (예정·대기·진행 전부)
+- **제목**: J열 메모 내용 그대로
+- **생성 경로는 `syncToCalendar` 단독** (1시간 사이클). `onEditTrigger`의 캘박 등록은 폐기
+- **delete 자동화 0** — 사람이 캘린더 앱에서 직접만. 시트에서 행이 사라져도 캘박은 남고 마감일 지나면 자연 소멸
+- **중복 거름**: 시트 내 같은 제목 여러 행 → 첫 행만. 캘린더에 같은 제목 있으면 스킵
+- **폭주 가드**: 한 회 create 50건 초과 시 abort + 시간 트리거 자동 정지
+- **숙명적 한계**: 메일 제목을 나중에 수정하면 새 제목으로 캘박이 하나 더 생기고 옛 것은 고아로 잔존
+- **용도**: AE(타 부서)가 디자인팀 마감일정만 보는 공유 캘린더. 원천 데이터·팀 운영 세부는 비공개
 
 ---
 
@@ -357,10 +404,13 @@ design-widget-schedule/
 
 ## 다음 단계
 
-### 1순위 — 운영 안정화 관찰
-- v0.2.8 자동 업데이트로 본인 + 팀원 5명 모두 갱신 안착 확인 (트레이 메뉴 버전 표시로 점검)
-- 새 K열 상태 흐름('예정 → 대기 → 진행 → 완료') 운영 정착도. 디자이너 6명이 의미 재정의 적응
-- 캘박 트리거('진행' 진입) 누락·중복 사례 모니터링
+### 1순위 — 운영 안정화 관찰 (2026-08 기준)
+- **공유 체크 이관** — 간이 트리거 `onEdit` + 5분 시간 트리거 이중 경로가 안착하는지. 누락·중복 사례 모니터링
+- **캘박 메일제목 기반 전환** — 예정·대기 단계까지 전부 캘박에 뜨는 것이 AE 공유 범위로 적절한지 운영 확인
+  - 옛 방식은 '진행'만 등록했음. 전환 후 이벤트 수가 늘어남
+- 메일 제목 수정 시 남는 고아 캘박이 실제로 얼마나 쌓이는지 (숙명적 한계라 수동 정리 필요)
+- `checkSyncIntegrity` 주간 메일이 실제로 오는지 + 누락 0건 유지되는지
+- v0.2.10 자동 업데이트로 팀원 6명 갱신 안착 확인 (트레이 메뉴 버전 표시로 점검)
 - 옛 `design-widget-releases` 레포는 모두 새 레포로 옮겨온 게 확인되면 archive
 
 ### 2순위 — AUDIT.md 잔여 항목 + 알려진 이슈
@@ -368,6 +418,7 @@ design-widget-schedule/
 - 1-2: 시트 구조 변경 시 위젯 어긋남 → 사용자 통제 정책으로 사실상 봉인
 - 1-3: 자동 업데이트 미적용 → v0.2.5의 즉시 설치 로직으로 근본 해소 (v0.2.6+ 실측 검증 완료)
 - **위젯 자동 hide (알려진 이슈 섹션 참조)**: 운영 영향 작아 보류. 진단 로그 추가 시 trigger 식별 가능
+- **설치형 onEdit 트리거 복구 여부**: 현재 간이 트리거로 우회 중이라 급하지 않음 (알려진 이슈 참조)
 
 ### 3순위 — macOS packaging 재시도 (필요 시)
 - Electron 30 LTS 다운그레이드 또는 code signing ($99/년)
@@ -375,21 +426,50 @@ design-widget-schedule/
 
 ---
 
+## 종료된 사고 (재발 방지용 기록)
+
+### ✅ 캘린더 폭주 사고 (2026-06) — 해결
+- **증상**: 공유 캘린더에 같은 이벤트가 한 날짜에 1000개+, 전체 약 4500건 누적.
+- **원인**: 증분 sync가 `setTag`/`getTag`(rowId 라벨) 매칭에만 의존 → 라벨이 깨지면 매시간 신규 create 누적. 옛 destructive sync가 갖고 있던 "자연 정리" 효과가 사라지면서 안전판 0.
+- **수습**: `wipeAllBatch`로 4500건 비움. 캘린더 일일 할당량에 걸려 며칠 소요 — **텀을 두고 나눠 실행**해서 통과.
+- **재설계**: 라벨 의존 폐기 → 이름 기반 → 최종적으로 **메일제목(J열 메모) 기반**으로 전환 (v0.3.0).
+- **교훈**: 라벨(hidden tag)은 깨질 수 있고, 깨지면 폭주로 직결된다. 사람이 눈으로 보는 값(제목)을 기준으로 삼는 편이 훨씬 견고하다.
+
+### ✅ 업무 데이터 5월분 로스 (2026-06) — 해결
+- **증상**: 4월 데이터는 깨끗한데 5월분에 오차. 업무 데이터 시트에 들어갔어야 할 행이 통째로 누락.
+- **원인**: v2.1.0에서 이관 중복 체크를 ID 우선으로 바꿈 → **행 복사로 생긴 시트 내 중복 UUID**가 완료 시트로 전파 → `idSet.has(id)`에서 묶음의 첫 행만 통과하고 나머지는 "중복 스킵". 옛 field 키 시절엔 비고가 달라 전부 정상 이관되던 케이스.
+- **수습**: 6-field 키로 전환 후 재실행 + `forceMigrateAllCompletedRows`로 잔여분 강제 이관.
+- **재발 방지**: `checkSyncIntegrity` 주간 메일 알림 도입 (로스를 한 달이 아니라 일주일 안에 발견).
+- **교훈**: 단방향 이관에 stable ID 매칭은 애초에 불필요했다. 사람이 행을 복사하는 환경에서 UUID는 고유하지 않다.
+
+### ✅ 프록시 뒤 PC에서 위젯만 GAS 도달 실패 (2026-08) — 해결
+- **증상**: 팀원 1명만 팀원 목록·스케줄 로딩 실패, E01. 재설치해도 동일. **크롬으로 GAS URL 직접 열면 정상**.
+- **원인**: Node 기본 `fetch`가 윈도우 시스템 프록시(PAC)를 안 탐.
+- **해결**: `net.fetch` 전환(v0.2.9) → 그래도 안 풀려서 `setProxy({mode:'system'})` 명시 추가(v0.2.10)에서 해소.
+- **교훈**: "브라우저는 되는데 앱만 안 된다"는 프록시 계층 지문. 또 진단 로그가 없으면 원인이 통째로 묻힌다 — v0.2.10에서 네트워크 진단 로그를 넣고서야 판단 가능해짐.
+
+### ✅ moveRowOnCheck 8분 행 → 트리거 자동 비활성화 (2026-08) — 해결
+- **증상**: M열 공유 체크가 무반응. **실행 기록조차 안 남음.** 트리거를 지웠다 다시 만들어도 동일.
+- **원인**: `countBusinessDays`가 요청일~완료일을 하루씩 순회하며 매번 `getKoreanHolidays` 호출 → 캐시가 비고 캘린더 할당량이 소진된 시간대엔 날짜 수만큼 캘린더 재조회 → 8분 실행 → `DEADLINE_EXCEEDED` 강제 종료. 반복 실패로 구글이 트리거를 자동 비활성화.
+- **"오전엔 되고 오후엔 먹통"** 패턴이 캘린더 일일 할당량 소진 시점과 일치했던 게 결정적 단서.
+- **해결**: 휴일 조회를 실행 1회 범위 메모로 접어 연도당 1회 보장 + 실패해도 throw 없이 주말만 제외 + 기간 상한 400일 (v0.3.1).
+- **교훈**: 구글의 "Summary of failures" 알림 메일에 실행 시간과 에러 코드가 다 찍혀 있다. **먹통일 땐 실행 기록보다 이 메일을 먼저 볼 것.**
+
+---
+
 ## 알려진 이슈 (보류)
 
-### ⚠ 캘린더 폭주 사고 (2026-06, 현재 진행 중)
-- **증상**: '디자인팀 업무 스케줄러' 캘린더에 같은 이벤트가 한 날짜에 1000개+ 누적. 전체 약 4500건 폭주 확인.
-- **추정 원인 (미확정)**: `syncToCalendar`의 자기 강화 루프 가능성.
-  - 옛 destructive sync ("향후 3개월 다 지우고 다시 만들기") → 증분 sync (id 기반 변경분만) 전환 시점에 옛 destructive의 "자연 정리" 효과 소실.
-  - id 매칭이 어떤 이유로 실패하면 매시간 시간 trigger 실행마다 시트 행 수만큼 새로 create 누적 → 캘린더 비대 → `getEvents` 응답 불안정 → 매칭 더 실패 → 더 폭주.
-  - `wipeAll` 수동 정리 후 잔존 일부 + 새 sync 충돌도 누적 기여 가능.
-- **현재 대응**:
-  - `syncToCalendar` 시간 trigger 일시 중지 권장
-  - `wipeAllBatch` 등 1회용 wipe 함수로 캘린더 비우는 중 (burst limit 페이스 ~180건/실행, 5분 trigger 자동 반복)
-- **다음 작업 필요**:
-  - 자기 강화 폭주 안전망 코드 추가 (예: `create` 카운트가 시트 활성 행 수의 N배 초과 시 abort + 진단 로그 + 자동 trigger 중지)
-  - 또는 syncToCalendar 자체 재설계 검토 (옛 destructive 회귀 / 더 보수적 매칭 / 다른 패턴)
-  - 캘린더 비운 후 안전망 박힌 코드로 정상 sync 한 번 + 며칠 관찰 후 시간 trigger 재등록
+### 설치형 onEdit 트리거 사망 (2026-08, 우회 중)
+- **증상**: 설치형 onEdit 트리거가 전부 발사되지 않음. 진단용 최소 함수 `pingOnEdit`을 트리거로 걸어도 무반응.
+- **판별 근거**: `doGet`(웹앱)은 정상 동작 → 스크립트 코드·시트 바인딩·권한은 멀쩡. **트리거 실행 계층만 한정 차단**.
+  - 웹앱과 트리거는 실행 경로·할당량·인증이 전부 별개. 로그의 "유형" 열로 구분됨 (`웹 앱` vs `시간 기반`/`실행`)
+- **추정 원인**: 설치형 트리거의 저장된 인증이 끊김. (할당량 소진 가설은 **간이 트리거가 정상 동작**하는 것으로 배제됨)
+- **현재 대응 — 3중 경로 확보**:
+  1. **간이 트리거 `onEdit`** (함수명만 맞으면 자동. 등록·승인 불필요) ← 실제로 이걸로 복구됨
+  2. **5분 시간 트리거** `processCheckedRowsNow` — 간이 트리거가 놓친 것 쓸어담기
+  3. **수동 ▶** `processCheckedRowsNow` — 최후 수단
+- **왜 2번을 같이 켜두나**: 간이 트리거도 **드래그로 여러 셀 채우기·붙여넣기**에서는 안 잡히거나 값을 못 넘긴다. 체크박스를 여러 개 드래그로 켜면 누락됨. 시간 사이클이 이걸 커버.
+- **중복 이관 걱정 없음**: `moveRowOnCheck`가 lock 획득 후 M열 TRUE를 재확인하므로 경로가 겹쳐도 안전.
 
 ### 위젯이 한참 안 만지면 자동으로 화면에서 사라짐 (트레이는 살아있음)
 - **증상**: alwaysOnTop ON 상태에서도 일정 시간 inactive 후 위젯 창이 hide.
@@ -445,10 +525,19 @@ design-widget-schedule/
 - **v0.2.8 후속 GAS 패치 (위젯 빌드 없음)**: `moveRowOnCheck` race 방어 — lock 대기 중 인접 행 deleteRow로 시트가 시프트되면 `e.range.getRow()`가 다른 행을 가리켜 잘못된 행이 완료 시트로 이관되던 사고 차단. lock 획득 후 M열 = TRUE 재확인 + 시프트 감지 시 `findFirstSharedRow_`로 진짜 처리 대상 행 재탐색. (광고주+비고 비슷한 두 작업이 인접 행일 때 발현, 실 사고 보고 후 패치) + `moveRowOnCheck` 요청일 추출을 좌측 첫 빨강 → **우측 마지막 빨강**으로 변경 (행 복사 잔존 안전장치, 빨강 2개+ 감지 시 ⚠ 로그)
 - **v0.2.8 GAS 확장 — 종속 드롭다운 (도입 후 폐기)**: 신규·유지보수 시트의 C(팀) ↔ D(담당자) ↔ E(광고주) 동적 Data Validation을 GAS onEdit으로 구현했으나, **GAS onEdit의 1~3초 latency가 디자이너 자연스러운 입력 속도를 못 따라와서 필터링이 실효성 없음** → 운영 검증 후 폐기. 본질적 한계: 시트 셀 직접 입력 + 시트 구조 변경 없음 + 즉시 필터링은 Sheets 플랫폼상 불가능 (Sheets는 종속 드롭다운 미지원, INDIRECT를 Data Validation source에 못 박음, GAS onEdit latency는 Google 백엔드 책임). 즉시성 원하면 HTML 사이드바·위젯 등 입력 환경 변경 필요. 본인 운영 결정: 폐기. 관련 코드(getMasterData_, handleCascadingDropdown_, initCascadingDropdowns, setDropdown_ + 모듈 상수 + onEditTrigger 호출 + 마스터 데이터 캐시) 전부 제거. 마스터 데이터 시트 자체는 위젯·대시보드 무관이라 그대로 둠.
 
+- **v0.2.9** (`f35193c`, `d23a89e`): **프록시 뒤 PC의 GAS 도달 실패 수정** — `electron/main.js`의 GAS 호출을 Node 기본 `fetch` → **`net.fetch`**로 교체. Node fetch가 윈도우 시스템 프록시를 안 타서 회사 자동 프록시(PAC) 환경의 팀원 1명만 E01로 완전 차단돼 있던 문제. (이 버전만으론 미해소 → v0.2.10에서 해결)
+- **v0.2.10** (`a65f68d`): **`session.defaultSession.setProxy({mode:'system'})` 명시 호출 + 네트워크 진단 로그 전수 보강.** `net.fetch`만으로는 PAC 자동 감지가 누락되는 환경이 있었고, **이 한 줄이 실제로 막혀 있던 PC를 풀어줌**. 더불어 `api:get`/`api:post`의 진입·응답 status·성공·실패와 `err.name/code/message` 원본을 `~/widget-debug.log`에 stamp (그전엔 `friendlyNetworkError`가 원인을 뭉개서 실패 흔적이 아예 안 남았음) + 시작 시 `app.getVersion()` stamp
+- **GAS `Synccompletedtodatasheet.gs` v2.2.0 → v2.3.0** (`a81a5bd`, `2ef5122`, `84c515a`, `c8f912c`): **이관 중복 체크 키를 ID 우선 → field 키로 회귀 후 6-field로 확장** (광고주+작업유형+비고+완료일+**작업자+담당자**). v2.1.0의 ID 판정이 행 복사발 중복 UUID를 만나 묶음 단위로 5월 데이터를 날린 사고 수습. + `forceMigrateAllCompletedRows`(중복 체크 없는 1회용 강제 이관) + **`checkSyncIntegrity` 주간 정합성 점검 메일**(매주 월 09시, 누락분을 메일로 통보) + `enableIntegrityCheckTrigger`
+- **GAS `Scheduler.gs` v0.3.0** (`5a63926`): **캘박 동기화를 메일제목(J열 셀 메모) 기반으로 전면 재설계.** 식별 기준에서 UUID·K열 상태를 전부 걷어냄 — 사람이 셀을 복사·드래그·일괄수정하는 스타일과 ID/상태 기반 로직이 근본적으로 안 맞아 중복·누락이 반복됐기 때문. 대상은 'J열 메모 있음 + 마감일 색칠됨'(상태 무관), 제목은 메모 그대로, 생성 경로는 `syncToCalendar` 단독(1시간). `onEditTrigger`의 캘박 등록 폐기 + `collectCalendarRows_`/`buildCalendarIndexByTitle_` 신설 + 전환용 `wipeTaggedEventsDryRun/Apply`(옛 태그 캘박 정리, 개인 일정 보존) + 안 쓰게 된 `isDuplicateEvent`·`formatEventTitle_`·`collectActiveProgressRows_` 제거
+- **GAS `Scheduler.gs` v0.3.1** (`aea2298`, `7a3cb17`, `660baea`, `24089a3`): **`moveRowOnCheck` 8분 행 수정 + 트리거 구조 전환.** TAT 계산이 날짜마다 공휴일 캘린더를 때리던 구조를 실행 1회 범위 메모로 접어 연도당 1회로 축소, 조회 실패해도 throw 없이 주말만 제외, 기간 상한 400일. + 설치형 onEdit 트리거가 통째로 죽은 상태를 우회하기 위해 **간이 트리거 `onEdit`** 도입(등록·승인 불필요) + **`processCheckedRowsNow`**(M열 TRUE 행 일괄 이관)와 **`enableAutoMoveTrigger`**(5분 시간 트리거)로 3중 경로 확보 + 진단용 `pingOnEdit`·`whichSpreadsheetAmIBoundTo`
+
 **시도했다가 폐기/실패**:
 - L/S 더블클릭 토글 (drag region 위 React 이벤트 미수신 + UX 혼동)
 - 리사이즈 후 border invalidate fix (모든 시도 실패 → border 자체 폐기)
 - 시스템 이모지 패널 자동 닫기 (Win+. 토글이 위치 이동 버그)
+- 캘박 식별을 rowId hidden tag로 하기 (라벨이 깨지면 폭주로 직결 → 메일제목 기반으로 대체)
+- 이관 중복 체크를 UUID로 하기 (행 복사 환경에서 UUID가 고유하지 않음 → 6-field 키로 대체)
+- 공유 체크 이관을 설치형 onEdit 트리거에만 의존하기 (트리거 사망 시 전면 마비 → 간이 트리거 + 시간 트리거 다중화)
 
 ---
 
@@ -460,9 +549,11 @@ design-widget-schedule/
 >
 > 사이즈: **L 400×620 (가장자리 드래그 확대, customSize 저장)** / **S 200×80 (가로형 컴팩트)**
 >
-> 인프라 풀세트: 캐싱·스켈레톤·persistent NEW·에러 코드 E01-E99·알림 토글·action whitelist·Windows 폰트 보정 + **electron-updater 자동 업데이트 + useActionQueue 직렬 큐 + STALE 자동 재시도**.
+> 인프라 풀세트: 캐싱·스켈레톤·persistent NEW·에러 코드 E01-E99·알림 토글·action whitelist·Windows 폰트 보정 + **electron-updater 자동 업데이트 + useActionQueue 직렬 큐 + STALE 자동 재시도 + net.fetch/시스템 프록시 대응**.
 >
-> **현 단계: v0.2.8 빌드·배포 완료** — K열 상태 운영 의미 정비('미정' → '예정' + 캘박 트리거 '진행 진입'으로 교체 + 중복 체크 rowId 강화). 디자인팀 6명에 자동 업데이트로 안착. v0.2.5의 즉시 silent 재시작 효과는 v0.2.6/0.2.7/0.2.8 사이클에서 실측 검증 완료. 운영 안정화 관찰 단계.
+> **현 단계 (2026-08): 위젯 v0.2.10 배포 완료 / GAS Scheduler.gs v0.3.1.** 위젯은 프록시 환경 네트워크 실패 해소 + 네트워크 진단 로그 확보. GAS는 캘박을 **메일제목(J열 메모) 기반**으로 재설계했고, 공유 체크 이관은 **간이 트리거 + 5분 시간 트리거 + 수동 ▶ 3중 경로**로 다중화됨.
+>
+> **이 프로젝트의 반복 패턴 (새 작업 전 반드시 인지)**: 사고의 뿌리가 거의 항상 같다 — **"사람이 셀을 다루는 방식"과 "기계가 식별하는 방식"의 불일치.** 디자이너들은 행을 복사하고 드래그로 채우고 일괄 붙여넣는다. 그래서 UUID는 중복되고, onEdit은 안 터지고, 상태 기반 트리거는 어긋난다. **새 기능을 설계할 때 "사람이 이걸 복사하면?" "드래그로 채우면?"을 먼저 통과시킬 것.** 눈에 보이는 값(메일 제목 등) 기준 + 시간 사이클이 이 팀에선 항상 더 견고했다.
 >
 > macOS .dmg는 Sequoia 이슈로 보류 (본인 dev 사용). 디자인팀 전부 Windows라 영향 X.
 >
