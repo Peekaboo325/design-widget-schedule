@@ -216,6 +216,30 @@ function isBusinessDay(date) {
   return true;
 }
 
+/**
+ * 공휴일 캐시 데우기 — 설치형 트리거에서만 호출할 것
+ *
+ * 배경: 간이 트리거(onEdit)는 CalendarApp을 쓸 수 없다. 그래서 moveRowOnCheck가
+ * 간이 트리거로 불릴 때 공휴일 캐시가 비어 있으면 주말만 제외한 TAT가 나와
+ * 실제보다 큰 값이 기록된다 (같은 작업도 체크 시점에 따라 값이 달라짐).
+ *
+ * 설치형 트리거(시간 기반)는 CalendarApp을 쓸 수 있으므로 여기서 미리 캐시를 채워둔다.
+ * 캐시 TTL 6시간 > 트리거 주기(5분·1시간)라 캐시가 비는 구간이 사실상 생기지 않고,
+ * 간이 트리거도 항상 캐시를 통해 공휴일을 반영하게 된다.
+ *
+ * calcBusinessDays가 참조하는 연도는 '올해'와 '작년' 둘뿐이라 그 두 개만 데운다.
+ * (회사 휴무일은 바인딩된 시트에서 읽으므로 간이 트리거도 직접 접근 가능 — 데울 필요 없음)
+ */
+function warmHolidayCache_() {
+  try {
+    const year = new Date().getFullYear();
+    getKoreanHolidays(year);
+    getKoreanHolidays(year - 1);
+  } catch (err) {
+    log_('warmHolidayCache_', `캐시 데우기 실패 (무시하고 진행): ${err}`);
+  }
+}
+
 /** 두 날짜 사이 영업일 수 (start 제외, end 포함) */
 function countBusinessDays(startDate, endDate) {
   if (!(startDate instanceof Date) || !(endDate instanceof Date)) return 0;
@@ -468,6 +492,9 @@ function processCheckedRowsNow() {
       log_('processCheckedRowsNow', `'💛신규·유지보수' 시트 없음 — 중단`);
       return;
     }
+
+    // 간이 트리거(onEdit)가 공휴일을 반영한 TAT를 계산할 수 있도록 캐시를 채워둔다
+    warmHolidayCache_();
 
     const TARGET_COL = 13; // M열 (공유 체크박스)
     const MAX_ROWS = 200;
@@ -743,6 +770,9 @@ function syncToCalendar() {
       log_('syncToCalendar', `캘린더 '${SCHEDULE_CALENDAR_NAME}' 없음 — 중단`);
       return;
     }
+
+    // 5분 트리거가 꺼져 있어도 캐시가 유지되도록 여기서도 데운다 (캐시 적중 시 즉시 반환)
+    warmHolidayCache_();
 
     const collected = collectCalendarRows_(sheet);
     const rows = collected.rows;
