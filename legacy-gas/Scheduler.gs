@@ -3,7 +3,8 @@
 //
 // 함수 구성:
 //   moveRowOnCheck            — onEdit 트리거: 신규 시트 M열 공유 체크 → 완료 시트 이관 + TAT 계산
-//   processCheckedRowsNow     — 수동(콘솔 ▶): M열 TRUE 행 일괄 이관. 트리거 죽었을 때 우회 경로
+//   processCheckedRowsNow     — 시간 트리거(5분) / 수동 ▶: M열 TRUE 행 일괄 이관. onEdit 대체
+//   enableAutoMoveTrigger     — 수동(콘솔 ▶): 위 함수를 5분 주기 시간 트리거로 등록
 //   onEditTrigger             — onEdit 트리거: L열 ID 자동 발급 + 중복 ID 해소 (위젯용, 캘박 안 건드림)
 //   syncToCalendar            — 시간 트리거: 메일제목(J열 메모) 기반 캘박 create+update (v0.3.0 재설계)
 //   backfillCalendarDryRun    — 수동(콘솔 ▶): 캘박 없는 대상 리스트 미리보기 (변경 없음)
@@ -506,6 +507,43 @@ function processCheckedRowsNow() {
   } catch (err) {
     log_('processCheckedRowsNow', `에러: ${err}\n${err.stack || ''}`);
   }
+}
+
+// ============================================================
+// enableAutoMoveTrigger — processCheckedRowsNow를 5분 주기 시간 트리거로 등록
+//
+// onEdit 트리거 대체용. 2026-08 사고에서 onEdit 트리거가 통째로 죽어(테스트용
+// pingOnEdit조차 발사 안 됨) 공유 체크가 무반응이 된 뒤 도입.
+//
+// 시간 트리거는 사람의 셀 조작 방식(드래그·복사·일괄수정)과 무관하게 동작하므로
+// onEdit이 놓치던 케이스까지 전부 잡힌다. 대가는 최대 5분 지연.
+//
+// 콘솔에서 ▶ 한 번만 누르면 됨. 이미 있으면 중복 등록 안 함.
+// 해제는 disableAutoMoveTrigger ▶.
+// ============================================================
+function enableAutoMoveTrigger() {
+  const triggers = ScriptApp.getProjectTriggers();
+  for (const t of triggers) {
+    if (t.getHandlerFunction() === 'processCheckedRowsNow' && t.getEventType() === ScriptApp.EventType.CLOCK) {
+      log_('enableAutoMoveTrigger', '기존 시간 trigger 있음 — 추가 등록 안 함');
+      return;
+    }
+  }
+  ScriptApp.newTrigger('processCheckedRowsNow').timeBased().everyMinutes(5).create();
+  log_('enableAutoMoveTrigger', '등록 완료 — 5분마다 processCheckedRowsNow 실행 (공유 체크 자동 이관)');
+}
+
+/** enableAutoMoveTrigger로 등록한 시간 트리거 해제 */
+function disableAutoMoveTrigger() {
+  const triggers = ScriptApp.getProjectTriggers();
+  let removed = 0;
+  for (const t of triggers) {
+    if (t.getHandlerFunction() === 'processCheckedRowsNow' && t.getEventType() === ScriptApp.EventType.CLOCK) {
+      ScriptApp.deleteTrigger(t);
+      removed++;
+    }
+  }
+  log_('disableAutoMoveTrigger', `시간 trigger ${removed}개 제거`);
 }
 
 // ============================================================
