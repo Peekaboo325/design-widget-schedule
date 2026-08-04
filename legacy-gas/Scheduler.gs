@@ -2,6 +2,7 @@
 // Scheduler.gs — 디자인팀 스케줄러 자동화
 //
 // 함수 구성:
+//   onEdit                    — 간이 트리거(등록·승인 불필요): moveRowOnCheck + onEditTrigger 호출
 //   moveRowOnCheck            — onEdit 트리거: 신규 시트 M열 공유 체크 → 완료 시트 이관 + TAT 계산
 //   processCheckedRowsNow     — 시간 트리거(5분) / 수동 ▶: M열 TRUE 행 일괄 이관. onEdit 대체
 //   enableAutoMoveTrigger     — 수동(콘솔 ▶): 위 함수를 5분 주기 시간 트리거로 등록
@@ -506,6 +507,35 @@ function processCheckedRowsNow() {
     log_('processCheckedRowsNow', `완료 — ${processed}건 이관, 남은 체크 행 ${remaining}`);
   } catch (err) {
     log_('processCheckedRowsNow', `에러: ${err}\n${err.stack || ''}`);
+  }
+}
+
+// ============================================================
+// onEdit — 간이 트리거 (simple trigger)
+//
+// 함수명이 'onEdit'이면 구글이 자동으로 호출한다. 트리거 등록도, 권한 승인도 없다.
+// 2026-08 사고에서 설치형(installable) onEdit 트리거가 통째로 죽어(테스트용
+// pingOnEdit조차 발사 안 됨) 공유 체크가 무반응이 된 뒤, 별도 경로로 도입.
+//
+// 제약과 대응:
+//   - 권한 필요한 서비스(CalendarApp 등) 사용 불가
+//     → 공휴일 조회는 v0.3.1에서 실패해도 주말만 제외하고 계산하도록 방어됨. 이관은 정상 동작.
+//   - 실행 시간 30초 (설치형은 6분)
+//     → moveRowOnCheck는 v0.3.1 패치 후 1~2초. 여유 충분.
+//
+// 설치형 트리거가 나중에 되살아나면 같은 편집에 두 번 불릴 수 있으나,
+// moveRowOnCheck가 lock 획득 후 M열 TRUE를 재확인하므로 중복 이관은 일어나지 않는다.
+// ============================================================
+function onEdit(e) {
+  try {
+    moveRowOnCheck(e);
+  } catch (err) {
+    log_('onEdit', `moveRowOnCheck 호출 실패: ${err}`);
+  }
+  try {
+    onEditTrigger(e);
+  } catch (err) {
+    log_('onEdit', `onEditTrigger 호출 실패: ${err}`);
   }
 }
 
