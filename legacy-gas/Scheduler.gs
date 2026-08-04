@@ -87,64 +87,121 @@ function whichSpreadsheetAmIBoundTo() {
 
 // ============================================================
 // 영업일 계산 (한국 공휴일 + 회사 휴무일 자동 반영)
+//
+// v0.3.1 행(hang) 사고 대응 (2026-07~08):
+//   증상 — moveRowOnCheck / onEditTrigger가 8분간 안 끝나고 DEADLINE_EXCEEDED로
+//         강제 종료. 반복 실패로 구글이 onEdit 트리거를 자동 비활성화 → 공유 체크가
+//         아무 반응 없는 상태가 됨 (실행 기록조차 안 남음).
+//   원인 — countBusinessDays가 날짜를 하루씩 돌면서 매번 getKoreanHolidays 호출.
+//         CacheService가 비어있고 캘린더 할당량이 소진된 오후 시간대에는 날짜 수만큼
+//         캘린더를 재조회 → 수백 회 호출 → 실행 시간 한도 초과.
+//   대응 — (1) 실행 1회 안에서 유효한 메모로 연도당 조회 1회 보장 (실패도 메모해서 재시도 차단)
+//         (2) 캘린더·시트 접근 전부 try/catch — 실패해도 절대 throw 안 하고 주말만 제외
+//         (3) countBusinessDays에 기간 상한 — 비정상 요청일이 들어와도 폭주 불가
 // ============================================================
 
-/** 한국 공식 공휴일 (Google Calendar 기반, 6시간 캐시) */
-function getKoreanHolidays(year) {
-  const cache = CacheService.getScriptCache();
-  const cacheKey = `kr_holidays_${year}`;
-  const cached = cache.get(cacheKey);
-  if (cached) return new Set(JSON.parse(cached));
+// 실행 1회 범위 메모 — 루프 안에서 CacheService·CalendarApp 왕복을 없애는 핵심.
+// GAS는 실행마다 스크립트를 새로 평가하므로 자동으로 비워진다.
+const __krHolidayMemo = {};
+const __companyHolidayMemo = {};
 
-  let cal = CalendarApp.getCalendarById(HOLIDAY_CAL_ID);
-  if (!cal) {
+// TAT 계산 기간 상한 — 요청일 파싱이 어긋나 비정상 범위가 들어와도 루프가 폭주하지 않게
+const MAX_TAT_SPAN_DAYS = 400;
+
+/** 한국 공식 공휴일 (Google Calendar 기반, 실행 내 메모 + 6시간 캐시) */
+function getKoreanHolidays(year) {
+  if (__krHolidayMemo[year]) return __krHolidayMemo[year];
+
+  const cacheKey = `kr_holidays_${year}`;
+  let dates = null;
+
+  try {
+    const cached = CacheService.getScriptCache().get(cacheKey);
+    if (cached) dates = JSON.parse(cached);
+  } catch (err) {
+    log_('getKoreanHolidays', `캐시 읽기 실패 (무시하고 진행): ${err}`);
+  }
+
+  if (dates === null) {
     try {
-      cal = CalendarApp.subscribeToCalendar(HOLIDAY_CAL_ID);
-      log_('getKoreanHolidays', '공휴일 캘린더 신규 구독 완료');
+      let cal = CalendarApp.getCalendarById(HOLIDAY_CAL_ID);
+      if (!cal) {
+        cal = CalendarApp.subscribeToCalendar(HOLIDAY_CAL_ID);
+        log_('getKoreanHolidays', '공휴일 캘린더 신규 구독 완료');
+      }
+      const events = cal.getEvents(
+        new Date(year, 0, 1),
+        new Date(year, 11, 31, 23, 59, 59)
+      );
+      dates = events.map(e =>
+        Utilities.formatDate(e.getStartTime(), 'Asia/Seoul', 'yyyy-MM-dd')
+      );
+      try {
+        CacheService.getScriptCache().put(cacheKey, JSON.stringify(dates), 21600); // 6시간
+      } catch (putErr) {
+        log_('getKoreanHolidays', `캐시 저장 실패 (무시): ${putErr}`);
+      }
+      log_('getKoreanHolidays', `${year}년 공휴일 ${dates.length}개 fetch 후 cache (6시간)`);
     } catch (err) {
-      log_('getKoreanHolidays', `공휴일 캘린더 구독 실패: ${err}`);
+      // 캘린더 할당량 소진·일시 장애 등. 여기서 throw하면 moveRowOnCheck가 통째로 죽으므로
+      // 공휴일 없이(주말만 제외) 계산하도록 빈 결과로 진행한다.
+      log_('getKoreanHolidays', `⚠ ${year}년 공휴일 조회 실패 — 주말만 제외하고 계산: ${err}`);
+      dates = [];
     }
   }
-  if (!cal) return new Set();
 
-  const events = cal.getEvents(
-    new Date(year, 0, 1),
-    new Date(year, 11, 31, 23, 59, 59)
-  );
-  const dates = events.map(e =>
-    Utilities.formatDate(e.getStartTime(), 'Asia/Seoul', 'yyyy-MM-dd')
-  );
-  cache.put(cacheKey, JSON.stringify(dates), 21600); // 6시간
-  log_('getKoreanHolidays', `${year}년 공휴일 ${dates.length}개 fetch 후 cache (6시간)`);
-  return new Set(dates);
+  // 실패한 경우에도 메모에 넣는다 — 같은 실행에서 날짜마다 재시도하는 것이 행의 원인이었음
+  const set = new Set(dates);
+  __krHolidayMemo[year] = set;
+  return set;
 }
 
-/** 회사 자체 휴무일 ('회사휴무일' 시트 A2:A에서 읽음, 1시간 캐시) */
+/** 회사 자체 휴무일 ('회사휴무일' 시트 A2:A에서 읽음, 실행 내 메모 + 1시간 캐시) */
 function getCompanyHolidays(year) {
-  const cache = CacheService.getScriptCache();
-  const cacheKey = `company_holidays_${year}`;
-  const cached = cache.get(cacheKey);
-  if (cached) return new Set(JSON.parse(cached));
+  if (__companyHolidayMemo[year]) return __companyHolidayMemo[year];
 
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(COMPANY_HOLIDAY_SHEET);
-  if (!sheet || sheet.getLastRow() < 2) {
-    cache.put(cacheKey, JSON.stringify([]), 3600);
-    log_('getCompanyHolidays', `'${COMPANY_HOLIDAY_SHEET}' 시트 없음 또는 비어있음 — 빈 결과 cache`);
-    return new Set();
+  const cacheKey = `company_holidays_${year}`;
+  let dates = null;
+
+  try {
+    const cached = CacheService.getScriptCache().get(cacheKey);
+    if (cached) dates = JSON.parse(cached);
+  } catch (err) {
+    log_('getCompanyHolidays', `캐시 읽기 실패 (무시하고 진행): ${err}`);
   }
 
-  const values = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues();
-  const dates = values
-    .map(row => row[0])
-    .filter(v => v instanceof Date && v.getFullYear() === year)
-    .map(d => Utilities.formatDate(d, 'Asia/Seoul', 'yyyy-MM-dd'));
+  if (dates === null) {
+    try {
+      const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(COMPANY_HOLIDAY_SHEET);
+      if (!sheet || sheet.getLastRow() < 2) {
+        dates = [];
+        log_('getCompanyHolidays', `'${COMPANY_HOLIDAY_SHEET}' 시트 없음 또는 비어있음`);
+      } else {
+        const values = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues();
+        dates = values
+          .map(row => row[0])
+          .filter(v => v instanceof Date && v.getFullYear() === year)
+          .map(d => Utilities.formatDate(d, 'Asia/Seoul', 'yyyy-MM-dd'));
+        log_('getCompanyHolidays', `${year}년 회사 휴무일 ${dates.length}개 fetch 후 cache (1시간)`);
+      }
+      try {
+        CacheService.getScriptCache().put(cacheKey, JSON.stringify(dates), 3600); // 1시간
+      } catch (putErr) {
+        log_('getCompanyHolidays', `캐시 저장 실패 (무시): ${putErr}`);
+      }
+    } catch (err) {
+      log_('getCompanyHolidays', `⚠ ${year}년 회사 휴무일 조회 실패 — 없는 것으로 계산: ${err}`);
+      dates = [];
+    }
+  }
 
-  cache.put(cacheKey, JSON.stringify(dates), 3600); // 1시간
-  log_('getCompanyHolidays', `${year}년 회사 휴무일 ${dates.length}개 fetch 후 cache (1시간)`);
-  return new Set(dates);
+  const set = new Set(dates);
+  __companyHolidayMemo[year] = set;
+  return set;
 }
 
 /** 영업일 여부 (주말 + 한국 공휴일 + 회사 휴무일 모두 제외) */
+// 휴일 조회는 메모를 타므로 연도당 최초 1회만 실제 조회. 루프에서 호출해도 안전.
 function isBusinessDay(date) {
   const day = date.getDay();
   if (day === 0 || day === 6) return false;
@@ -158,6 +215,20 @@ function isBusinessDay(date) {
 
 /** 두 날짜 사이 영업일 수 (start 제외, end 포함) */
 function countBusinessDays(startDate, endDate) {
+  if (!(startDate instanceof Date) || !(endDate instanceof Date)) return 0;
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return 0;
+  if (endDate <= startDate) return 0;
+
+  // 기간 상한 — 요청일이 잘못 잡혀 수천 일 범위가 들어오는 경우 루프 폭주 차단
+  const spanDays = Math.ceil((endDate.getTime() - startDate.getTime()) / 86400000);
+  if (spanDays > MAX_TAT_SPAN_DAYS) {
+    log_(
+      'countBusinessDays',
+      `⚠ 기간 ${spanDays}일로 비정상 (상한 ${MAX_TAT_SPAN_DAYS}일) — 계산 생략하고 0 반환. 시트 요청일 확인 필요`
+    );
+    return 0;
+  }
+
   let count = 0;
   const cur = new Date(startDate);
   cur.setDate(cur.getDate() + 1); // 시작일 제외 (TAT 계산 관행)
