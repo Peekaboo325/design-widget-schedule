@@ -6,6 +6,7 @@
 //   moveRowOnCheck            — onEdit 트리거: 신규 시트 M열 공유 체크 → 완료 시트 이관 + TAT 계산
 //   processCheckedRowsNow     — 시간 트리거(5분) / 수동 ▶: M열 TRUE 행 일괄 이관. onEdit 대체
 //   enableAutoMoveTrigger     — 수동(콘솔 ▶): 위 함수를 5분 주기 시간 트리거로 등록
+//   repairInstallableEditTriggers — 수동(콘솔 ▶): 설치형 onEdit 트리거 전수 삭제 후 코드로 재생성
 //   onEditTrigger             — onEdit 트리거: L열 ID 자동 발급 + 중복 ID 해소 (위젯용, 캘박 안 건드림)
 //   syncToCalendar            — 시간 트리거: 메일제목(J열 메모) 기반 캘박 create+update (v0.3.0 재설계)
 //   backfillCalendarDryRun    — 수동(콘솔 ▶): 캘박 없는 대상 리스트 미리보기 (변경 없음)
@@ -563,6 +564,69 @@ function onEdit(e) {
     onEditTrigger(e);
   } catch (err) {
     log_('onEdit', `onEditTrigger 호출 실패: ${err}`);
+  }
+}
+
+// ============================================================
+// repairInstallableEditTriggers — 설치형 onEdit 트리거 수리 시도 (수동 ▶)
+//
+// 2026-08 사고: 설치형 onEdit 트리거가 전부 발사되지 않음. UI에서 지우고 다시 만들어도 동일.
+// 단 같은 시점에 설치형 '시간' 트리거(syncToCalendar)는 정상 동작 → 계정 인증·할당량·
+// 구글 정책 문제가 아니라 onEdit 트리거 등록 자체가 망가진 상태로 판단.
+//
+// 하는 일:
+//   1. 실제 등록된 트리거를 전수 출력 (UI는 좀비 트리거를 안 보여줄 수 있음)
+//   2. ON_EDIT 계열만 전부 삭제 — 시간 트리거(syncToCalendar 등)는 건드리지 않음
+//   3. 코드로 재생성. UI 등록과 다른 경로이고 생성 시점 인증으로 다시 묶인다
+//
+// 실행 후 시트에서 셀 하나 편집 → 실행 기록에 moveRowOnCheck가 뜨면 복구 성공.
+// 실패해도 간이 트리거 onEdit + 5분 시간 트리거가 살아있으므로 업무 영향 없음.
+// ============================================================
+function repairInstallableEditTriggers() {
+  log_('repairInstallableEditTriggers', '시작 — 설치형 onEdit 트리거 전수 삭제 후 코드로 재생성');
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    log_('repairInstallableEditTriggers', `대상 시트: ${ss.getName()} (${ss.getId()})`);
+
+    const before = ScriptApp.getProjectTriggers();
+    log_('repairInstallableEditTriggers', `현재 실제 등록된 트리거 ${before.length}개:`);
+    before.forEach(t => {
+      log_(
+        'repairInstallableEditTriggers',
+        `  - ${t.getHandlerFunction()} / ${t.getEventType()} / ${t.getTriggerSource()}`
+      );
+    });
+
+    // ON_EDIT 계열만 제거. 시간 트리거는 정상 동작 중이므로 절대 건드리지 않는다.
+    let removed = 0;
+    before.forEach(t => {
+      if (t.getEventType() !== ScriptApp.EventType.ON_EDIT) return;
+      try {
+        ScriptApp.deleteTrigger(t);
+        removed++;
+        log_('repairInstallableEditTriggers', `  삭제: ${t.getHandlerFunction()}`);
+      } catch (err) {
+        log_('repairInstallableEditTriggers', `  삭제 실패: ${t.getHandlerFunction()} — ${err}`);
+      }
+    });
+    log_('repairInstallableEditTriggers', `설치형 onEdit 트리거 ${removed}개 제거`);
+
+    // 코드로 재생성 — UI 등록과 다른 경로
+    let created = 0;
+    ['moveRowOnCheck', 'onEditTrigger'].forEach(fn => {
+      try {
+        ScriptApp.newTrigger(fn).forSpreadsheet(ss).onEdit().create();
+        created++;
+        log_('repairInstallableEditTriggers', `  재생성: ${fn}`);
+      } catch (err) {
+        log_('repairInstallableEditTriggers', `  재생성 실패: ${fn} — ${err}`);
+      }
+    });
+
+    log_('repairInstallableEditTriggers', `완료 — 제거 ${removed}, 재생성 ${created}`);
+    log_('repairInstallableEditTriggers', '→ 시트에서 셀 하나 편집 후 실행 기록 확인. moveRowOnCheck가 뜨면 복구 성공');
+  } catch (err) {
+    log_('repairInstallableEditTriggers', `에러: ${err}\n${err.stack || ''}`);
   }
 }
 
