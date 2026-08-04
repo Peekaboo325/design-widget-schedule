@@ -3,6 +3,7 @@
 //
 // 함수 구성:
 //   moveRowOnCheck            — onEdit 트리거: 신규 시트 M열 공유 체크 → 완료 시트 이관 + TAT 계산
+//   processCheckedRowsNow     — 수동(콘솔 ▶): M열 TRUE 행 일괄 이관. 트리거 죽었을 때 우회 경로
 //   onEditTrigger             — onEdit 트리거: L열 ID 자동 발급 + 중복 ID 해소 (위젯용, 캘박 안 건드림)
 //   syncToCalendar            — 시간 트리거: 메일제목(J열 메모) 기반 캘박 create+update (v0.3.0 재설계)
 //   backfillCalendarDryRun    — 수동(콘솔 ▶): 캘박 없는 대상 리스트 미리보기 (변경 없음)
@@ -441,6 +442,70 @@ function findFirstSharedRow_(sheet, col) {
     if (values[i][0] === true) return DATA_START + i;
   }
   return null;
+}
+
+// ============================================================
+// processCheckedRowsNow — M열 TRUE 행 일괄 이관 (수동 ▶ 전용)
+//
+// onEdit 트리거가 죽어 있어도 업무가 막히지 않게 하는 우회 경로.
+// 시트에서 공유 체크만 해두면, 이 함수를 콘솔에서 ▶ 한 번 눌러 밀린 것을 전부 처리한다.
+// 내부적으로 moveRowOnCheck를 그대로 호출하므로 결과는 트리거 동작과 완전히 동일
+// (완료 시트 이관 + TAT 계산 + 원본 행 삭제).
+//
+// 안전장치:
+//   - 한 번에 최대 200건, 실행 4분 경과 시 중단 (GAS 6분 한도 여유)
+//   - 이관 후 시트 행 수가 안 줄면 실패로 보고 즉시 중단 (무한 루프 차단)
+//   - 남은 게 있으면 로그로 알려줌 → 다시 ▶ 누르면 이어서 진행
+// ============================================================
+function processCheckedRowsNow() {
+  log_('processCheckedRowsNow', '시작 — M열 TRUE 행 일괄 이관 (트리거 없이 수동 처리)');
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('💛신규·유지보수');
+    if (!sheet) {
+      log_('processCheckedRowsNow', `'💛신규·유지보수' 시트 없음 — 중단`);
+      return;
+    }
+
+    const TARGET_COL = 13; // M열 (공유 체크박스)
+    const MAX_ROWS = 200;
+    const TIME_LIMIT_MS = 4 * 60 * 1000;
+    const startedAt = new Date().getTime();
+
+    let processed = 0;
+    while (processed < MAX_ROWS) {
+      if (new Date().getTime() - startedAt > TIME_LIMIT_MS) {
+        log_('processCheckedRowsNow', `⏱ 4분 경과 — 중단. 다시 ▶ 실행하면 이어서 진행`);
+        break;
+      }
+
+      const row = findFirstSharedRow_(sheet, TARGET_COL);
+      if (!row) break; // 남은 TRUE 행 없음
+
+      const rowCountBefore = sheet.getLastRow();
+
+      // 트리거가 보내는 것과 같은 형태의 이벤트를 만들어 전달 (doPost도 동일 방식 사용)
+      moveRowOnCheck({
+        range: sheet.getRange(row, TARGET_COL),
+        value: 'TRUE',
+        source: ss
+      });
+      SpreadsheetApp.flush();
+
+      // 이관되면 원본 행이 삭제되어 행 수가 줄어든다. 안 줄었으면 실패 — 무한 루프 방지
+      if (sheet.getLastRow() >= rowCountBefore) {
+        log_('processCheckedRowsNow', `⚠ ${row}행 이관 실패 (행 수 변화 없음) — 중단. 위 moveRowOnCheck 로그 확인 필요`);
+        break;
+      }
+
+      processed++;
+    }
+
+    const remaining = findFirstSharedRow_(sheet, TARGET_COL) ? '있음' : '없음';
+    log_('processCheckedRowsNow', `완료 — ${processed}건 이관, 남은 체크 행 ${remaining}`);
+  } catch (err) {
+    log_('processCheckedRowsNow', `에러: ${err}\n${err.stack || ''}`);
+  }
 }
 
 // ============================================================
