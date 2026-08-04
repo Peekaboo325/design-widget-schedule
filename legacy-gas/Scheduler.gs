@@ -35,6 +35,57 @@ function log_(fn, msg) {
 }
 
 // ============================================================
+// [진단용] onEdit 트리거가 살아있는지 확인하는 최소 함수
+//
+// 사용법:
+//   1) 트리거 메뉴 → 트리거 추가 → 함수 'pingOnEdit' / 소스 '스프레드시트에서' / 유형 '수정 시'
+//   2) 시트 아무 셀이나 한 글자 입력
+//   3) 실행 기록에 pingOnEdit 뜨는지 확인
+//
+// 판정:
+//   - 뜸   → onEdit 인프라 정상. 문제는 moveRowOnCheck 내부 조건 또는 시트 구조
+//   - 안 뜸 → 트리거 자체가 안 걸림. 편집 중인 파일이 스크립트에 붙은 파일이 아니거나,
+//            계정 레벨 할당량·승인 문제. 아래 whichSpreadsheetAmIBoundTo 로 파일부터 확인
+//
+// 진단 끝나면 트리거 삭제 권장 (모든 편집마다 로그 쌓임)
+// ============================================================
+function pingOnEdit(e) {
+  try {
+    const sheetName = e && e.range ? e.range.getSheet().getName() : '(이벤트 없음)';
+    const a1 = e && e.range ? e.range.getA1Notation() : '?';
+    log_('pingOnEdit', `발사됨 — sheet='${sheetName}', cell=${a1}, value='${e && e.value}'`);
+  } catch (err) {
+    log_('pingOnEdit', `발사됐지만 에러: ${err}`);
+  }
+}
+
+// ============================================================
+// [진단용] 이 스크립트가 어떤 스프레드시트에 붙어 있는지 확인
+//
+// 콘솔에서 ▶ 실행 → 로그의 URL을 열어보고, 지금 팀이 실제로 쓰는 시트와
+// 같은 파일인지 대조. 다르면 '사본에서 작업 중' 확정 (트리거는 원본에만 있음).
+// ============================================================
+function whichSpreadsheetAmIBoundTo() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss) { log_('whichSpreadsheetAmIBoundTo', '바인딩된 스프레드시트 없음'); return; }
+    log_('whichSpreadsheetAmIBoundTo', `이름: ${ss.getName()}`);
+    log_('whichSpreadsheetAmIBoundTo', `ID:   ${ss.getId()}`);
+    log_('whichSpreadsheetAmIBoundTo', `URL:  ${ss.getUrl()}`);
+    log_('whichSpreadsheetAmIBoundTo', `시트 목록: ${ss.getSheets().map(s => s.getName()).join(' / ')}`);
+
+    // 현재 등록된 트리거 목록도 같이 출력
+    const triggers = ScriptApp.getProjectTriggers();
+    log_('whichSpreadsheetAmIBoundTo', `등록된 트리거 ${triggers.length}개:`);
+    triggers.forEach(t => {
+      log_('whichSpreadsheetAmIBoundTo', `  - ${t.getHandlerFunction()} / ${t.getEventType()} / ${t.getTriggerSource()}`);
+    });
+  } catch (err) {
+    log_('whichSpreadsheetAmIBoundTo', `에러: ${err}`);
+  }
+}
+
+// ============================================================
 // 영업일 계산 (한국 공휴일 + 회사 휴무일 자동 반영)
 // ============================================================
 
