@@ -2,7 +2,7 @@
 // Scheduler.gs — 디자인팀 스케줄러 자동화
 //
 // 함수 구성:
-//   onEdit                    — 간이 트리거(등록·승인 불필요): moveRowOnCheck + onEditTrigger 호출
+//   onEditSimpleBackup_       — 간이 트리거. **현재 비활성** (이름을 'onEdit'으로 바꾸면 즉시 부활)
 //   moveRowOnCheck            — onEdit 트리거: 신규 시트 M열 공유 체크 → 완료 시트 이관 + TAT 계산
 //   processCheckedRowsNow     — 시간 트리거(5분) / 수동 ▶: M열 TRUE 행 일괄 이관. onEdit 대체
 //   enableAutoMoveTrigger     — 수동(콘솔 ▶): 위 함수를 5분 주기 시간 트리거로 등록
@@ -539,22 +539,30 @@ function processCheckedRowsNow() {
 }
 
 // ============================================================
-// onEdit — 간이 트리거 (simple trigger)
+// 간이 트리거 (simple trigger) — 현재 비활성 (2026-08-05)
 //
-// 함수명이 'onEdit'이면 구글이 자동으로 호출한다. 트리거 등록도, 권한 승인도 없다.
-// 2026-08 사고에서 설치형(installable) onEdit 트리거가 통째로 죽어(테스트용
-// pingOnEdit조차 발사 안 됨) 공유 체크가 무반응이 된 뒤, 별도 경로로 도입.
+// ⚠ 되살리려면 아래 함수 이름을 'onEditSimpleBackup_' → 'onEdit'으로 바꾸기만 하면 된다.
+//   구글은 이름이 정확히 'onEdit'인 함수만 자동 호출하므로, 이름이 다르면 아무 일도 안 한다.
 //
-// 제약과 대응:
-//   - 권한 필요한 서비스(CalendarApp 등) 사용 불가
-//     → 공휴일 조회는 v0.3.1에서 실패해도 주말만 제외하고 계산하도록 방어됨. 이관은 정상 동작.
+// 도입 배경 (2026-08-04): 설치형 onEdit 트리거가 통째로 죽어(테스트용 pingOnEdit조차
+//   발사 안 됨) 공유 체크가 무반응이 됐을 때, 등록·승인이 필요 없는 별도 경로로 투입.
+//   실제로 이걸로 그날 업무를 복구했다.
+//
+// 비활성화한 이유 (2026-08-05): 다음날 아침 설치형 트리거가 저절로 복구됨. 둘 다 켜두면
+//   한 번 편집에 이관 로직이 두 번 돌아 트리거 실행시간을 2배로 태운다. 개인 계정은
+//   하루 90분 한도라 한도 소진 자체가 침묵 사고의 원인이 될 수 있어 중복을 제거.
+//   설치형이 또 죽어도 5분 시간 트리거(processCheckedRowsNow)가 이관을 보장한다.
+//
+// 설치형 대비 열세인 점 — 되살릴 때 감수할 것:
+//   - CalendarApp 등 권한 서비스 사용 불가 (공휴일 조회 → warmHolidayCache_로 보정)
+//   - 실패해도 구글 "Summary of failures" 알림 메일이 안 옴
 //   - 실행 시간 30초 (설치형은 6분)
-//     → moveRowOnCheck는 v0.3.1 패치 후 1~2초. 여유 충분.
+//   - 편집한 팀원 계정으로 실행됨 (설치형은 소유자 계정)
 //
-// 설치형 트리거가 나중에 되살아나면 같은 편집에 두 번 불릴 수 있으나,
-// moveRowOnCheck가 lock 획득 후 M열 TRUE를 재확인하므로 중복 이관은 일어나지 않는다.
+// 둘 다 켜져 있어도 중복 이관은 나지 않는다 — moveRowOnCheck가 lock 획득 후
+// M열 TRUE를 재확인하기 때문. 문제는 정확성이 아니라 실행시간 낭비다.
 // ============================================================
-function onEdit(e) {
+function onEditSimpleBackup_(e) {
   try {
     moveRowOnCheck(e);
   } catch (err) {
