@@ -30,7 +30,7 @@
 - **레포**: `Peekaboo325/design-widget-schedule` (public, 코드 + 릴리스 통합)
 - **스택**: Electron 33 + React 18 + Vite (electron-vite) + electron-builder + **electron-updater**
 - **버전**: **위젯 v0.2.10** (프록시 환경 GAS 도달 실패 수정 — `net.fetch` + `setProxy(system)` + 네트워크 진단 로그)
-- **GAS 버전**: `Scheduler.gs` v0.3.1 (캘박 메일제목 기반 재설계 + TAT 계산 행 수정) / `Synccompletedtodatasheet.gs` v2.3.0 (중복 키 6-field)
+- **GAS 버전**: `Scheduler.gs` v0.3.1 (캘박 메일제목 기반 재설계 + TAT 계산 행 수정) / `Synccompletedtodatasheet.gs` v2.3.1 (중복 키 6-field + 실행 시간 새벽 2시)
 - **빌드/실행**:
   - dev: `npm run dev`
   - macOS dev launcher: `start-mac.command` 더블클릭 (자동 git pull + npm install + dev)
@@ -345,7 +345,7 @@ design-widget-schedule/
 | ON_EDIT / SPREADSHEETS | 편집 시 | `onEditTrigger` (L열 ID 발급·중복 해소) |
 | CLOCK | 5분 | `processCheckedRowsNow` (onEdit이 놓친 체크 쓸어담기) |
 | CLOCK | 1시간 | `syncToCalendar` (캘박 동기화) |
-| CLOCK | 매일 09시 | `syncCompletedToDataSheet` (업무 데이터 이관) |
+| CLOCK | 매일 02시 | `syncCompletedToDataSheet` (업무 데이터 이관, 2026-08 09시→02시 변경) |
 | CLOCK | 매주 월 09시 | `checkSyncIntegrity` (이관 정합성 점검 메일) |
 
 - **공유 체크 이관은 2중 경로**: 설치형 onEdit(즉시) + 5분 시간 트리거(누락 회수)
