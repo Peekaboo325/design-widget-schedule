@@ -310,14 +310,14 @@ function setTimeTrigger() {
     }
   });
 
-  // 매일 오전 9시 실행 (원하는 주기로 변경 가능)
+  // 매일 새벽 3시 실행 (원하는 주기로 변경 가능)
   ScriptApp.newTrigger("syncCompletedToDataSheet")
     .timeBased()
     .everyDays(1)
-    .atHour(9)
+    .atHour(3)
     .create();
 
-  Logger.log("✅ 트리거 설정 완료: 매일 오전 9시 자동 실행");
+  Logger.log("✅ 트리거 설정 완료: 매일 새벽 3시 자동 실행");
 }
 
 // ============================================================
