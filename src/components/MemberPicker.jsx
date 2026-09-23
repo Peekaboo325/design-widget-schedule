@@ -21,7 +21,7 @@ export default function MemberPicker({ members, onSelect, loading, error }) {
         <p className={styles.error}>
           팀원 목록 로드 실패: {String(error.message ?? error)}
         </p>
-        <p className={styles.muted}>위젯을 다시 실행해 보세요.</p>
+        <p className={styles.muted}>잠시 후 자동으로 다시 시도해요.</p>
       </div>
     )
   }

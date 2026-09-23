@@ -105,7 +105,18 @@ export default function App() {
   }, [settings.size, activeTab])
 
   // 팀원 목록
-  const { members, loading: membersLoading, error: membersError } = useMembers()
+  const {
+    members,
+    loading: membersLoading,
+    error: membersError,
+    refetch: refetchMembers
+  } = useMembers()
+
+  // 팀원 목록은 목록이 하나도 없을 때만 화면을 막는다.
+  // 캐시든 fresh든 목록이 있으면 로딩·에러는 무시하고 스케줄을 그대로 보여줌.
+  // v0.2.11: 이전엔 캐시 목록이 있어도 fetch 에러 하나로 스케줄 탭 전체가 가려졌음
+  const membersBlockingLoading = membersLoading && members.length === 0
+  const membersBlockingError = members.length === 0 ? membersError : null
 
   // 저장된 멤버가 현재 목록에 없으면 stale로 간주 (입퇴사 대비)
   // 멤버 목록이 아직 fetch되지 않은 동안엔 savedMember 잠정 활성 (깜빡임 방지)
@@ -397,11 +408,18 @@ export default function App() {
     [mutateSchedule, backupQueue]
   )
 
+  // 수동 새로고침(↻ 버튼·트레이) — 팀원 목록이 에러 상태면 같이 재시도
+  // 액션 큐는 fresh 스케줄을 받아야 하므로 refresh를 그대로 쓰고, 이건 사람이 누르는 경로 전용
+  const refreshAll = useCallback(() => {
+    if (membersError) refetchMembers()
+    refresh()
+  }, [membersError, refetchMembers, refresh])
+
   // 트레이 '새로고침' 메뉴 → 즉시 재조회
   useEffect(() => {
-    const off = window.widgetAPI?.onTrayRefresh?.(() => refresh())
+    const off = window.widgetAPI?.onTrayRefresh?.(() => refreshAll())
     return () => off?.()
-  }, [refresh])
+  }, [refreshAll])
 
   // 새로 추가된 NEW 키만 OS 알림 (중복 방지)
   // 이전 newKeys에 없던 키가 들어오면 알림 띄움
@@ -599,8 +617,8 @@ export default function App() {
             {needsMemberPick ? (
               <MemberPicker
                 members={members}
-                loading={membersLoading}
-                error={membersError}
+                loading={membersBlockingLoading}
+                error={membersBlockingError}
                 onSelect={setActiveMember}
               />
             ) : activeTab === 'checklist' ? (
@@ -624,8 +642,8 @@ export default function App() {
             ) : (
               <Body
                 size={settings.size}
-                membersLoading={membersLoading}
-                membersError={membersError}
+                membersLoading={membersBlockingLoading}
+                membersError={membersBlockingError}
                 activeMember={activeMember}
                 scheduleData={scheduleData}
                 scheduleLoading={scheduleLoading}
@@ -646,7 +664,7 @@ export default function App() {
               className={`${styles.refreshFab} ${refreshing ? styles.iconBtnSpinning : ''}`}
               aria-label="새로고침"
               disabled={!activeMember || refreshing}
-              onClick={() => refresh()}
+              onClick={() => refreshAll()}
             >
               <RefreshIcon />
             </button>
@@ -746,11 +764,15 @@ function Body({
   onCopyNote,
   onMarkSeen
 }) {
+  // 팀원 목록이 하나도 없을 때만 여기까지 옴 (App에서 membersBlockingError로 걸러서 전달)
   if (membersError) {
     return (
-      <p className={styles.error}>
-        팀원 목록 로드 실패: {String(membersError.message ?? membersError)}
-      </p>
+      <div>
+        <p className={styles.error}>
+          팀원 목록 로드 실패: {String(membersError.message ?? membersError)}
+        </p>
+        <p className={styles.muted}>잠시 후 자동으로 다시 시도해요.</p>
+      </div>
     )
   }
 
