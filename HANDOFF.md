@@ -1,7 +1,7 @@
 # HANDOFF.md — design-widget-schedule
 
 > 새 대화방에서 이 파일을 통째로 컨텍스트로 주면 AI가 현재 상태를 빠르게 흡수합니다.
-> **최신 상태 기준**: 위젯 v0.2.10 / GAS Scheduler.gs v0.3.1 + 간이 트리거 상시 이중화 (2026-08-24)
+> **최신 상태 기준**: 위젯 v0.2.11 (코드·버전 준비 완료, 태그 대기) / GAS Scheduler.gs v0.3.1 + 간이 트리거 상시 이중화 (2026-09-23)
 
 ---
 
@@ -29,7 +29,7 @@
 ## 프로젝트 개요
 - **레포**: `Peekaboo325/design-widget-schedule` (public, 코드 + 릴리스 통합)
 - **스택**: Electron 33 + React 18 + Vite (electron-vite) + electron-builder + **electron-updater**
-- **버전**: **위젯 v0.2.10** (프록시 환경 GAS 도달 실패 수정 — `net.fetch` + `setProxy(system)` + 네트워크 진단 로그)
+- **버전**: **위젯 v0.2.11** (팀원 목록 1회 실패로 스케줄 탭이 영구히 가려지던 버그 수정 — 재시도·자동 회복·차단 조건 완화). 배포 완료 버전은 v0.2.10
 - **GAS 버전**: `Scheduler.gs` v0.3.1 (캘박 메일제목 기반 재설계 + TAT 계산 행 수정) / `Synccompletedtodatasheet.gs` v2.3.1 (중복 키 6-field + 실행 시간 새벽 2시)
 - **빌드/실행**:
   - dev: `npm run dev`
@@ -89,7 +89,7 @@ design-widget-schedule/
 │   │   └── checklist.js                # 체크리스트 항목 source of truth
 │   ├── hooks/
 │   │   ├── useSettings.js
-│   │   ├── useMembers.js               # 캐시
+│   │   ├── useMembers.js               # 캐시 + 지수 백오프 재시도 + 5분 자동 회복 + refetch
 │   │   ├── useSchedule.js              # 캐시 + 5분 폴링 + 지수 백오프(2s/4s/8s, 최대 3회) + backup 포함
 │   │   ├── useSeenSchedule.js          # persistent NEW 추적 (key=scheduleKey)
 │   │   └── useActionQueue.js           # 직렬 큐 + STALE 자동 재시도 (id 기반 행 재탐색)
@@ -211,6 +211,11 @@ design-widget-schedule/
 - IPC: `cache:get-members/set-members/get-schedule/set-schedule`
 - 캐시 즉시 로드 → 백그라운드 fetch → 덮어쓰기 + 캐시 갱신
 - 첫 실행 캐시 없으면 ScheduleSkeleton
+- **재시도 규칙 (스케줄·팀원 목록 공통, v0.2.11부터 팀원 목록도)**: 실패 시 2s → 4s → 8s 지수 백오프(최대 3회). 전부 실패해야 에러 노출
+  - 스케줄: 5분 폴링이 원래 있어서 자연 회복
+  - 팀원 목록: 최종 실패 후 **5분 뒤 자동 재시도**. ↻ 버튼·트레이 새로고침(`refreshAll`)도 팀원 목록 에러 시 같이 재요청
+- **팀원 목록 에러는 목록이 하나도 없을 때만 화면을 막음** (`membersBlockingLoading` / `membersBlockingError`, App.jsx). 캐시 목록이 있으면 fetch 에러가 나도 스케줄은 그대로 표시
+  - v0.2.10까지는 캐시 목록이 있어도 에러 하나로 스케줄 탭 전체가 가려졌음 (아래 종료된 사고 참조)
 
 ### Persistent NEW + scheduleKey 진화
 - `seenKeysByMember` store 영구 저장 (IPC: `cache:get-seen / set-seen`)
@@ -473,6 +478,18 @@ design-widget-schedule/
 - **해결**: `net.fetch` 전환(v0.2.9) → 그래도 안 풀려서 `setProxy({mode:'system'})` 명시 추가(v0.2.10)에서 해소.
 - **교훈**: "브라우저는 되는데 앱만 안 된다"는 프록시 계층 지문. 또 진단 로그가 없으면 원인이 통째로 묻힌다 — v0.2.10에서 네트워크 진단 로그를 넣고서야 판단 가능해짐.
 
+### ✅ 팀원 목록 1회 실패로 스케줄 탭이 영구히 가려짐 (2026-09) — 해결 (v0.2.11)
+- **증상**: 헤더엔 "최근 갱신 14:29", NEW 뱃지(+7), 백업 카운트(3)가 정상으로 뜨는데 **스케줄 탭만** "팀원 목록 로드 실패: 네트워크 연결을 확인해주세요". 백업 탭은 정상. ↻ 눌러도 안 풀리고 위젯 재실행해야만 복구.
+- **원인 — 허점 3개가 겹침**:
+  1. `useMembers`가 마운트 시 **딱 1회만** 요청. 스케줄과 달리 재시도·폴링이 없어서 한 번 실패하면 에러가 영구히 남음
+  2. `Body`(App.jsx)가 스케줄 데이터보다 `membersError`를 **먼저** 검사 → 캐시된 팀원 목록과 스케줄이 멀쩡히 있어도 스케줄 탭 전체를 가림. 백업 탭은 이 검사를 안 거쳐서 정상
+  3. ↻ 버튼·트레이 새로고침은 스케줄만 다시 불러와서 복구 수단이 없었음
+- **첫 실패의 유력 원인**: GAS 콜드 스타트로 응답이 12초(`API_TIMEOUT_MS`)를 넘김. 실행 기록에 `doGet 14.464초`가 실제로 찍혀 있었음. PC 부팅 직후 네트워크보다 위젯이 먼저 뜨는 경우도 같은 결과
+  - 확인법: 해당 PC `%USERPROFILE%\widget-debug.log`에서 `api:get FAIL type=members name=AbortError`
+- **해결 (v0.2.11)**: 팀원 목록에 스케줄과 같은 백오프 재시도 + 최종 실패 후 5분 자동 재시도 / 목록이 하나도 없을 때만 화면 차단 / ↻·트레이가 팀원 목록도 재요청
+- **검증**: 가짜 `widgetAPI`로 수정 전/후 빌드를 같은 조건에서 Playwright 비교. 수정 전 빌드에서 사용자 화면과 동일한 버그 재현 확인 후, 수정 후 빌드에서 해소 확인
+- **교훈**: **같은 종류의 데이터 fetch는 같은 복원력 규칙을 가져야 한다.** 스케줄엔 재시도·폴링을 붙여놓고 팀원 목록엔 안 붙여서, 더 사소한 데이터가 더 중요한 화면을 막았다. 또 "보조 데이터의 에러가 주 데이터 화면을 막지 않게" — 에러 검사 순서가 곧 우선순위다
+
 ### ✅ moveRowOnCheck 8분 행 → 트리거 자동 비활성화 (2026-08) — 해결
 - **증상**: M열 공유 체크가 무반응. **실행 기록조차 안 남음.** 트리거를 지웠다 다시 만들어도 동일.
 - **원인**: `countBusinessDays`가 요청일~완료일을 하루씩 순회하며 매번 `getKoreanHolidays` 호출 → 캐시가 비고 캘린더 할당량이 소진된 시간대엔 날짜 수만큼 캘린더 재조회 → 8분 실행 → `DEADLINE_EXCEEDED` 강제 종료. 반복 실패로 구글이 트리거를 자동 비활성화.
@@ -558,6 +575,7 @@ design-widget-schedule/
 
 - **v0.2.9** (`f35193c`, `d23a89e`): **프록시 뒤 PC의 GAS 도달 실패 수정** — `electron/main.js`의 GAS 호출을 Node 기본 `fetch` → **`net.fetch`**로 교체. Node fetch가 윈도우 시스템 프록시를 안 타서 회사 자동 프록시(PAC) 환경의 팀원 1명만 E01로 완전 차단돼 있던 문제. (이 버전만으론 미해소 → v0.2.10에서 해결)
 - **v0.2.10** (`a65f68d`): **`session.defaultSession.setProxy({mode:'system'})` 명시 호출 + 네트워크 진단 로그 전수 보강.** `net.fetch`만으로는 PAC 자동 감지가 누락되는 환경이 있었고, **이 한 줄이 실제로 막혀 있던 PC를 풀어줌**. 더불어 `api:get`/`api:post`의 진입·응답 status·성공·실패와 `err.name/code/message` 원본을 `~/widget-debug.log`에 stamp (그전엔 `friendlyNetworkError`가 원인을 뭉개서 실패 흔적이 아예 안 남았음) + 시작 시 `app.getVersion()` stamp
+- **v0.2.11** (`519c0e4`, 태그 대기): **팀원 목록 1회 실패로 스케줄 탭이 영구히 가려지던 버그 수정.** `useMembers`에 지수 백오프 재시도(2s/4s/8s) + 최종 실패 후 5분 자동 재시도 + `refetch` 추가. App.jsx는 팀원 목록 로딩·에러를 목록이 하나도 없을 때만 화면 차단(`membersBlockingLoading`/`membersBlockingError`)하도록 바꾸고, ↻ 버튼·트레이 새로고침(`refreshAll`)이 팀원 목록 에러 시 같이 재요청. MemberPicker 안내 문구 "위젯을 다시 실행해 보세요" → "잠시 후 자동으로 다시 시도해요"
 - **GAS `Synccompletedtodatasheet.gs` v2.2.0 → v2.3.0** (`a81a5bd`, `2ef5122`, `84c515a`, `c8f912c`): **이관 중복 체크 키를 ID 우선 → field 키로 회귀 후 6-field로 확장** (광고주+작업유형+비고+완료일+**작업자+담당자**). v2.1.0의 ID 판정이 행 복사발 중복 UUID를 만나 묶음 단위로 5월 데이터를 날린 사고 수습. + `forceMigrateAllCompletedRows`(중복 체크 없는 1회용 강제 이관) + **`checkSyncIntegrity` 주간 정합성 점검 메일**(매주 월 09시, 누락분을 메일로 통보) + `enableIntegrityCheckTrigger`
 - **GAS `Scheduler.gs` v0.3.0** (`5a63926`): **캘박 동기화를 메일제목(J열 셀 메모) 기반으로 전면 재설계.** 식별 기준에서 UUID·K열 상태를 전부 걷어냄 — 사람이 셀을 복사·드래그·일괄수정하는 스타일과 ID/상태 기반 로직이 근본적으로 안 맞아 중복·누락이 반복됐기 때문. 대상은 'J열 메모 있음 + 마감일 색칠됨'(상태 무관), 제목은 메모 그대로, 생성 경로는 `syncToCalendar` 단독(1시간). `onEditTrigger`의 캘박 등록 폐기 + `collectCalendarRows_`/`buildCalendarIndexByTitle_` 신설 + 전환용 `wipeTaggedEventsDryRun/Apply`(옛 태그 캘박 정리, 개인 일정 보존) + 안 쓰게 된 `isDuplicateEvent`·`formatEventTitle_`·`collectActiveProgressRows_` 제거
 - **GAS `Scheduler.gs` v0.3.1** (`aea2298`, `7a3cb17`, `660baea`, `24089a3`): **`moveRowOnCheck` 8분 행 수정 + 트리거 구조 전환.** TAT 계산이 날짜마다 공휴일 캘린더를 때리던 구조를 실행 1회 범위 메모로 접어 연도당 1회로 축소, 조회 실패해도 throw 없이 주말만 제외, 기간 상한 400일. + 설치형 onEdit 트리거가 통째로 죽은 상태를 우회하기 위해 **간이 트리거 `onEdit`** 도입(등록·승인 불필요) + **`processCheckedRowsNow`**(M열 TRUE 행 일괄 이관)와 **`enableAutoMoveTrigger`**(5분 시간 트리거)로 3중 경로 확보 + 진단용 `pingOnEdit`·`whichSpreadsheetAmIBoundTo`
@@ -582,7 +600,7 @@ design-widget-schedule/
 >
 > 인프라 풀세트: 캐싱·스켈레톤·persistent NEW·에러 코드 E01-E99·알림 토글·action whitelist·Windows 폰트 보정 + **electron-updater 자동 업데이트 + useActionQueue 직렬 큐 + STALE 자동 재시도 + net.fetch/시스템 프록시 대응**.
 >
-> **현 단계 (2026-08): 위젯 v0.2.10 배포 완료 / GAS Scheduler.gs v0.3.1.** 위젯은 프록시 환경 네트워크 실패 해소 + 네트워크 진단 로그 확보. GAS는 캘박을 **메일제목(J열 메모) 기반**으로 재설계했고, 공유 체크 이관은 **간이 트리거 + 5분 시간 트리거 + 수동 ▶ 3중 경로**로 다중화됨.
+> **현 단계 (2026-09): 위젯 v0.2.10 배포 완료, v0.2.11 코드·버전 준비 완료(태그 대기) / GAS Scheduler.gs v0.3.1.** 위젯은 프록시 환경 네트워크 실패 해소 + 네트워크 진단 로그 확보, v0.2.11에서 팀원 목록 fetch 재시도·자동 회복 추가. GAS는 캘박을 **메일제목(J열 메모) 기반**으로 재설계했고, 공유 체크 이관은 **간이 트리거 + 5분 시간 트리거 + 수동 ▶ 3중 경로**로 다중화됨.
 >
 > **이 프로젝트의 반복 패턴 (새 작업 전 반드시 인지)**: 사고의 뿌리가 거의 항상 같다 — **"사람이 셀을 다루는 방식"과 "기계가 식별하는 방식"의 불일치.** 디자이너들은 행을 복사하고 드래그로 채우고 일괄 붙여넣는다. 그래서 UUID는 중복되고, onEdit은 안 터지고, 상태 기반 트리거는 어긋난다. **새 기능을 설계할 때 "사람이 이걸 복사하면?" "드래그로 채우면?"을 먼저 통과시킬 것.** 눈에 보이는 값(메일 제목 등) 기준 + 시간 사이클이 이 팀에선 항상 더 견고했다.
 >
